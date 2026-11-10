@@ -15,6 +15,7 @@
     "@tanstack/react-query": "5.90.21",
     "@walktogether/api-client": "workspace:*",
     "@walktogether/shared-types": "workspace:*",
+    "@walktogether/shared-utils": "workspace:*",
     "@walktogether/ui": "workspace:*",
     "@walktogether/validation": "workspace:*",
     "next": "15.5.29",

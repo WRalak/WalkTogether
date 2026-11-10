@@ -148,3 +148,25 @@ describe('member and admin planes are separate', () => {
     await api().get('/api/v1/platform-admin/users').set(bearer(ownerA)).expect(401);
   });
 });
+
+describe('club activity feed', () => {
+  it('shows only activities shared with that club, and only to its members', async () => {
+    const { randomUUID } = await import('node:crypto');
+    const now = new Date();
+    const shared = await prisma.activity.create({
+      data: { userId: memberA.id, clientId: randomUUID(), type: 'WALK', status: 'COMPLETED', startedAt: now, endedAt: now, distanceM: 3200, movingSeconds: 2400, routePolyline: 'secret', clubShares: { create: { clubId: clubA.id } } },
+    });
+    const notShared = await prisma.activity.create({
+      data: { userId: memberA.id, clientId: randomUUID(), type: 'RUN', status: 'COMPLETED', startedAt: now, endedAt: now, distanceM: 5000, movingSeconds: 1500 },
+    });
+    const res = await api().get(`/api/v1/clubs/${clubA.id}/activities`).set(bearer(adminA)).expect(200);
+    const ids = res.body.data.map((a: { id: string }) => a.id);
+    expect(ids).toContain(shared.id);
+    expect(ids).not.toContain(notShared.id);
+    expect(JSON.stringify(res.body)).not.toContain('secret');
+    expect(res.body.meta.lastSevenDays.activities).toBeGreaterThanOrEqual(1);
+
+    await api().get(`/api/v1/clubs/${clubA.id}/activities`).set(bearer(memberB)).expect((r) => expect([403, 404]).toContain(r.status));
+    await api().get(`/api/v1/clubs/${clubB.id}/activities`).set(bearer(adminA)).expect((r) => expect([403, 404]).toContain(r.status));
+  });
+});

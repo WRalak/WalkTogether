@@ -33,7 +33,7 @@ docker build -f infrastructure/docker/server.Dockerfile -t walktogether-api .
 ```
 
 ```bash
-docker build -f infrastructure/docker/next-app.Dockerfile --build-arg APP=web --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app --build-arg NEXT_PUBLIC_SITE_URL=https://walktogether.app --build-arg NEXT_PUBLIC_CLUB_ADMIN_URL=https://clubs.walktogether.app -t walktogether-web .
+docker build -f infrastructure/docker/next-app.Dockerfile --build-arg APP=website --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app --build-arg NEXT_PUBLIC_SITE_URL=https://walktogether.app --build-arg NEXT_PUBLIC_CLUB_ADMIN_URL=https://clubs.walktogether.app -t walktogether-website .
 ```
 
 Repeat with `APP=club-admin` and `APP=platform-admin`. The API image runs `node dist/main.js` by

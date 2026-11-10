@@ -26,7 +26,16 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   poweredByHeader: false,
-  transpilePackages: ['@walktogether/ui', '@walktogether/api-client', '@walktogether/shared-types', '@walktogether/validation'],
+  transpilePackages: ['@walktogether/ui', '@walktogether/api-client', '@walktogether/shared-types', '@walktogether/validation', '@walktogether/shared-utils'],
+  // Pre-restructure URLs map onto /dashboard/<section>.
+  async redirects() {
+    const moved = { revenue: 'analytics', billing: 'subscriptions', sponsorships: 'sponsors' };
+    const same = ['users', 'clubs', 'challenges', 'moderation', 'audit-logs', 'security', 'system', 'settings', 'admins'];
+    return [
+      ...Object.entries(moved).map(([from, to]) => ({ source: `/${from}`, destination: `/dashboard/${to}`, permanent: true })),
+      ...same.map((s) => ({ source: `/${s}/:path*`, destination: `/dashboard/${s}/:path*`, permanent: true })),
+    ];
+  },
   async headers() {
     return [{ source: '/:path*', headers: [...securityHeaders, { key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }];
   },

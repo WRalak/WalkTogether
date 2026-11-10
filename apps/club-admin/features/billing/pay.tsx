@@ -1,11 +1,12 @@
 'use client';
+import { formatMoney } from '@walktogether/shared-utils';
 import { useEffect, useState } from 'react';
 import type { CheckoutResultDto } from '@walktogether/api-client';
 import { Alert, Button, Field, Input, Select } from '@walktogether/ui';
 import { api } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
 
-export const money = (minor: number, currency: string) => `${currency} ${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export const money = (minor: number, currency: string) => formatMoney(minor, currency, { decimals: true });
 
 /**
  * Payment UX: M-Pesa sends an STK push to the phone; Stripe redirects to hosted checkout.

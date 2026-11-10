@@ -21,11 +21,11 @@ physical devices, live provider credentials or third parties is done; those item
 
 **Backend (`server/`)** — Express 5 modular monolith, Prisma/PostgreSQL+PostGIS, Redis, BullMQ worker,
 Socket.IO. Modules: auth, users, clubs, memberships, announcements, subscriptions/entitlements,
-activities/GPS, events, social (follows, posts, comments, feed), media, messaging, moderation,
+activities, gps (point storage, validation, partitions), events, social (follows, posts, comments, feed), media, messaging, moderation,
 challenges/leaderboards/achievements, payments, sponsorships, administration, notifications, audit.
 11 migrations (`init` … `phase9_daily_steps`), no schema drift.
 
-**Shared packages** — `shared-types`, `validation` (Zod), `api-client`, `gps` (filtering, statistics,
+**Shared packages** — `shared-types`, `validation` (Zod), `api-client`, `shared-utils` (formatting/labels), `gps` (filtering, statistics,
 `TrackingEngine`, polyline, privacy trimming), `ui`, `configuration`.
 
 **Mobile (`apps/mobile`)** — auth (email, phone OTP), Record (background location task with
@@ -35,30 +35,31 @@ events with RSVP + QR scanner check-in, community feed (photos and video posters
 messaging, user profiles/follows, notifications + push registration, challenges & leaderboards,
 achievements, step counts from Health Connect/HealthKit, Premium subscription (M-Pesa/card), privacy & security settings.
 
-**Club admin (`apps/club-admin`)** — members, invitations, roles & ownership transfer,
+**Club admin (`apps/club-admin`, `/dashboard/<section>?club=<id>`)** — overview, shared member activities, attendance reports, members, invitations, roles & ownership transfer,
 announcements, events + live QR + attendance + CSV, challenges, analytics & reports, community
 moderation, sponsorship offers, billing (plans, checkout, invoices), settings with logo/cover upload,
 and a sponsor portal (apply, campaigns, pay, reports).
 
-**Platform admin (`apps/platform-admin`)** — MFA sign-in, overview KPIs (incl. MRR/ARR,
+**Platform admin (`apps/platform-admin`, `/dashboard/<section>`)** — MFA sign-in, subscriptions list and plan grants, payments & refunds, sponsors, campaigns, overview KPIs (incl. MRR/ARR,
 sponsorship revenue), revenue, users (detail + history), clubs, plans/promotions/payments/refunds,
 sponsors & campaigns (review, reports, rewards), challenges & achievement rules, moderation queue,
 audit log, security monitoring, system health, settings/flags, administrators.
 
-**Public web (`apps/web`)** — marketing pages, club discovery/SEO pages, live pricing from the plans
+**Public website (`apps/website`)** — marketing pages, club discovery/SEO pages, public events with schema.org markup, live pricing from the plans
 API, sponsor portal entry, email-link pages.
 
 ## Tests (all passing)
 
 | Suite | Tests |
 | --- | --- |
-| Server integration/unit (16 files: auth, users, clubs, tenant isolation, security, phase 2, activities, events, social/media/video/messaging, challenges, payments/sponsorships, M-Pesa (mocked Daraja), platform admin, admin, journey, unit) | 153 |
+| Server integration/unit (16 files: auth, users, clubs, tenant isolation, security, phase 2, activities, events, social/media/video/messaging, challenges, payments/sponsorships, M-Pesa (mocked Daraja), platform admin, admin, journey, unit) | 155 |
 | `packages/gps` | 8 |
 | `packages/validation` | 6 |
 | `packages/api-client` | 4 |
-| Web apps (web, club-admin, platform-admin) | 5 |
+| `packages/shared-utils` | 4 |
+| Web apps (website, club-admin, platform-admin) | 5 |
 | Mobile (Jest: schemas, token store, tracking session, offline sync, QR parsing, component) | 9 |
-| **Total** | **185** |
+| **Total** | **191** |
 
 Also verified: workspace typecheck; GitHub Actions CI (typecheck, unit, integration against
 PostGIS/Redis service containers, migration drift check, production builds of all Next.js apps,

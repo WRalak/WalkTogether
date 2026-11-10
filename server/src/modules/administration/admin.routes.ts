@@ -164,6 +164,26 @@ adminRouter.post('/plans', requireAdminPermission('plans.manage'), async (req, r
 adminRouter.patch('/plans/:id', requireAdminPermission('plans.manage'), async (req, res) => {
   res.json({ data: await subs.adminUpsertPlan(req.admin!.adminId, parse(idParam, req.params).id, parse(updatePlanSchema, req.body), auditCtx(req)) });
 });
+adminRouter.get('/subscriptions', requireAdminPermission('billing.view'), async (req, res) => {
+  const q = parse(
+    z.object({
+      status: z.enum(['TRIALING', 'ACTIVE', 'PAST_DUE', 'GRACE', 'CANCELED', 'EXPIRED']).optional(),
+      audience: z.enum(['CLUB', 'INDIVIDUAL']).optional(),
+    }),
+    req.query,
+  );
+  const rows = await prisma.subscription.findMany({
+    where: { ...(q.status ? { status: q.status } : {}), ...(q.audience ? { plan: { audience: q.audience } } : {}) },
+    orderBy: { createdAt: 'desc' },
+    take: 200,
+    include: {
+      plan: { select: { code: true, name: true, audience: true, currency: true, amountMinor: true, interval: true } },
+      club: { select: { id: true, name: true, slug: true } },
+      user: { select: { id: true, username: true } },
+    },
+  });
+  res.json({ data: rows });
+});
 adminRouter.post('/subscriptions/grant', requireAdminPermission('plans.manage'), async (req, res) => {
   const body = parse(z.object({ planId: z.string().uuid(), clubId: z.string().uuid().optional(), userId: z.string().uuid().optional() }).strict().refine((b) => !!b.clubId !== !!b.userId, 'Provide exactly one of clubId or userId'), req.body);
   const plan = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { id: body.planId } });

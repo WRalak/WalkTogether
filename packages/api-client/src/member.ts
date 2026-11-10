@@ -5,6 +5,19 @@ import { HttpClient, type HttpClientOptions } from './http';
 
 type In<S extends z.ZodTypeAny> = z.input<S>;
 
+export interface ClubActivityDto {
+  id: string;
+  type: 'WALK' | 'RUN' | 'HIKE';
+  title: string | null;
+  startedAt: string;
+  sharedAt: string;
+  distanceM: number;
+  movingSeconds: number;
+  avgPaceSecPerKm: number | null;
+  flagged: boolean;
+  athlete: { id: string; username: string; displayName: string; avatarUrl: string | null };
+}
+
 export interface MyClub {
   id: string;
   slug: string;
@@ -456,7 +469,13 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
     reports: {
       overview: (clubId: string) => http.request<ClubOverviewDto>(`/api/v1/clubs/${clubId}/analytics`),
       growth: (clubId: string) => http.request<ClubGrowthDto>(`/api/v1/clubs/${clubId}/analytics/growth`),
-      attendance: (clubId: string) => http.request<{ id: string; title: string; startsAt: string; status: string; going: number; capacity: number | null; attended: number; rate: number | null }[]>(`/api/v1/clubs/${clubId}/reports/attendance`),
+      attendance: (clubId: string, range: { from?: string; to?: string } = {}) =>
+        http.request<{ id: string; title: string; startsAt: string; status: string; going: number; capacity: number | null; attended: number; rate: number | null }[]>(`/api/v1/clubs/${clubId}/reports/attendance`, { query: range }),
+      /** Activities members chose to share with the club (summary only, never routes). */
+      activities: async (clubId: string, cursor?: string) => {
+        const page = await http.page<ClubActivityDto>(`/api/v1/clubs/${clubId}/activities`, { query: { cursor } });
+        return page as typeof page & { meta: typeof page.meta & { lastSevenDays?: { activities: number; distanceM: number; movingSeconds: number } } };
+      },
       membersCsv: (clubId: string) => http.text(`/api/v1/clubs/${clubId}/reports/members.csv`),
     },
     social: {

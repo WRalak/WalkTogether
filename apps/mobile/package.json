@@ -21,6 +21,7 @@
     "@walktogether/api-client": "workspace:*",
     "@walktogether/gps": "workspace:*",
     "@walktogether/shared-types": "workspace:*",
+    "@walktogether/shared-utils": "workspace:*",
     "@walktogether/validation": "workspace:*",
     "expo": "54.0.38",
     "expo-application": "~7.0.8",

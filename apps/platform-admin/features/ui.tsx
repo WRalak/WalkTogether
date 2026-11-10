@@ -3,8 +3,7 @@ import { useState } from 'react';
 import { Alert, Badge, Button, Card, CardContent, Spinner, Table, Td, Th } from '@walktogether/ui';
 import { errorMessage } from '@/lib/errors';
 
-export const money = (minor: number, currency: string) => `${currency} ${(minor / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-export const fmtMoneyMap = (m: Record<string, number> | undefined) => (m && Object.keys(m).length ? Object.entries(m).map(([c, v]) => money(v, c)).join(' · ') : '—');
+export { formatMoney as money, formatMoneyMap as fmtMoneyMap } from '@walktogether/shared-utils';
 
 export function Section({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (

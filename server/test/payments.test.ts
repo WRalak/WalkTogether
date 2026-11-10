@@ -98,6 +98,19 @@ describe('subscription checkout', () => {
     await checkout(await registerUser(), { planId: plan.id, provider: 'sandbox', promotionCode: free }).expect(400); // exhausted
   });
 
+  it('platform admins list subscriptions; members cannot', async () => {
+    const admin = await createAdmin('FINANCE');
+    const A = { Authorization: `Bearer ${admin.accessToken}` };
+    const u = await registerUser();
+    const plan = await paidPlan('INDIVIDUAL', { 'user.advanced_analytics': true }, 100000);
+    const code = `FREE${uid().toUpperCase()}`;
+    await api().put(`/api/v1/platform-admin/promotions/${code}`).set(A).send({ percentOff: 100 }).expect(200);
+    await checkout(u, { planId: plan.id, provider: 'sandbox', promotionCode: code }).expect(202);
+    const res = await api().get('/api/v1/platform-admin/subscriptions').query({ audience: 'INDIVIDUAL', status: 'ACTIVE' }).set(A).expect(200);
+    expect(res.body.data.some((s: { user: { id: string } | null; plan: { code: string } }) => s.user?.id === u.id && s.plan.code === plan.code)).toBe(true);
+    await api().get('/api/v1/platform-admin/subscriptions').set(bearer(u)).expect(401);
+  });
+
   it('admins can refund; revenue analytics reflect verified payments', async () => {
     const admin = await createAdmin();
     const u = await registerUser();

@@ -31,8 +31,10 @@ jobs:
       - name: Package & web unit tests
         run: |
           pnpm --filter @walktogether/validation test
+          pnpm --filter @walktogether/shared-utils test
+          pnpm --filter @walktogether/gps test
           pnpm --filter @walktogether/api-client test
-          pnpm --filter @walktogether/web test
+          pnpm --filter @walktogether/website test
           pnpm --filter @walktogether/club-admin test
           pnpm --filter @walktogether/platform-admin test
       - name: Mobile tests
@@ -86,7 +88,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @walktogether/server exec prisma generate
       - run: pnpm --filter @walktogether/server build
-      - run: pnpm --filter @walktogether/web build
+      - run: pnpm --filter @walktogether/website build
       - run: pnpm --filter @walktogether/club-admin build
       - run: pnpm --filter @walktogether/platform-admin build
       - name: Mobile JS bundle compiles (Android)
@@ -118,7 +120,7 @@ jobs:
       matrix:
         include:
           - { name: api, file: infrastructure/docker/server.Dockerfile, args: '' }
-          - { name: web, file: infrastructure/docker/next-app.Dockerfile, args: 'APP=web' }
+          - { name: website, file: infrastructure/docker/next-app.Dockerfile, args: 'APP=website' }
           - { name: club-admin, file: infrastructure/docker/next-app.Dockerfile, args: 'APP=club-admin' }
           - { name: platform-admin, file: infrastructure/docker/next-app.Dockerfile, args: 'APP=platform-admin' }
     steps:

@@ -15,7 +15,7 @@ export const loginFormSchema = z.object({ email: emailSchema, password: z.string
 
 /** Only allow same-app relative redirects (prevents open redirects via ?next=). */
 export function safeNext(next: string | null) {
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/clubs';
+  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
 }
 
 export function LoginForm() {

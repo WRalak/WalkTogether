@@ -1,5 +1,6 @@
 import { prisma } from '../../database/prisma';
 import { toCsv } from '../events/events.service';
+import { decodeCursor, encodeCursor } from '../../shared/pagination';
 import { requireClubPermission } from './club-access';
 import { requireFeature, resolveEntitlements } from '../subscriptions/entitlements.service';
 
@@ -77,4 +78,54 @@ export async function attendanceReport(clubId: string, actorId: string, from?: D
     select: { id: true, title: true, startsAt: true, status: true, goingCount: true, maxParticipants: true, _count: { select: { attendance: true } } },
   });
   return events.map((e) => ({ id: e.id, title: e.title, startsAt: e.startsAt, status: e.status, going: e.goingCount, capacity: e.maxParticipants, attended: e._count.attendance, rate: e.goingCount ? Math.round((e._count.attendance / e.goingCount) * 100) : null }));
+}
+
+/**
+ * Activities members explicitly shared with this club (newest first). Summary fields only — routes are
+ * never exposed here, and activities flagged by GPS validation are marked so admins can review them.
+ */
+export async function clubActivities(clubId: string, actorId: string, q: { cursor?: string; limit: number }) {
+  await requireClubPermission(clubId, actorId, 'members.view', { allowInactiveClub: true });
+  const cursor = decodeCursor(q.cursor);
+  const shares = await prisma.activityClubShare.findMany({
+    where: {
+      clubId,
+      activity: { status: 'COMPLETED' },
+      ...(cursor ? { OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, activityId: { lt: cursor.id } }] } : {}),
+    },
+    orderBy: [{ createdAt: 'desc' }, { activityId: 'desc' }],
+    take: q.limit + 1,
+    include: {
+      activity: {
+        select: {
+          id: true, type: true, title: true, startedAt: true, distanceM: true, movingSeconds: true, avgPaceSecPerKm: true, flagged: true,
+          user: { select: { id: true, username: true, profile: { select: { displayName: true, avatarUrl: true } } } },
+        },
+      },
+    },
+  });
+  const page = shares.slice(0, q.limit);
+  const last = page.at(-1);
+  const since = new Date(Date.now() - 7 * DAY);
+  const week = await prisma.activity.aggregate({
+    where: { status: 'COMPLETED', startedAt: { gte: since }, clubShares: { some: { clubId } } },
+    _sum: { distanceM: true, movingSeconds: true },
+    _count: true,
+  });
+  return {
+    items: page.map(({ activity: a, createdAt }) => ({
+      id: a.id,
+      type: a.type,
+      title: a.title,
+      startedAt: a.startedAt,
+      sharedAt: createdAt,
+      distanceM: a.distanceM,
+      movingSeconds: a.movingSeconds,
+      avgPaceSecPerKm: a.avgPaceSecPerKm,
+      flagged: a.flagged,
+      athlete: { id: a.user.id, username: a.user.username, displayName: a.user.profile?.displayName ?? a.user.username, avatarUrl: a.user.profile?.avatarUrl ?? null },
+    })),
+    nextCursor: shares.length > q.limit && last ? encodeCursor({ createdAt: last.createdAt, id: last.activity.id }) : null,
+    lastSevenDays: { activities: week._count, distanceM: week._sum.distanceM ?? 0, movingSeconds: week._sum.movingSeconds ?? 0 },
+  };
 }

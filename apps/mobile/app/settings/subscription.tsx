@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatMoney } from '@walktogether/shared-utils';
 import { Linking, Text, View } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -10,7 +11,7 @@ import { api } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 import { errorMessage } from '@/utils/errors';
 
-const money = (m: number, c: string) => `${c} ${(m / 100).toLocaleString()}`;
+const money = (m: number, c: string) => formatMoney(m, c);
 
 export default function Subscription() {
   const qc = useQueryClient();

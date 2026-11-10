@@ -67,7 +67,7 @@ export function AdminLogin() {
         void run(async () => {
           await adminApi.auth.verifyMfa(step.mfaToken, code.trim());
           await reload();
-          router.replace('/');
+          router.replace('/dashboard/overview');
         });
       }}
     >

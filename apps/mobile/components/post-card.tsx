@@ -1,3 +1,4 @@
+import { timeAgo } from '@walktogether/shared-utils';
 import { Image, Linking, Pressable, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import type { PostDto } from '@walktogether/api-client';
@@ -5,13 +6,7 @@ import { initials } from '@/utils/format';
 import { formatDuration, formatPace, km, typeLabel } from '@/utils/units';
 import { Avatar } from './ui';
 
-export function timeAgo(iso: string) {
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  return new Date(iso).toLocaleDateString();
-}
+export { timeAgo };
 
 export function PostCard({ post, onLike }: { post: PostDto; onLike: (p: PostDto) => void }) {
   const img = post.media.find((m) => m.kind === 'IMAGE');

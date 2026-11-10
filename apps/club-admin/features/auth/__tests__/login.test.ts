@@ -4,10 +4,10 @@ import { clubFormSchema, toClubPayload } from '../../clubs/club-form';
 
 describe('club admin forms', () => {
   it('prevents open redirects through ?next=', () => {
-    expect(safeNext('/clubs/abc')).toBe('/clubs/abc');
-    expect(safeNext('//evil.example')).toBe('/clubs');
-    expect(safeNext('https://evil.example')).toBe('/clubs');
-    expect(safeNext(null)).toBe('/clubs');
+    expect(safeNext('/dashboard/members?club=abc')).toBe('/dashboard/members?club=abc');
+    expect(safeNext('//evil.example')).toBe('/dashboard');
+    expect(safeNext('https://evil.example')).toBe('/dashboard');
+    expect(safeNext(null)).toBe('/dashboard');
   });
 
   it('validates login input', () => {

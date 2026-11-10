@@ -167,7 +167,7 @@ describe('stats, goals and premium features', () => {
 
 describe('GPS storage partitioning', () => {
   it('stores points in monthly partitions and prunes by time', async () => {
-    const { ensureGpsPartitions } = await import('../src/modules/activities/partitions');
+    const { ensureGpsPartitions } = await import('../src/modules/gps/partitions');
     expect((await ensureGpsPartitions()).created).toBeGreaterThanOrEqual(0);
     const u = await registerUser();
     const r = await record(u, walk(20));

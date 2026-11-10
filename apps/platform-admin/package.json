@@ -12,11 +12,12 @@
   },
   "dependencies": {
     "@hookform/resolvers": "5.2.2",
+    "@tanstack/react-query": "5.90.21",
     "@walktogether/api-client": "workspace:*",
     "@walktogether/shared-types": "workspace:*",
+    "@walktogether/shared-utils": "workspace:*",
     "@walktogether/ui": "workspace:*",
     "@walktogether/validation": "workspace:*",
-    "@tanstack/react-query": "5.90.21",
     "next": "15.5.29",
     "qrcode.react": "4.2.0",
     "react": "19.1.0",

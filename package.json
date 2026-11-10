@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev:server": "pnpm --filter @walktogether/server dev",
-    "dev:web": "pnpm --filter @walktogether/web dev",
+    "dev:website": "pnpm --filter @walktogether/website dev",
     "dev:club-admin": "pnpm --filter @walktogether/club-admin dev",
     "dev:platform-admin": "pnpm --filter @walktogether/platform-admin dev",
     "dev:mobile": "pnpm --filter @walktogether/mobile start",

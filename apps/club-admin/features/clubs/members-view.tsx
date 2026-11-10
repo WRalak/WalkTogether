@@ -6,7 +6,7 @@ import type { ClubMember } from '@walktogether/api-client';
 import { Alert, Badge, Button, cn, EmptyState, Input, Select, Spinner, Table, Td, Th } from '@walktogether/ui';
 import { api } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
-import { useClub } from './use-club';
+import { dashboardHref, useClub } from './use-club';
 
 type Status = 'ACTIVE' | 'PENDING' | 'SUSPENDED';
 
@@ -97,7 +97,7 @@ export function MembersView() {
               key={t.key}
               role="tab"
               aria-selected={status === t.key}
-              onClick={() => router.replace(`/clubs/${clubId}/members?status=${t.key}`)}
+              onClick={() => router.replace(dashboardHref(clubId, '/members', { status: t.key }))}
               className={cn('-mb-px border-b-2 px-3 py-2 text-sm font-medium', status === t.key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}
             >
               {t.label}

@@ -122,6 +122,21 @@ export function createAdminApi(options: Omit<HttpClientOptions, 'refreshPath'>) 
       update: (id: string, body: Json) => http.request<Json>(`/api/v1/platform-admin/plans/${id}`, { method: 'PATCH', body }),
       grant: (body: { planId: string; clubId?: string; userId?: string }) => http.request<Json>('/api/v1/platform-admin/subscriptions/grant', { method: 'POST', body }),
     },
+    subscriptions: {
+      list: (query: { status?: string; audience?: 'CLUB' | 'INDIVIDUAL' } = {}) =>
+        http.request<
+          {
+            id: string;
+            status: string;
+            currentPeriodEnd: string;
+            cancelAtPeriodEnd: boolean;
+            createdAt: string;
+            plan: { code: string; name: string; audience: string; currency: string; amountMinor: number; interval: string };
+            club: { id: string; name: string; slug: string } | null;
+            user: { id: string; username: string } | null;
+          }[]
+        >('/api/v1/platform-admin/subscriptions', { query }),
+    },
     promotions: {
       list: () => http.request<Json[]>('/api/v1/platform-admin/promotions'),
       save: (code: string, body: Json) => http.request<Json>(`/api/v1/platform-admin/promotions/${encodeURIComponent(code)}`, { method: 'PUT', body }),

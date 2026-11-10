@@ -1,13 +1,12 @@
 import { Prisma, type ActivityType } from '@prisma/client';
-import { computeStats, decodePolyline, encodePolyline, privateDisplayRoute, simplify, type RawPoint } from '@walktogether/gps';
+import { decodePolyline, encodePolyline, privateDisplayRoute } from '@walktogether/gps';
 import { prisma } from '../../database/prisma';
 import { enqueue } from '../../queues';
 import { badRequest, conflict, forbidden, notFound } from '../../shared/errors';
 import { decodeCursor, encodeCursor } from '../../shared/pagination';
 import { logger } from '../../shared/logger';
+import { analyseActivity, ingestPoints, storeRoute, type IncomingPoint } from '../gps/gps.service';
 import { canViewActivity } from './visibility';
-
-const MAX_POINTS_PER_ACTIVITY = 50_000;
 
 type Vis = 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE';
 
@@ -29,20 +28,10 @@ async function ownActivity(userId: string, id: string) {
   return a;
 }
 
-export async function addPoints(userId: string, id: string, points: { seq: number; segment: number; t: number; lat: number; lng: number; accuracy?: number | null; altitude?: number | null; altitudeAccuracy?: number | null; speed?: number | null }[]) {
+export async function addPoints(userId: string, id: string, points: IncomingPoint[]) {
   const a = await ownActivity(userId, id);
   if (a.status !== 'RECORDING') throw conflict('Activity is already completed', 'ACTIVITY_CLOSED');
-  if (a.pointCount + points.length > MAX_POINTS_PER_ACTIVITY) throw badRequest('Too many points for one activity');
-  const minT = a.startedAt.getTime() - 10 * 60_000;
-  const maxT = Date.now() + 2 * 60_000;
-  const valid = points.filter((p) => p.t >= minT && p.t <= maxT);
-  // Duplicate seq from retries are ignored (ON CONFLICT DO NOTHING).
-  const res = await prisma.activityGpsPoint.createMany({
-    data: valid.map((p) => ({ activityId: id, seq: p.seq, segment: p.segment, recordedAt: new Date(p.t), lat: p.lat, lng: p.lng, accuracyM: p.accuracy ?? null, altitudeM: p.altitude ?? null, altitudeAccuracyM: p.altitudeAccuracy ?? null, speedMps: p.speed ?? null })),
-    skipDuplicates: true,
-  });
-  if (res.count) await prisma.activity.update({ where: { id }, data: { pointCount: { increment: res.count } } });
-  return { accepted: res.count, ignored: points.length - res.count };
+  return ingestPoints(a, points);
 }
 
 async function assertShareableClubs(userId: string, clubIds: string[]) {
@@ -62,29 +51,8 @@ export async function completeActivity(
   if (a.status !== 'RECORDING') throw conflict('Activity was discarded', 'ACTIVITY_CLOSED');
   if (input.clubIds) await assertShareableClubs(userId, input.clubIds);
 
-  const rows = await prisma.activityGpsPoint.findMany({ where: { activityId: id }, orderBy: { seq: 'asc' } });
-  const bySegment = new Map<number, RawPoint[]>();
-  for (const r of rows) {
-    const list = bySegment.get(r.segment) ?? [];
-    list.push({ lat: r.lat, lng: r.lng, t: r.recordedAt.getTime(), accuracy: r.accuracyM, altitude: r.altitudeM, altitudeAccuracy: r.altitudeAccuracyM, speed: r.speedMps });
-    bySegment.set(r.segment, list);
-  }
-  const segments = [...bySegment.entries()].sort((x, y) => x[0] - y[0]).map(([, points]) => ({ points }));
-  const profile = await prisma.userProfile.findUnique({ where: { userId }, select: { weightKg: true } });
-  const stats = computeStats(segments, a.type, { weightKg: profile?.weightKg });
+  const { stats, flags, flagged, display, routePolyline } = await analyseActivity(a, input);
 
-  const flags: Record<string, unknown> = {};
-  const total = rows.length || 1;
-  if (stats.rejected.speed / total > 0.1) flags.impossibleSpeed = stats.rejected.speed;
-  if (input.mockLocationDetected) flags.mockLocation = true;
-  if (input.clientStats && Math.abs(input.clientStats.distanceM - stats.distanceM) > Math.max(200, stats.distanceM * 0.25)) {
-    flags.clientMismatch = { client: input.clientStats.distanceM, server: stats.distanceM };
-  }
-  if (stats.avgSpeedMps && stats.avgSpeedMps > (a.type === 'RUN' ? 7 : 3.5)) flags.unrealisticAverageSpeed = stats.avgSpeedMps;
-  const flagged = Object.keys(flags).length > 0;
-
-  const accepted = segments.flatMap((s) => s.points);
-  const display = simplify(accepted.map((p) => ({ lat: p.lat, lng: p.lng })), 4);
   await prisma.$transaction(async (tx) => {
     await tx.activity.update({
       where: { id },
@@ -102,17 +70,13 @@ export async function completeActivity(
         maxSpeedMps: stats.maxSpeedMps,
         elevationGainM: stats.elevationGainM,
         caloriesEstimate: stats.caloriesEstimate,
-        routePolyline: display.length >= 2 ? encodePolyline(display) : null,
+        routePolyline,
         flagged,
         flags: { ...flags, rejected: stats.rejected } as Prisma.InputJsonValue,
         clientStats: (input.clientStats ?? Prisma.DbNull) as Prisma.InputJsonValue,
       },
     });
-    if (display.length >= 2) {
-      // WKT built from validated numbers only, passed as a bound parameter.
-      const wkt = `LINESTRING(${display.map((p) => `${p.lng} ${p.lat}`).join(',')})`;
-      await tx.$executeRaw`UPDATE activities SET route = ST_GeogFromText(${wkt}) WHERE id = ${id}::uuid`;
-    }
+    await storeRoute(tx, id, display);
     if (input.clubIds?.length) await tx.activityClubShare.createMany({ data: input.clubIds.map((clubId) => ({ activityId: id, clubId })), skipDuplicates: true });
   });
   await enqueue('activity.completed', { activityId: id }).catch((err) => logger.error({ err }, 'failed to enqueue activity.completed'));

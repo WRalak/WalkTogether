@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 # Shared image definition for the three Next.js apps. Build from the repository root:
-#   docker build -f infrastructure/docker/next-app.Dockerfile --build-arg APP=web -t walktogether-web .
-#   APP = web | club-admin | platform-admin
+#   docker build -f infrastructure/docker/next-app.Dockerfile --build-arg APP=website -t walktogether-website .
+#   APP = website | club-admin | platform-admin
 FROM node:22-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NEXT_TELEMETRY_DISABLED=1
 RUN corepack enable

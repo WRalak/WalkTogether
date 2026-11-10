@@ -26,7 +26,20 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   poweredByHeader: false,
-  transpilePackages: ['@walktogether/ui', '@walktogether/api-client', '@walktogether/shared-types', '@walktogether/validation'],
+  transpilePackages: ['@walktogether/ui', '@walktogether/api-client', '@walktogether/shared-types', '@walktogether/validation', '@walktogether/shared-utils'],
+  // Old /clubs/... URLs (bookmarks, emails) map onto the /dashboard structure.
+  async redirects() {
+    const uuid = '[0-9a-fA-F-]{36}';
+    return [
+      { source: '/clubs', destination: '/dashboard', permanent: true },
+      { source: '/clubs/new', destination: '/dashboard/new', permanent: true },
+      { source: `/clubs/:clubId(${uuid})`, destination: '/dashboard/overview?club=:clubId', permanent: true },
+      { source: `/clubs/:clubId(${uuid})/billing`, destination: '/dashboard/subscription?club=:clubId', permanent: true },
+      { source: `/clubs/:clubId(${uuid})/invitations`, destination: '/dashboard/members/invitations?club=:clubId', permanent: true },
+      { source: `/clubs/:clubId(${uuid})/roles`, destination: '/dashboard/members/roles?club=:clubId', permanent: true },
+      { source: `/clubs/:clubId(${uuid})/:path*`, destination: '/dashboard/:path*?club=:clubId', permanent: true },
+    ];
+  },
   async headers() {
     return [{ source: '/:path*', headers: [...securityHeaders, { key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }];
   },

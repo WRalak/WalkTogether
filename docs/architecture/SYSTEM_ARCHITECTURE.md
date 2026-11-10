@@ -21,7 +21,7 @@ platform owner. The architecture optimises for:
   Android / iOS ───▶│  Mobile app (Expo/RN)    │──┐
                     └──────────────────────────┘  │  HTTPS (JSON, Bearer access token)
                     ┌──────────────────────────┐  │
-  Browsers ────────▶│  apps/web (Next.js)      │──┤  SSR fetches public endpoints only
+  Browsers ────────▶│  apps/website (Next.js)  │──┤  SSR fetches public endpoints only
                     │  apps/club-admin         │──┤  httpOnly refresh cookie + in-memory access token
                     │  apps/platform-admin     │──┤  separate admin identity + TOTP MFA
                     └──────────────────────────┘  ▼
@@ -55,27 +55,38 @@ platform owner. The architecture optimises for:
 ```
 apps/
   mobile/           Expo SDK 54, Expo Router, NativeWind, TanStack Query, Zustand, SecureStore
-  web/              Public marketing site + SEO club pages (Next.js 15 App Router)
-  club-admin/       Club administration dashboard (Next.js)
-  platform-admin/   Platform super-admin dashboard (Next.js), separate hostname
+                    app/(auth), app/(tabs)/{index,explore,record,community,profile}, clubs/, activities/,
+                    challenges/, events/, messages/, settings/ + components/ features/ hooks/ services/ store/ utils/
+  club-admin/       Club dashboard (Next.js): app/(auth)/{login,signup}, app/dashboard/{overview, members,
+                    events, activities, challenges, attendance, announcements, analytics, subscription,
+                    settings, moderation, sponsorships}. The managed club is selected by `?club=<id>`.
+  platform-admin/   Platform super-admin (Next.js), separate hostname: app/(auth)/login,
+                    app/dashboard/{overview, users, clubs, subscriptions, payments, sponsors, campaigns,
+                    challenges, moderation, analytics, audit-logs, settings, security, system, admins}
+  website/          Public site (Next.js): home, pricing, clubs, events, about, contact, legal pages
 server/
   prisma/           schema.prisma, SQL migrations, idempotent seed
   src/
     config/         zod-validated environment (refuses unsafe prod config)
     database/       Prisma + Redis clients
     middleware/     request context, auth, admin auth, validation, rate limits, errors
-    modules/        feature modules (routes → services → Prisma)
+    modules/        feature modules (routes → services → Prisma): auth, users, clubs, memberships,
+                    activities, gps, events, social, messaging, challenges, subscriptions, payments,
+                    sponsorships, notifications, administration (+ announcements, media, moderation,
+                    audit, platform, health)
     queues/         typed job catalogue, processors, BullMQ wiring
     shared/         crypto, password hashing, pagination, logger, errors
     app.ts          HTTP composition root; main.ts / worker.ts entry points
-  test/             integration + tenant-isolation suites (real Postgres + Redis)
+  test/             integration + tenant-isolation + security suites (real Postgres + Redis)
 packages/
   shared-types/     permission catalogues, enums, API envelope types
   validation/       Zod schemas shared by server and clients
   api-client/       typed fetch client (single-flight refresh, web/native token modes)
+  shared-utils/     framework-free helpers (money, distance, duration, pace, labels, relative time)
   ui/               shadcn-style React components for the web apps
+  gps/              GPS filtering, statistics, tracking engine, polyline, privacy trimming
   configuration/    shared Tailwind preset/tokens and tsconfig
-infrastructure/     Dockerfiles, Nginx, deployment notes
+infrastructure/     docker/, nginx/, deployment/ (backup + restore drill)
 docs/               this documentation
 ```
 

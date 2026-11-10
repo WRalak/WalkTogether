@@ -17,10 +17,10 @@ and keep ownership of their personal fitness data. The first pilot walking club 
 | --- | --- |
 | `server/` | Express 5 + TypeScript modular-monolith API, Prisma/PostgreSQL+PostGIS, Redis, BullMQ worker |
 | `apps/mobile/` | Expo SDK 54 / React Native member app (Expo Router, NativeWind, TanStack Query, Zustand) |
-| `apps/web/` | Public website and SEO club pages (Next.js 15) |
-| `apps/club-admin/` | Club administration dashboard (Next.js 15) |
-| `apps/platform-admin/` | Platform super-admin dashboard (Next.js 15), separate identity with mandatory MFA |
-| `packages/` | `shared-types`, `validation` (Zod), `api-client`, `ui`, `configuration` |
+| `apps/website/` | Public website and SEO club pages (Next.js 15) |
+| `apps/club-admin/` | Club dashboard (Next.js 15): `/dashboard/<section>?club=<id>` |
+| `apps/platform-admin/` | Platform super-admin (Next.js 15) at `/dashboard/<section>`, separate identity with mandatory MFA |
+| `packages/` | `shared-types`, `validation` (Zod), `api-client`, `shared-utils`, `ui`, `gps`, `configuration` |
 | `infrastructure/` | Dockerfiles, Nginx config, backup/restore scripts |
 | `loadtest/` | autocannon scenarios and baseline results |
 | `docs/` | Architecture, database, security, API, multi-tenancy, GPS, monetization, deployment |
@@ -71,7 +71,7 @@ In development, emails and SMS codes are printed to the API console.
 Web apps (copy each `apps/*/.env.example` to `.env.local` first if you need non-default URLs):
 
 ```bash
-pnpm dev:web
+pnpm dev:website
 ```
 
 ```bash
@@ -118,7 +118,7 @@ pnpm test
 pnpm typecheck
 ```
 
-185 automated tests. Highlights: authentication and session security, platform-admin MFA, an OWASP-oriented
+191 automated tests. Highlights: authentication and session security, platform-admin MFA, an OWASP-oriented
 **security suite** (`server/test/security.test.ts`), and a dedicated **tenant-isolation suite** (`server/test/tenant-isolation.test.ts`) proving users cannot read or modify
 other clubs' data.
 

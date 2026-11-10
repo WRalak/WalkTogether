@@ -8,7 +8,7 @@ export function TopBar() {
   return (
     <header className="border-b bg-background">
       <div className="flex h-14 items-center justify-between px-4 md:px-6">
-        <Link href="/clubs" className="flex items-center gap-2 font-extrabold">
+        <Link href="/dashboard" className="flex items-center gap-2 font-extrabold">
           <span aria-hidden className="grid h-7 w-7 place-items-center rounded-full bg-primary text-[10px] text-primary-foreground">WT</span>
           Clubs
         </Link>

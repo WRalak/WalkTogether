@@ -30,7 +30,7 @@ export function SignupForm() {
     try {
       await api.auth.register({ ...values, device: { platform: 'web', deviceName: 'Club dashboard' } });
       await refreshUser();
-      router.replace('/clubs/new');
+      router.replace('/dashboard/new');
     } catch (e) {
       setError(errorMessage(e));
     }
