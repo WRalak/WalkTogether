@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 160 25% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 160 25% 10%;
+    /* Forest green: primary brand colour */
+    --primary: 156 72% 28%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 150 25% 95%;
+    --secondary-foreground: 160 25% 15%;
+    /* Sunrise orange: accents and highlights */
+    --accent: 24 95% 53%;
+    --accent-foreground: 0 0% 100%;
+    --muted: 150 15% 96%;
+    --muted-foreground: 160 8% 38%;
+    --destructive: 0 72% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 70% 32%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 45%;
+    --warning-foreground: 0 0% 100%;
+    --border: 150 12% 88%;
+    --input: 150 12% 82%;
+    --ring: 156 72% 28%;
+    --radius: 0.75rem;
+  }
+  .dark {
+    --background: 160 25% 7%;
+    --foreground: 150 15% 94%;
+    --card: 160 22% 10%;
+    --card-foreground: 150 15% 94%;
+    --primary: 152 60% 45%;
+    --primary-foreground: 160 30% 8%;
+    --secondary: 160 15% 16%;
+    --secondary-foreground: 150 15% 94%;
+    --accent: 24 95% 58%;
+    --accent-foreground: 160 30% 8%;
+    --muted: 160 15% 14%;
+    --muted-foreground: 150 8% 65%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 60% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 10%;
+    --border: 160 15% 20%;
+    --input: 160 15% 24%;
+    --ring: 152 60% 45%;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      --background: 160 25% 7%;
+      --foreground: 150 15% 94%;
+      --card: 160 22% 10%;
+      --card-foreground: 150 15% 94%;
+      --primary: 152 60% 45%;
+      --primary-foreground: 160 30% 8%;
+      --secondary: 160 15% 16%;
+      --secondary-foreground: 150 15% 94%;
+      --muted: 160 15% 14%;
+      --muted-foreground: 150 8% 65%;
+      --border: 160 15% 20%;
+      --input: 160 15% 24%;
+    }
+  }
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
