@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { EventCard } from '@/components/event-card';
 import { ClubCard } from '@/components/club-card';
 import { EmptyState, ErrorState, Loading, TextField } from '@/components/ui';
 import { api } from '@/services/api';
@@ -17,6 +18,7 @@ export default function Explore() {
     getNextPageParam: (last) => last.meta.nextCursor ?? undefined,
   });
   const items = clubs.data?.pages.flatMap((p) => p.items) ?? [];
+  const events = useQuery({ queryKey: ['public-events'], queryFn: () => api.events.discover({ limit: 5 }) });
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-surface-muted">
@@ -35,6 +37,16 @@ export default function Explore() {
             <Text accessibilityRole="header" className="mb-4 text-3xl font-extrabold text-ink">
               Explore clubs
             </Text>
+            {!!events.data?.items.length && (
+              <View className="mb-4">
+                <Text accessibilityRole="header" className="mb-3 text-lg font-bold text-ink">
+                  Upcoming public events
+                </Text>
+                {events.data.items.map((e) => (
+                  <EventCard key={e.id} e={e} showClub />
+                ))}
+              </View>
+            )}
             <TextField label="Search clubs" placeholder="Club name" returnKeyType="search" value={q} onChangeText={setQ} onSubmitEditing={() => setSearch(q.trim())} />
           </View>
         }

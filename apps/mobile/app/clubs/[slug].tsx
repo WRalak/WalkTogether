@@ -7,6 +7,7 @@ import { Screen } from '@/components/screen';
 import { api } from '@/services/api';
 import { errorMessage } from '@/utils/errors';
 import { categoryLabel, initials } from '@/utils/format';
+import { EventCard } from '@/components/event-card';
 
 export default function ClubDetail() {
   const { slug, invite } = useLocalSearchParams<{ slug: string; invite?: string }>();
@@ -14,6 +15,7 @@ export default function ClubDetail() {
   const [code, setCode] = useState(invite ?? '');
   const [message, setMessage] = useState<string | null>(null);
   const club = useQuery({ queryKey: ['club', slug], queryFn: () => api.clubs.get(slug) });
+  const events = useQuery({ queryKey: ['club-events', club.data?.id], queryFn: () => api.events.ofClub(club.data!.id, { limit: 5 }), enabled: !!club.data });
 
   const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ['club', slug] }), qc.invalidateQueries({ queryKey: ['my-clubs'] })]);
   const join = useMutation({
@@ -110,6 +112,16 @@ export default function ClubDetail() {
         )}
       </View>
 
+      {!!events.data?.items.length && (
+        <View className="mt-5">
+          <Text accessibilityRole="header" className="mb-3 text-lg font-bold text-ink">
+            Upcoming events
+          </Text>
+          {events.data.items.map((e) => (
+            <EventCard key={e.id} e={e} />
+          ))}
+        </View>
+      )}
       <Card className="mt-5">
         <Text className="font-bold text-ink">About</Text>
         <Text className="mt-2 text-ink-muted">{c.description ?? 'This club hasn’t added a description yet.'}</Text>

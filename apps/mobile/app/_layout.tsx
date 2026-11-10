@@ -49,6 +49,9 @@ export default function RootLayout() {
           <Stack.Screen name="activities/index" options={{ headerShown: true, title: 'Your activities', headerTintColor: '#127a50' }} />
           <Stack.Screen name="activities/[id]" options={{ headerShown: true, title: 'Activity', headerTintColor: '#127a50' }} />
           <Stack.Screen name="activities/summary" options={{ headerShown: true, title: 'Save activity', headerTintColor: '#127a50', gestureEnabled: false }} />
+          <Stack.Screen name="events/[id]/index" options={{ headerShown: true, title: 'Event', headerTintColor: '#127a50' }} />
+          <Stack.Screen name="events/[id]/check-in" options={{ headerShown: true, title: 'Check in', headerTintColor: '#127a50' }} />
+          <Stack.Screen name="events/scan" options={{ headerShown: true, title: 'Scan QR code', headerTintColor: '#127a50' }} />
           <Stack.Screen name="settings/privacy" options={{ headerShown: true, title: 'Privacy', headerTintColor: '#127a50' }} />
           <Stack.Screen name="settings/security" options={{ headerShown: true, title: 'Security', headerTintColor: '#127a50' }} />
         </Stack>

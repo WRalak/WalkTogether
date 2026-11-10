@@ -34,6 +34,7 @@ for (const w of workers) {
 const maintenance = getQueue('maintenance');
 await maintenance.upsertJobScheduler('account-purge', { pattern: '17 3 * * *' }, { name: 'account.purge-due', data: {} });
 await maintenance.upsertJobScheduler('sessions-cleanup', { pattern: '47 2 * * *' }, { name: 'sessions.cleanup', data: {} });
+await maintenance.upsertJobScheduler('event-reminders', { pattern: '*/10 * * * *' }, { name: 'events.reminders', data: {} });
 await maintenance.upsertJobScheduler('subscriptions-lifecycle', { pattern: '7 * * * *' }, { name: 'subscriptions.lifecycle', data: {} });
 
 logger.info('WalkTogether worker started');

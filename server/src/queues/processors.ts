@@ -5,6 +5,7 @@ import { purgeDueAccounts } from '../modules/users/account-deletion';
 import { cleanupExpiredSessions } from '../modules/auth/session-maintenance';
 import { deliverPush } from '../modules/notifications/notifications.service';
 import { fanOutAnnouncement } from '../modules/announcements/announcements.service';
+import { sendEventReminders } from '../modules/events/events.service';
 import { runSubscriptionLifecycle } from '../modules/subscriptions/subscriptions.service';
 
 export const processors: { [K in JobName]: (data: JobMap[K]) => Promise<unknown> } = {
@@ -18,4 +19,5 @@ export const processors: { [K in JobName]: (data: JobMap[K]) => Promise<unknown>
   // Challenge progress and achievements hook in here (Phase 6).
   'activity.completed': async () => undefined,
   'activity.deleted': async () => undefined,
+  'events.reminders': () => sendEventReminders(),
 };

@@ -23,6 +23,7 @@
     "@walktogether/validation": "workspace:*",
     "expo": "54.0.38",
     "expo-application": "~7.0.8",
+    "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.14",
     "expo-crypto": "~15.0.9",
     "expo-device": "~8.0.10",

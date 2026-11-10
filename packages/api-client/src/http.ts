@@ -122,6 +122,14 @@ export class HttpClient {
     return this.parse<T>(res);
   }
 
+  /** Authenticated non-JSON download (CSV/GPX). */
+  async text(path: string, o: RequestOptions = {}): Promise<string> {
+    let res = await this.raw(path, o, await this.opts.tokens.getAccessToken());
+    if (res.status === 401 && (await this.refresh())) res = await this.raw(path, o, await this.opts.tokens.getAccessToken());
+    if (!res.ok) await this.parse(res);
+    return res.text();
+  }
+
   async page<T>(path: string, o: RequestOptions = {}): Promise<Page<T>> {
     const { data, meta } = await this.requestWithMeta<T[]>(path, o);
     return { items: data, meta: meta ?? { nextCursor: null, limit: data.length } };

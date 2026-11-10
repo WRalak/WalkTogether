@@ -103,6 +103,54 @@ export interface ActivityStatsDto {
   steps: null;
 }
 
+export interface EventDto {
+  id: string;
+  clubId: string;
+  seriesId: string | null;
+  title: string;
+  description: string | null;
+  type: string;
+  status: 'SCHEDULED' | 'CANCELLED';
+  visibility: 'PUBLIC' | 'MEMBERS';
+  startsAt: string;
+  endsAt: string;
+  timezone: string;
+  meetingPoint: string;
+  meetingLat: number | null;
+  meetingLng: number | null;
+  routeDescription: string | null;
+  distanceM: number | null;
+  difficulty: string;
+  maxParticipants: number | null;
+  goingCount: number;
+  cancelReason: string | null;
+  coverUrl: string | null;
+  club: { id: string; slug: string; name: string; logoUrl: string | null };
+  viewer?: { registration: string | null; checkedInAt: string | null; canManage: boolean; canManageAttendance: boolean };
+}
+
+export interface ParticipantsDto {
+  eventId: string;
+  going: number;
+  waitlisted: number;
+  attended: number;
+  rows: { user: { id: string; username: string; displayName: string }; registration: string | null; attendance: { method: string; checkedInAt: string; distanceFromMeetingM: number | null } | null }[];
+}
+
+export interface ClubOverviewDto {
+  members: { active: number; pending: number; new30d: number; engaged30d: number; engagementRate: number };
+  events: { upcoming30d: number; held30d: number; attendance30d: number; attendanceRate: number | null };
+  activities: { shared30d: number };
+  challenges: { participants30d: number };
+  plan: { name: string | null; status: string };
+}
+
+export interface ClubGrowthDto {
+  newMembers: { month: string; value: number }[];
+  attendance: { month: string; value: number }[];
+  topAttendees: { userId: string; username?: string; displayName?: string; events: number }[];
+}
+
 export interface Announcement {
   id: string;
   clubId: string;
@@ -206,6 +254,26 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
       createGoal: (body: In<typeof v.goalSchema>) => http.request<GoalDto>('/api/v1/activities/goals', { method: 'POST', body }),
       deleteGoal: (id: string) => http.request<void>(`/api/v1/activities/goals/${id}`, { method: 'DELETE' }),
       ofUser: (userId: string, query: { cursor?: string } = {}) => http.page<ActivityDto>(`/api/v1/users/${userId}/activities`, { query }),
+    },
+    events: {
+      discover: (query: { near?: string; radiusKm?: number; type?: string; cursor?: string; limit?: number } = {}) => http.page<EventDto>('/api/v1/events', { query, auth: false }),
+      ofClub: (clubId: string, query: { from?: string; to?: string; includeCancelled?: boolean; cursor?: string; limit?: number } = {}) => http.page<EventDto>(`/api/v1/clubs/${clubId}/events`, { query }),
+      create: (clubId: string, body: In<typeof v.createEventSchema>) => http.request<EventDto>(`/api/v1/clubs/${clubId}/events`, { method: 'POST', body }),
+      get: (id: string) => http.request<EventDto>(`/api/v1/events/${id}`),
+      update: (id: string, body: Record<string, unknown>) => http.request<EventDto>(`/api/v1/events/${id}`, { method: 'PATCH', body }),
+      cancel: (id: string, reason: string, applyToSeries = false) => http.request<void>(`/api/v1/events/${id}/cancel`, { method: 'POST', body: { reason, applyToSeries } }),
+      rsvp: (id: string, going: boolean) => http.request<{ status: string }>(`/api/v1/events/${id}/rsvp`, { method: 'POST', body: { going } }),
+      participants: (id: string) => http.request<ParticipantsDto>(`/api/v1/events/${id}/participants`),
+      checkInCode: (id: string) => http.request<{ code: string; expiresAt: string; deepLink: string }>(`/api/v1/events/${id}/check-in-code`),
+      checkIn: (id: string, body: In<typeof v.checkInSchema>) => http.request<{ checkedInAt: string; method: string; distanceFromMeetingM: number | null }>(`/api/v1/events/${id}/check-in`, { method: 'POST', body }),
+      markAttendance: (id: string, userId: string, present: boolean) => http.request<void>(`/api/v1/events/${id}/attendance`, { method: 'POST', body: { userId, present } }),
+      attendanceCsv: (id: string) => http.text(`/api/v1/events/${id}/attendance.csv`),
+    },
+    reports: {
+      overview: (clubId: string) => http.request<ClubOverviewDto>(`/api/v1/clubs/${clubId}/analytics`),
+      growth: (clubId: string) => http.request<ClubGrowthDto>(`/api/v1/clubs/${clubId}/analytics/growth`),
+      attendance: (clubId: string) => http.request<{ id: string; title: string; startsAt: string; status: string; going: number; capacity: number | null; attended: number; rate: number | null }[]>(`/api/v1/clubs/${clubId}/reports/attendance`),
+      membersCsv: (clubId: string) => http.text(`/api/v1/clubs/${clubId}/reports/members.csv`),
     },
     notifications: {
       list: (query: { cursor?: string; limit?: number } = {}) => http.requestWithMeta<AppNotification[]>('/api/v1/notifications', { query }),

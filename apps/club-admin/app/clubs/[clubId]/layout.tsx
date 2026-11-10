@@ -11,6 +11,8 @@ import { useClub } from '@/features/clubs/use-club';
 const NAV: { href: string; label: string; permission?: ClubPermissionKey }[] = [
   { href: '', label: 'Overview' },
   { href: '/members', label: 'Members', permission: 'members.view' },
+  { href: '/events', label: 'Events & attendance', permission: 'club.view_private' },
+  { href: '/analytics', label: 'Analytics & reports', permission: 'analytics.view' },
   { href: '/invitations', label: 'Invitations', permission: 'members.invite' },
   { href: '/roles', label: 'Roles', permission: 'roles.manage' },
   { href: '/announcements', label: 'Announcements', permission: 'club.view_private' },

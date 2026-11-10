@@ -158,6 +158,9 @@ model User {
   notifications        Notification[]
   activities           Activity[]
   goals                PersonalGoal[]
+  eventsCreated        Event[]                   @relation("EventCreator")
+  eventRegistrations   EventRegistration[]
+  eventAttendance      EventAttendance[]         @relation("Attendee")
   following            Follow[]                  @relation("Follower")
   followers            Follow[]                  @relation("Followee")
 
@@ -412,6 +415,7 @@ model Club {
   announcements  ClubAnnouncement[]
   subscriptions  Subscription[]
   activityShares ActivityClubShare[]
+  events         Event[]
 
   @@index([status, visibility])
   @@index([countryCode, category])
@@ -907,4 +911,132 @@ model Follow {
   @@id([followerId, followeeId])
   @@index([followeeId, status, createdAt])
   @@map("follows")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4: events & attendance
+// ---------------------------------------------------------------------------
+
+enum EventType {
+  WALK
+  RUN
+  HIKE
+  CHARITY_WALK
+  FITNESS
+  SOCIAL
+}
+
+enum EventStatus {
+  SCHEDULED
+  CANCELLED
+}
+
+enum EventVisibility {
+  PUBLIC
+  MEMBERS
+}
+
+enum Difficulty {
+  EASY
+  MODERATE
+  HARD
+}
+
+enum RegistrationStatus {
+  GOING
+  WAITLISTED
+  CANCELLED
+}
+
+enum AttendanceMethod {
+  QR
+  ORGANIZER
+}
+
+model Event {
+  id                   String                                 @id @default(uuid()) @db.Uuid
+  clubId               String                                 @map("club_id") @db.Uuid
+  createdById          String                                 @map("created_by_id") @db.Uuid
+  /// Occurrences of a recurring event share a series id.
+  seriesId             String?                                @map("series_id") @db.Uuid
+  title                String                                 @db.VarChar(120)
+  description          String?                                @db.VarChar(5000)
+  type                 EventType
+  status               EventStatus                            @default(SCHEDULED)
+  visibility           EventVisibility                        @default(MEMBERS)
+  startsAt             DateTime                               @map("starts_at")
+  endsAt               DateTime                               @map("ends_at")
+  timezone             String                                 @default("Africa/Nairobi") @db.VarChar(64)
+  meetingPoint         String                                 @map("meeting_point") @db.VarChar(200)
+  meetingLat           Float?                                 @map("meeting_lat")
+  meetingLng           Float?                                 @map("meeting_lng")
+  meetingLocation      Unsupported("geography(Point, 4326)")? @map("meeting_location")
+  routeDescription     String?                                @map("route_description") @db.VarChar(2000)
+  distanceM            Int?                                   @map("distance_m")
+  difficulty           Difficulty                             @default(EASY)
+  maxParticipants      Int?                                   @map("max_participants")
+  registrationClosesAt DateTime?                              @map("registration_closes_at")
+  coverUrl             String?                                @map("cover_url") @db.VarChar(500)
+  /// Secret for rotating QR check-in codes (never sent to members).
+  checkInSecret        String                                 @map("check_in_secret") @db.VarChar(64)
+  cancelReason         String?                                @map("cancel_reason") @db.VarChar(300)
+  goingCount           Int                                    @default(0) @map("going_count")
+  createdAt            DateTime                               @default(now()) @map("created_at")
+  updatedAt            DateTime                               @updatedAt @map("updated_at")
+
+  club          Club                @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  createdBy     User                @relation("EventCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  registrations EventRegistration[]
+  attendance    EventAttendance[]
+  reminders     EventReminder[]
+
+  @@index([clubId, startsAt])
+  @@index([status, visibility, startsAt])
+  @@index([seriesId, startsAt])
+  @@index([meetingLocation], map: "events_meeting_location_gist", type: Gist)
+  @@map("events")
+}
+
+model EventRegistration {
+  eventId   String             @map("event_id") @db.Uuid
+  userId    String             @map("user_id") @db.Uuid
+  status    RegistrationStatus
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, userId])
+  @@index([eventId, status, createdAt])
+  @@index([userId, status])
+  @@map("event_registrations")
+}
+
+/// Proximity to the meeting point is stored as a supporting signal only — never as proof.
+model EventAttendance {
+  eventId              String           @map("event_id") @db.Uuid
+  userId               String           @map("user_id") @db.Uuid
+  method               AttendanceMethod
+  checkedInAt          DateTime         @default(now()) @map("checked_in_at")
+  checkedInById        String?          @map("checked_in_by_id") @db.Uuid
+  distanceFromMeetingM Int?             @map("distance_from_meeting_m")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation("Attendee", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, userId])
+  @@index([userId, checkedInAt])
+  @@map("event_attendance")
+}
+
+model EventReminder {
+  eventId String   @map("event_id") @db.Uuid
+  kind    String   @db.VarChar(16)
+  sentAt  DateTime @default(now()) @map("sent_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, kind])
+  @@map("event_reminders")
 }

@@ -154,3 +154,34 @@ clubsRouter.delete('/:clubId/announcements/:announcementId', requireAuth, async 
   await announcements.deleteAnnouncement(clubId, announcementId, authUserId(req), auditCtx(req));
   res.status(204).end();
 });
+
+// Phase 4: events, analytics & reports ----------------------------------------------------------
+import { createEventSchema, listEventsQuerySchema } from '@walktogether/validation';
+import * as events from '../events/events.service';
+import * as analytics from './analytics.service';
+
+clubsRouter.post('/:clubId/events', requireAuth, async (req, res) => {
+  const { clubId } = parse(clubParam, req.params);
+  res.status(201).json({ data: await events.createEvent(clubId, authUserId(req), parse(createEventSchema, req.body), auditCtx(req)) });
+});
+clubsRouter.get('/:clubId/events', optionalAuth, async (req, res) => {
+  const { clubId } = parse(clubParam, req.params);
+  const { items, nextCursor } = await events.listClubEvents(clubId, req.auth?.userId, parse(listEventsQuerySchema, req.query));
+  res.json({ data: items, meta: { nextCursor, limit: items.length } });
+});
+clubsRouter.get('/:clubId/analytics', requireAuth, async (req, res) => {
+  res.json({ data: await analytics.clubOverview(parse(clubParam, req.params).clubId, authUserId(req)) });
+});
+clubsRouter.get('/:clubId/analytics/growth', requireAuth, async (req, res) => {
+  res.json({ data: await analytics.clubGrowth(parse(clubParam, req.params).clubId, authUserId(req)) });
+});
+clubsRouter.get('/:clubId/reports/attendance', requireAuth, async (req, res) => {
+  const { from, to } = parse(z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional() }), req.query);
+  res.json({ data: await analytics.attendanceReport(parse(clubParam, req.params).clubId, authUserId(req), from, to) });
+});
+clubsRouter.get('/:clubId/reports/members.csv', requireAuth, async (req, res) => {
+  const csv = await analytics.membersCsv(parse(clubParam, req.params).clubId, authUserId(req));
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="members.csv"');
+  res.send(csv);
+});

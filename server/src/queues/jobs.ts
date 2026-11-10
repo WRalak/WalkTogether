@@ -12,6 +12,7 @@ export interface JobMap {
   'subscriptions.lifecycle': Record<string, never>;
   'activity.completed': { activityId: string };
   'activity.deleted': { userId: string; activityId: string; type: string };
+  'events.reminders': Record<string, never>;
 }
 
 export type JobName = keyof JobMap;
@@ -27,4 +28,5 @@ export const JOB_QUEUES: Record<JobName, 'notifications' | 'maintenance' | 'acti
   'subscriptions.lifecycle': 'maintenance',
   'activity.completed': 'activity',
   'activity.deleted': 'activity',
+  'events.reminders': 'maintenance',
 };

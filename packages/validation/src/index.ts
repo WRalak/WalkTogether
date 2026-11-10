@@ -5,3 +5,4 @@ export * from './clubs';
 export * from './admin';
 export * from './phase2';
 export * from './activities';
+export * from './events';
