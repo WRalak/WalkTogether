@@ -5,6 +5,7 @@ import { badRequest, conflict, forbidden, notFound } from '../../shared/errors';
 import { decodeCursor, encodeCursor } from '../../shared/pagination';
 import { audit, type AuditContext } from '../audit/audit.service';
 import { canSeeClub, isSubset, loadClubAccess, requireClubPermission, type ClubAccess } from '../clubs/club-access';
+import { assertAdminSeatAvailable } from '../clubs/roles.service';
 
 // ---------------------------------------------------------------------------
 // Joining & leaving
@@ -245,6 +246,7 @@ export async function assignRole(clubId: string, membershipId: string, actorId: 
   if (!actor.role?.isOwner && !isSubset(role.permissions.map((p) => p.permissionKey), actor.permissions)) {
     throw forbidden('You cannot assign a role with more permissions than your own', 'PRIVILEGE_ESCALATION');
   }
+  await assertAdminSeatAvailable(clubId, role.permissions.map((p) => p.permissionKey), target.role.permissions.map((p) => p.permissionKey));
   await prisma.$transaction(async (tx) => {
     await tx.clubMembership.update({ where: { id: target.id }, data: { roleId: role.id } });
     await audit({ actorType: 'USER', actorId, action: 'membership.role_assigned', targetType: 'membership', targetId: target.id, clubId, metadata: { userId: target.userId, from: target.roleId, to: role.id } }, ctx, tx);
@@ -306,6 +308,7 @@ export async function createInvitation(
       throw forbidden('You cannot invite people into a role with more permissions than your own', 'PRIVILEGE_ESCALATION');
     }
     if (!actor.permissions.has('members.roles.assign')) throw forbidden('You cannot invite people into a specific role');
+    await assertAdminSeatAvailable(clubId, role.permissions.map((p) => p.permissionKey));
   }
 
   const code = randomToken(12);

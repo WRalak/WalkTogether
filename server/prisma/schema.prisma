@@ -153,6 +153,9 @@ model User {
   memberships          ClubMembership[]          @relation("MembershipUser")
   reviewedMemberships  ClubMembership[]          @relation("MembershipReviewer")
   createdInvitations   ClubInvitation[]
+  announcements        ClubAnnouncement[]
+  subscriptions        Subscription[]            @relation("UserSubscriptions")
+  notifications        Notification[]
 
   @@index([status])
   @@index([createdAt])
@@ -395,11 +398,13 @@ model Club {
   updatedAt        DateTime                               @updatedAt @map("updated_at")
   deletedAt        DateTime?                              @map("deleted_at")
 
-  owner       User             @relation("ClubOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  settings    ClubSettings?
-  roles       ClubRole[]
-  memberships ClubMembership[]
-  invitations ClubInvitation[]
+  owner         User               @relation("ClubOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  settings      ClubSettings?
+  roles         ClubRole[]
+  memberships   ClubMembership[]
+  invitations   ClubInvitation[]
+  announcements ClubAnnouncement[]
+  subscriptions Subscription[]
 
   @@index([status, visibility])
   @@index([countryCode, category])
@@ -640,4 +645,124 @@ model FeatureFlag {
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@map("feature_flags")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2: announcements, subscription plans & entitlements, notifications
+// ---------------------------------------------------------------------------
+
+model ClubAnnouncement {
+  id          String    @id @default(uuid()) @db.Uuid
+  clubId      String    @map("club_id") @db.Uuid
+  authorId    String    @map("author_id") @db.Uuid
+  title       String    @db.VarChar(140)
+  body        String    @db.VarChar(5000)
+  pinned      Boolean   @default(false)
+  publishedAt DateTime  @default(now()) @map("published_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  club   Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([clubId, pinned, publishedAt])
+  @@map("club_announcements")
+}
+
+enum PlanAudience {
+  CLUB
+  INDIVIDUAL
+}
+
+enum BillingInterval {
+  MONTH
+  YEAR
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  GRACE
+  CANCELED
+  EXPIRED
+}
+
+/// Prices, trials and limits are data managed by platform admins, never code.
+model SubscriptionPlan {
+  id          String          @id @default(uuid()) @db.Uuid
+  code        String          @unique @db.VarChar(50)
+  audience    PlanAudience
+  name        String          @db.VarChar(80)
+  description String?         @db.VarChar(500)
+  currency    String          @default("KES") @db.Char(3)
+  amountMinor Int             @default(0) @map("amount_minor")
+  interval    BillingInterval @default(MONTH)
+  trialDays   Int             @default(0) @map("trial_days")
+  graceDays   Int             @default(7) @map("grace_days")
+  isActive    Boolean         @default(false) @map("is_active")
+  /// The free plan applied when a subject has no paid subscription (one per audience).
+  isDefault   Boolean         @default(false) @map("is_default")
+  sortOrder   Int             @default(0) @map("sort_order")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  entitlements  SubscriptionEntitlement[]
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model SubscriptionEntitlement {
+  planId    String   @map("plan_id") @db.Uuid
+  key       String   @db.VarChar(64)
+  intLimit  Int?     @map("int_limit")
+  boolValue Boolean? @map("bool_value")
+
+  plan SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@id([planId, key])
+  @@map("subscription_entitlements")
+}
+
+/// Club and individual subscriptions are independent: exactly one of club_id / user_id is set.
+model Subscription {
+  id                 String             @id @default(uuid()) @db.Uuid
+  clubId             String?            @map("club_id") @db.Uuid
+  userId             String?            @map("user_id") @db.Uuid
+  planId             String             @map("plan_id") @db.Uuid
+  status             SubscriptionStatus
+  currentPeriodStart DateTime           @map("current_period_start")
+  currentPeriodEnd   DateTime           @map("current_period_end")
+  graceUntil         DateTime?          @map("grace_until")
+  cancelAtPeriodEnd  Boolean            @default(false) @map("cancel_at_period_end")
+  canceledAt         DateTime?          @map("canceled_at")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  club Club?            @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User?            @relation("UserSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  plan SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([clubId, status])
+  @@index([userId, status])
+  @@index([status, currentPeriodEnd])
+  @@map("subscriptions")
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String    @db.VarChar(64)
+  title     String    @db.VarChar(200)
+  body      String    @db.VarChar(1000)
+  data      Json      @default("{}")
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
 }

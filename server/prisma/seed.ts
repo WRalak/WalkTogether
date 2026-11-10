@@ -6,12 +6,14 @@
 import { prisma } from '../src/database/prisma';
 import { syncPermissionCatalog } from '../src/modules/platform/catalog';
 import { PLATFORM_SETTING_DEFAULTS } from '../src/modules/platform/settings';
+import { seedPlans } from './seed-plans';
 
 async function main() {
   await syncPermissionCatalog();
   for (const [key, value] of Object.entries(PLATFORM_SETTING_DEFAULTS)) {
     await prisma.platformSetting.upsert({ where: { key }, create: { key, value: value as never }, update: {} });
   }
+  await seedPlans();
   const flags = [
     { key: 'gps_tracking', description: 'GPS activity recording (Phase 3)' },
     { key: 'social_feed', description: 'Community feed (Phase 5)' },

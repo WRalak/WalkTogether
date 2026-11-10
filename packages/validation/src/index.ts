@@ -3,3 +3,4 @@ export * from './auth';
 export * from './users';
 export * from './clubs';
 export * from './admin';
+export * from './phase2';

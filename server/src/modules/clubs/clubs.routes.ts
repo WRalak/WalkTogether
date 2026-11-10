@@ -108,3 +108,49 @@ clubsRouter.delete('/:clubId/invitations/:invitationId', requireAuth, async (req
   await memberships.revokeInvitation(clubId, invitationId, authUserId(req), auditCtx(req));
   res.status(204).end();
 });
+
+// Phase 2: roles, ownership, announcements, billing view -------------------------------------
+import { announcementSchema, listQuerySchema, roleInputSchema, transferOwnershipSchema, updateAnnouncementSchema, updateRoleSchema } from '@walktogether/validation';
+import * as roles from './roles.service';
+import * as announcements from '../announcements/announcements.service';
+
+const roleParam = clubParam.extend({ roleId: z.string().uuid() });
+const announcementParam = clubParam.extend({ announcementId: z.string().uuid() });
+
+clubsRouter.post('/:clubId/roles', requireAuth, async (req, res) => {
+  const { clubId } = parse(clubParam, req.params);
+  res.status(201).json({ data: await roles.createRole(clubId, authUserId(req), parse(roleInputSchema, req.body), auditCtx(req)) });
+});
+clubsRouter.patch('/:clubId/roles/:roleId', requireAuth, async (req, res) => {
+  const { clubId, roleId } = parse(roleParam, req.params);
+  res.json({ data: await roles.updateRole(clubId, roleId, authUserId(req), parse(updateRoleSchema, req.body), auditCtx(req)) });
+});
+clubsRouter.delete('/:clubId/roles/:roleId', requireAuth, async (req, res) => {
+  const { clubId, roleId } = parse(roleParam, req.params);
+  await roles.deleteRole(clubId, roleId, authUserId(req), auditCtx(req));
+  res.status(204).end();
+});
+clubsRouter.post('/:clubId/transfer-ownership', requireAuth, async (req, res) => {
+  const { clubId } = parse(clubParam, req.params);
+  const input = parse(transferOwnershipSchema, req.body);
+  res.json({ data: await roles.transferOwnership(clubId, authUserId(req), input.membershipId, input.password, auditCtx(req)) });
+});
+
+clubsRouter.get('/:clubId/announcements', optionalAuth, async (req, res) => {
+  const { clubId } = parse(clubParam, req.params);
+  const { items, nextCursor } = await announcements.listAnnouncements(clubId, req.auth?.userId, parse(listQuerySchema, req.query));
+  res.json({ data: items, meta: { nextCursor, limit: items.length } });
+});
+clubsRouter.post('/:clubId/announcements', requireAuth, async (req, res) => {
+  const { clubId } = parse(clubParam, req.params);
+  res.status(201).json({ data: await announcements.createAnnouncement(clubId, authUserId(req), parse(announcementSchema, req.body), auditCtx(req)) });
+});
+clubsRouter.patch('/:clubId/announcements/:announcementId', requireAuth, async (req, res) => {
+  const { clubId, announcementId } = parse(announcementParam, req.params);
+  res.json({ data: await announcements.updateAnnouncement(clubId, announcementId, authUserId(req), parse(updateAnnouncementSchema, req.body), auditCtx(req)) });
+});
+clubsRouter.delete('/:clubId/announcements/:announcementId', requireAuth, async (req, res) => {
+  const { clubId, announcementId } = parse(announcementParam, req.params);
+  await announcements.deleteAnnouncement(clubId, announcementId, authUserId(req), auditCtx(req));
+  res.status(204).end();
+});

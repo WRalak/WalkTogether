@@ -51,6 +51,45 @@ export interface SessionInfo {
   lastUsedAt: string;
 }
 
+export interface Announcement {
+  id: string;
+  clubId: string;
+  title: string;
+  body: string;
+  pinned: boolean;
+  publishedAt: string;
+  author: { id: string; username: string; profile: { displayName: string } | null };
+}
+
+export interface AppNotification {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown>;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface Plan {
+  id: string;
+  code: string;
+  audience: 'CLUB' | 'INDIVIDUAL';
+  name: string;
+  description: string | null;
+  currency: string;
+  amountMinor: number;
+  interval: 'MONTH' | 'YEAR';
+  trialDays: number;
+  isDefault: boolean;
+  entitlements: { key: string; intLimit: number | null; boolValue: boolean | null }[];
+}
+
+export interface BillingInfo {
+  subscription: { id: string; status: string; currentPeriodEnd: string; graceUntil: string | null; cancelAtPeriodEnd: boolean; plan: Plan } | null;
+  entitlements: { planCode: string | null; planName: string | null; status: string; values: Record<string, number | boolean> };
+}
+
 export type ClubWithCoords = ClubDetail & { latitude: number | null; longitude: number | null };
 
 /** Typed client for the member-facing API (mobile app, public web, club admin dashboard). */
@@ -100,6 +139,16 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
         storeTokens(await http.request<AuthTokens>('/api/v1/auth/phone/register', { method: 'POST', body, auth: false })),
       oauth: async (body: In<typeof v.oauthLoginSchema>) => storeTokens(await http.request<AuthTokens & { created: boolean }>('/api/v1/auth/oauth', { method: 'POST', body, auth: false })),
     },
+    notifications: {
+      list: (query: { cursor?: string; limit?: number } = {}) => http.requestWithMeta<AppNotification[]>('/api/v1/notifications', { query }),
+      read: (id: string) => http.request<void>(`/api/v1/notifications/${id}/read`, { method: 'PATCH' }),
+      readAll: () => http.request<{ updated: number }>('/api/v1/notifications/read-all', { method: 'POST', body: {} }),
+    },
+    subscriptions: {
+      plans: (audience?: 'CLUB' | 'INDIVIDUAL') => http.request<Plan[]>('/api/v1/subscriptions/plans', { query: { audience }, auth: false }),
+      me: () => http.request<BillingInfo>('/api/v1/subscriptions/me'),
+      cancelMine: () => http.request<unknown>('/api/v1/subscriptions/me/cancel', { method: 'POST', body: {} }),
+    },
     users: {
       me: () => http.request<MeUser>('/api/v1/users/me'),
       updateMe: (body: In<typeof v.updateMeSchema>) => http.request<MeUser>('/api/v1/users/me', { method: 'PATCH', body }),
@@ -130,6 +179,16 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
           `/api/v1/clubs/${clubId}/invitations`,
         ),
       revokeInvitation: (clubId: string, invitationId: string) => http.request<void>(`/api/v1/clubs/${clubId}/invitations/${invitationId}`, { method: 'DELETE' }),
+      createRole: (clubId: string, body: In<typeof v.roleInputSchema>) => http.request<ClubRoleInfo>(`/api/v1/clubs/${clubId}/roles`, { method: 'POST', body }),
+      updateRole: (clubId: string, roleId: string, body: In<typeof v.updateRoleSchema>) => http.request<unknown>(`/api/v1/clubs/${clubId}/roles/${roleId}`, { method: 'PATCH', body }),
+      deleteRole: (clubId: string, roleId: string) => http.request<void>(`/api/v1/clubs/${clubId}/roles/${roleId}`, { method: 'DELETE' }),
+      transferOwnership: (clubId: string, membershipId: string, password?: string) => http.request<{ ownerId: string }>(`/api/v1/clubs/${clubId}/transfer-ownership`, { method: 'POST', body: { membershipId, password } }),
+      announcements: (clubId: string, query: { cursor?: string; limit?: number } = {}) => http.page<Announcement>(`/api/v1/clubs/${clubId}/announcements`, { query }),
+      createAnnouncement: (clubId: string, body: In<typeof v.announcementSchema>) => http.request<Announcement>(`/api/v1/clubs/${clubId}/announcements`, { method: 'POST', body }),
+      updateAnnouncement: (clubId: string, id: string, body: In<typeof v.updateAnnouncementSchema>) => http.request<Announcement>(`/api/v1/clubs/${clubId}/announcements/${id}`, { method: 'PATCH', body }),
+      deleteAnnouncement: (clubId: string, id: string) => http.request<void>(`/api/v1/clubs/${clubId}/announcements/${id}`, { method: 'DELETE' }),
+      billing: (clubId: string) => http.request<BillingInfo>(`/api/v1/subscriptions/clubs/${clubId}`),
+      cancelSubscription: (clubId: string) => http.request<unknown>(`/api/v1/subscriptions/clubs/${clubId}/cancel`, { method: 'POST', body: {} }),
       previewInvitation: (code: string) => http.request<{ club: { id: string; slug: string; name: string; logoUrl: string | null }; expiresAt: string }>(`/api/v1/clubs/invitations/${encodeURIComponent(code)}`, { auth: false }),
     },
   };

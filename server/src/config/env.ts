@@ -54,6 +54,34 @@ const envSchema = z.object({
 
   RATE_LIMIT_ENABLED: bool.default('true'),
 
+  // Push notifications: console (dev only) | expo
+  PUSH_PROVIDER: z.enum(['console', 'expo']).default('console'),
+  EXPO_ACCESS_TOKEN: z.string().optional(),
+
+  // Object storage for media (S3-compatible: AWS S3, Cloudflare R2, MinIO).
+  STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
+  STORAGE_LOCAL_DIR: z.string().default('./.uploads'),
+  S3_BUCKET: z.string().optional(),
+  S3_REGION: z.string().default('auto'),
+  S3_ENDPOINT: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  MEDIA_PUBLIC_BASE_URL: z.string().optional(),
+
+  // Payments
+  PAYMENT_PROVIDERS: csv.default(''),
+  MPESA_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+  MPESA_CONSUMER_KEY: z.string().optional(),
+  MPESA_CONSUMER_SECRET: z.string().optional(),
+  MPESA_SHORTCODE: z.string().optional(),
+  MPESA_PASSKEY: z.string().optional(),
+  MPESA_CALLBACK_SECRET: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+
+  // Maps (served to clients; keys must be platform-restricted in the provider console)
+  MAP_PROVIDER: z.enum(['google', 'mapbox']).default('google'),
+
   SENTRY_DSN: z.string().optional(),
   ADMIN_TOTP_ISSUER: z.string().default('WalkTogether Admin'),
 });
@@ -75,6 +103,9 @@ function loadEnv(): Env {
     if (env.SMS_PROVIDER === 'console') problems.push('SMS_PROVIDER must not be "console"');
     if (env.QUEUE_DRIVER === 'inline') problems.push('QUEUE_DRIVER must be "bullmq"');
     if (!env.RATE_LIMIT_ENABLED) problems.push('RATE_LIMIT_ENABLED must be true');
+    if (env.PUSH_PROVIDER === 'console') problems.push('PUSH_PROVIDER must not be "console"');
+    if (env.STORAGE_DRIVER === 'local') problems.push('STORAGE_DRIVER must be "s3"');
+    if (env.STORAGE_DRIVER === 's3' && !env.S3_BUCKET) problems.push('S3_BUCKET is required');
     if (env.EMAIL_PROVIDER === 'smtp' && !env.SMTP_URL) problems.push('SMTP_URL is required');
     if (env.SMS_PROVIDER === 'africastalking' && (!env.AFRICASTALKING_API_KEY || !env.AFRICASTALKING_USERNAME))
       problems.push("AFRICASTALKING_USERNAME and AFRICASTALKING_API_KEY are required");

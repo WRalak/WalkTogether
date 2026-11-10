@@ -7,6 +7,9 @@ export interface JobMap {
   'sms.send': SmsMessage;
   'account.purge-due': Record<string, never>;
   'sessions.cleanup': Record<string, never>;
+  'push.send': { userIds: string[]; title: string; body: string; data?: Record<string, unknown> };
+  'announcement.fanout': { announcementId: string };
+  'subscriptions.lifecycle': Record<string, never>;
 }
 
 export type JobName = keyof JobMap;
@@ -17,4 +20,7 @@ export const JOB_QUEUES: Record<JobName, 'notifications' | 'maintenance'> = {
   'sms.send': 'notifications',
   'account.purge-due': 'maintenance',
   'sessions.cleanup': 'maintenance',
+  'push.send': 'notifications',
+  'announcement.fanout': 'notifications',
+  'subscriptions.lifecycle': 'maintenance',
 };

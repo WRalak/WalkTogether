@@ -15,9 +15,11 @@ import { requireAdmin, requireAdminPermission } from '../../middleware/admin-aut
 import { auditCtx } from '../../middleware/request-context';
 import { adminAuthLimiter } from '../../middleware/rate-limit';
 import { parse } from '../../middleware/validate';
-import { unauthorized } from '../../shared/errors';
+import { badRequest, unauthorized } from '../../shared/errors';
 import * as adminAuth from './admin-auth.service';
 import * as admin from './admin.service';
+import { planInputSchema, updatePlanSchema } from '@walktogether/validation';
+import * as subs from '../subscriptions/subscriptions.service';
 
 export const ADMIN_REFRESH_COOKIE = 'wt_art';
 const cookieOpts = (expires?: Date): CookieOptions => ({
@@ -149,4 +151,21 @@ adminRouter.put('/feature-flags/:key', requireAdminPermission('feature_flags.man
     req.body,
   );
   res.json({ data: await admin.upsertFeatureFlag(req.admin!.adminId, key, body, auditCtx(req)) });
+});
+
+// Subscription plans (prices, trials and entitlements are configured here, never in code) -----
+adminRouter.get('/plans', requireAdminPermission('plans.manage'), async (_req, res) => {
+  res.json({ data: await subs.adminListPlans() });
+});
+adminRouter.post('/plans', requireAdminPermission('plans.manage'), async (req, res) => {
+  res.status(201).json({ data: await subs.adminUpsertPlan(req.admin!.adminId, null, parse(planInputSchema, req.body), auditCtx(req)) });
+});
+adminRouter.patch('/plans/:id', requireAdminPermission('plans.manage'), async (req, res) => {
+  res.json({ data: await subs.adminUpsertPlan(req.admin!.adminId, parse(idParam, req.params).id, parse(updatePlanSchema, req.body), auditCtx(req)) });
+});
+adminRouter.post('/subscriptions/grant', requireAdminPermission('plans.manage'), async (req, res) => {
+  const body = parse(z.object({ planId: z.string().uuid(), clubId: z.string().uuid().optional(), userId: z.string().uuid().optional() }).strict().refine((b) => !!b.clubId !== !!b.userId, 'Provide exactly one of clubId or userId'), req.body);
+  const plan = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { id: body.planId } });
+  if ((plan.audience === 'CLUB') !== !!body.clubId) throw badRequest('Plan audience does not match subject');
+  res.status(201).json({ data: await subs.adminGrantPlan(req.admin!.adminId, body.clubId ? { clubId: body.clubId } : { userId: body.userId! }, body.planId, auditCtx(req)) });
 });
