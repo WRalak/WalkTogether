@@ -6,7 +6,7 @@ in the root `package.json`. Review this register monthly and on every Dependabot
 
 | Advisory | Package (path) | Exposure | Mitigation / plan |
 | --- | --- | --- | --- |
-| GHSA-mrhx-c7xc-m3w5 | `zod` 3.x (server + clients) | Memory exhaustion when validating *oversized* constrained collections | All JSON bodies are capped at 1 MB by `express.json`, every array schema has a `.max()`, and the largest array (GPS batch, 2 000 points) is far below the limit. **Plan:** migrate to Zod 4 (`@asteasolutions/zod-to-openapi` v8) in the next maintenance release. |
+| GHSA-mrhx-c7xc-m3w5 | `zod` | Memory exhaustion validating oversized collections | **Resolved** — migrated to Zod 4.6.7 and `@asteasolutions/zod-to-openapi` 8.5.0; advisory removed from the audit ignore list. |
 | GHSA-5p2g-fcmc-qvqq, GHSA-w3rx-r6r6-pgpr | `image-size` (Expo → Metro bundler) | DoS in a build-time bundler parsing project images | Build tooling only; images in the repo are trusted. Clears when Expo ships a Metro upgrade. |
 | GHSA-qr28-fpjm-wq7f | `decode-uri-component` (expo-router → query-string) | Quadratic DoS when parsing a crafted deep link on the device | Impact limited to slowing the user's own app; no server exposure. Clears with an expo-router upgrade. |
 

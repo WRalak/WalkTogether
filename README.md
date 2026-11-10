@@ -8,7 +8,7 @@ international markets.
 It is multi-tenant from day one: any user can create a club, belong to several clubs with different roles,
 and keep ownership of their personal fitness data. The first pilot walking club is just the first club.
 
-> Current state: **Phases 1–8 are implemented; Phase 9 hardening is partially complete.** See [`DEVELOPMENT_STATUS.md`](DEVELOPMENT_STATUS.md)
+> Current state: **Phases 1–9 are implemented.** See [`DEVELOPMENT_STATUS.md`](DEVELOPMENT_STATUS.md)
 > for exactly what works today and what is next.
 
 ## Repository
@@ -21,7 +21,8 @@ and keep ownership of their personal fitness data. The first pilot walking club 
 | `apps/club-admin/` | Club administration dashboard (Next.js 15) |
 | `apps/platform-admin/` | Platform super-admin dashboard (Next.js 15), separate identity with mandatory MFA |
 | `packages/` | `shared-types`, `validation` (Zod), `api-client`, `ui`, `configuration` |
-| `infrastructure/` | Dockerfiles, Nginx config |
+| `infrastructure/` | Dockerfiles, Nginx config, backup/restore scripts |
+| `loadtest/` | autocannon scenarios and baseline results |
 | `docs/` | Architecture, database, security, API, multi-tenancy, GPS, monetization, deployment |
 
 ## Prerequisites
@@ -117,8 +118,8 @@ pnpm test
 pnpm typecheck
 ```
 
-164 automated tests. Highlights: authentication and session security, platform-admin MFA, and a dedicated
-**tenant-isolation suite** (`server/test/tenant-isolation.test.ts`) proving users cannot read or modify
+185 automated tests. Highlights: authentication and session security, platform-admin MFA, an OWASP-oriented
+**security suite** (`server/test/security.test.ts`), and a dedicated **tenant-isolation suite** (`server/test/tenant-isolation.test.ts`) proving users cannot read or modify
 other clubs' data.
 
 ## Documentation
@@ -132,3 +133,4 @@ other clubs' data.
 * [Monetization design](docs/architecture/MONETIZATION_DESIGN.md)
 * [Deployment guide](docs/deployment/DEPLOYMENT_GUIDE.md)
 * [Dependency risk register](docs/security/DEPENDENCY_RISK_REGISTER.md)
+* [Load-test baseline](loadtest/README.md)

@@ -1,4 +1,4 @@
-import { Image, Pressable, Text, View } from 'react-native';
+import { Image, Linking, Pressable, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import type { PostDto } from '@walktogether/api-client';
 import { initials } from '@/utils/format';
@@ -15,6 +15,7 @@ export function timeAgo(iso: string) {
 
 export function PostCard({ post, onLike }: { post: PostDto; onLike: (p: PostDto) => void }) {
   const img = post.media.find((m) => m.kind === 'IMAGE');
+  const video = post.media.find((m) => m.kind === 'VIDEO' && m.urls.poster && m.urls.video);
   return (
     <View className="mb-3 rounded-3xl border border-line bg-surface p-4">
       <Link href={{ pathname: '/users/[username]', params: { username: post.author.username } }} asChild>
@@ -40,6 +41,21 @@ export function PostCard({ post, onLike }: { post: PostDto; onLike: (p: PostDto)
             </View>
           )}
           {post.body ? <Text className="mt-3 text-base text-ink">{post.body}</Text> : null}
+          {!img && video && (
+            <Pressable
+              onPress={() => void Linking.openURL(video.urls.video!)}
+              accessibilityRole="button"
+              accessibilityLabel="Play video"
+              className="mt-3 w-full overflow-hidden rounded-2xl"
+            >
+              <Image source={{ uri: video.urls.poster }} className="w-full" style={{ aspectRatio: video.width && video.height ? video.width / video.height : 16 / 9 }} accessibilityIgnoresInvertColors />
+              <View className="absolute inset-0 items-center justify-center">
+                <View className="h-14 w-14 items-center justify-center rounded-full bg-black/60">
+                  <Text className="text-2xl text-white">▶</Text>
+                </View>
+              </View>
+            </Pressable>
+          )}
           {img?.urls.medium && <Image source={{ uri: img.urls.medium }} className="mt-3 w-full rounded-2xl" style={{ aspectRatio: img.width && img.height ? img.width / img.height : 4 / 3 }} accessibilityLabel="Post photo" />}
         </Pressable>
       </Link>

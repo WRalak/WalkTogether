@@ -39,8 +39,9 @@ docker build -f infrastructure/docker/next-app.Dockerfile --build-arg APP=web --
 Repeat with `APP=club-admin` and `APP=platform-admin`. The API image runs `node dist/main.js` by
 default; the worker uses `node dist/worker.js`; migrations use `npx prisma migrate deploy`.
 
-> The Dockerfiles were written for this repository layout but have not yet been built in CI with a
-> Docker daemon; add an image-build job before the first staging deploy.
+All four images are built on every CI run (`docker-images` job); the API image is additionally
+smoke-tested to confirm it refuses to start with an unsafe production configuration. The API image
+includes `ffmpeg` for video transcoding.
 
 ## 4. Release procedure
 
@@ -58,6 +59,19 @@ default; the worker uses `node dist/worker.js`; migrations use `npx prisma migra
 8. Rollback: redeploy the previous image; migrations are forward-only and backwards-compatible by
    policy, so code rollback does not require schema rollback.
 
+### Supporting services
+
+* **ClamAV** (`clamd`, e.g. `clamav/clamav:1.4` as an ECS sidecar or service): set
+  `MALWARE_SCANNER=clamav`, `CLAMAV_HOST`, `CLAMAV_PORT`. Every upload is scanned before processing.
+* **ffmpeg/ffprobe** are in the API/worker image (`FFMPEG_PATH`/`FFPROBE_PATH` to override). Videos are
+  limited to 180 s, re-encoded to H.264 ≤720p with all container metadata (including GPS atoms) removed.
+* **GPS partitions:** `activity_gps_points` is range-partitioned by month. The worker's daily
+  `partitions.maintain` job creates partitions four months ahead; rows outside them land in the default
+  partition, so ingestion never fails. Detach/archive old partitions per the retention policy.
+* **Health data:** Android builds need Health Connect (minSdk 26, `READ_STEPS` declared and justified
+  in the Play Console health-apps form); iOS builds need the HealthKit entitlement. Steps are read-only
+  and never inferred from GPS.
+
 ## 5. Backups and recovery
 
 | Item | Policy |
@@ -67,7 +81,9 @@ default; the worker uses `node dist/worker.js`; migrations use `npx prisma migra
 | Object storage | Versioning + lifecycle rules |
 | Restore drill | Quarterly: restore PITR into an isolated instance, run smoke tests, record RTO/RPO |
 
-Targets: RPO ≤ 5 minutes, RTO ≤ 2 hours (to be validated by drills in Phase 9).
+Targets: RPO ≤ 5 minutes, RTO ≤ 2 hours. `infrastructure/deployment/backup.sh` produces encrypted
+`pg_dump` archives to S3; `restore-drill.sh` restores the latest into a scratch database and verifies
+row counts and migrations (drill executed successfully during Phase 9). Repeat quarterly on staging.
 
 ## 6. Mobile releases
 
@@ -90,10 +106,12 @@ credentials needed before a real launch:
 | Google sign-in | `GOOGLE_CLIENT_IDS` | Google Cloud Console OAuth clients (web, Android, iOS) |
 | Apple sign-in | `APPLE_CLIENT_IDS` | Apple Developer: Services ID + bundle ID |
 | Errors | `SENTRY_DSN` | Sentry project |
-| M-Pesa (Phase 7) | `MPESA_*` | Safaricom Daraja portal (sandbox → go-live) |
+| M-Pesa (Phase 7) | `MPESA_*` incl. `MPESA_INITIATOR_NAME`, `MPESA_SECURITY_CREDENTIAL` (reversals/refunds) | Safaricom Daraja portal (sandbox → go-live; Reversal API enabled on the shortcode) |
 | Stripe (Phase 7) | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe dashboard |
 | Maps (Phase 3) | `GOOGLE_MAPS_ANDROID_KEY` or `MAPBOX_TOKEN` | Google Cloud / Mapbox (restricted keys) |
-| Push (Phase 5) | `EAS_PROJECT_ID`, FCM credentials in EAS | Expo / Firebase |
+| Push (Phase 5) | `PUSH_PROVIDER=expo`, `EXPO_ACCESS_TOKEN`, `EAS_PROJECT_ID`, FCM credentials in EAS | Expo / Firebase |
+| Media | `STORAGE_DRIVER=s3`, `S3_*`, `MEDIA_PUBLIC_BASE_URL`, `MALWARE_SCANNER=clamav` | S3 / Cloudflare R2 + ClamAV |
+| Metrics | `METRICS_TOKEN` | Generate; give to Prometheus |
 
 None of these are faked: without credentials, OAuth returns `503 PROVIDER_NOT_CONFIGURED` and
 deployed environments refuse to start with console email/SMS providers.

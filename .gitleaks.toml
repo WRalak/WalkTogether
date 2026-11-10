@@ -7,7 +7,8 @@ description = "Documented development placeholders and test fixtures (never used
 paths = [
   '''server/\.env\.example''',
   '''server/test/env\.ts''',
-  '''server/test/mpesa\.test\.ts''',
+  '''server/test/[a-z0-9-]+\.ts''',
+  '''apps/[a-z-]+/(test|__tests__)/.*''',
 ]
 regexes = [
   '''dev-only-[a-z0-9-]+''',

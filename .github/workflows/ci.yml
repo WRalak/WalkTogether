@@ -63,6 +63,8 @@ jobs:
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @walktogether/server exec prisma generate
+      - name: Install ffmpeg (video pipeline tests)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - name: API, auth, authorization & tenant-isolation tests
         run: pnpm --filter @walktogether/server test
       - name: Migration drift check (schema.prisma vs migrations)
