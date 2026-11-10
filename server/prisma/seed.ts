@@ -14,6 +14,8 @@ async function main() {
     await prisma.platformSetting.upsert({ where: { key }, create: { key, value: value as never }, update: {} });
   }
   await seedPlans();
+  const { seedDefaultAchievements } = await import('../src/modules/challenges/achievements.service');
+  await seedDefaultAchievements();
   const flags = [
     { key: 'gps_tracking', description: 'GPS activity recording (Phase 3)' },
     { key: 'social_feed', description: 'Community feed (Phase 5)' },

@@ -217,3 +217,12 @@ clubsRouter.put('/:clubId/branding', requireAuth, async (req, res) => {
   if (b.coverMediaId) data.coverUrl = await readyAssetUrl(userId, b.coverMediaId, ['CLUB_COVER']);
   res.json({ data: await clubs.updateClub(clubId, userId, data, auditCtx(req)) });
 });
+
+// Phase 6: club challenges -----------------------------------------------------------------------
+import { createChallengeSchema } from '@walktogether/validation';
+import { createClubChallenge } from '../challenges/challenges.service';
+
+clubsRouter.post('/:clubId/challenges', requireAuth, async (req, res) => {
+  const { clubId } = parse(clubParam, req.params);
+  res.status(201).json({ data: await createClubChallenge(clubId, authUserId(req), parse(createChallengeSchema, req.body), auditCtx(req)) });
+});

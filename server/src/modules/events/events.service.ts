@@ -3,6 +3,7 @@ import { Prisma, type EventType } from '@prisma/client';
 import { haversine } from '@walktogether/gps';
 import { prisma, type Tx } from '../../database/prisma';
 import { randomToken, safeEqual } from '../../shared/crypto';
+import { enqueue } from '../../queues';
 import { badRequest, conflict, forbidden, notFound } from '../../shared/errors';
 import { decodeCursor, encodeCursor } from '../../shared/pagination';
 import { audit, type AuditContext } from '../audit/audit.service';
@@ -310,6 +311,7 @@ export async function selfCheckIn(eventId: string, userId: string, input: { code
     create: { eventId, userId, method: 'QR', distanceFromMeetingM: distance },
     update: {},
   });
+  await enqueue('achievements.evaluate', { userId }).catch(() => undefined);
   return { checkedInAt: row.checkedInAt, method: row.method, distanceFromMeetingM: row.distanceFromMeetingM };
 }
 

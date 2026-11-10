@@ -23,7 +23,7 @@ export async function clubOverview(clubId: string, actorId: string) {
   ]);
   const engaged = new Set([...engagedAttend.map((a) => a.userId), ...engagedShare.map((s) => s.activity.userId)]);
   const expected = pastEvents.reduce((s, e) => s + e.goingCount, 0);
-  const challengeParticipants = 0; // PHASE6_CHALLENGES
+  const challengeParticipants = await prisma.challengeParticipant.count({ where: { challenge: { clubId }, joinedAt: { gte: since } } });
   return {
     members: { active, pending, new30d: newMembers, engaged30d: engaged.size, engagementRate: active ? Math.round((engaged.size / active) * 100) : 0 },
     events: { upcoming30d: upcoming, held30d: pastEvents.length, attendance30d: attendanceRows, attendanceRate: expected ? Math.round((attendanceRows / expected) * 100) : null },

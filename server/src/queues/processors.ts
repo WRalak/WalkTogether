@@ -5,6 +5,10 @@ import { purgeDueAccounts } from '../modules/users/account-deletion';
 import { cleanupExpiredSessions } from '../modules/auth/session-maintenance';
 import { deliverPush } from '../modules/notifications/notifications.service';
 import { fanOutAnnouncement } from '../modules/announcements/announcements.service';
+import { finalizeEndedChallenges, onActivityChanged } from '../modules/challenges/challenges.service';
+import { computeLeaderboards } from '../modules/challenges/leaderboards.service';
+import { evaluateAchievements } from '../modules/challenges/achievements.service';
+import { prisma } from '../database/prisma';
 import { processMedia } from '../modules/media/media.service';
 import { upsertActivityPost } from '../modules/social/posts.service';
 import { cleanupStaleMedia } from '../modules/media/maintenance';
@@ -21,9 +25,18 @@ export const processors: { [K in JobName]: (data: JobMap[K]) => Promise<unknown>
   'subscriptions.lifecycle': () => runSubscriptionLifecycle(),
   'activity.completed': async (d) => {
     await upsertActivityPost(d.activityId);
+    const a = await prisma.activity.findUnique({ where: { id: d.activityId }, select: { userId: true, startedAt: true } });
+    if (!a) return;
+    await onActivityChanged(a.userId, a.startedAt);
+    await evaluateAchievements(a.userId);
   },
-  'activity.deleted': async () => undefined,
+  'activity.deleted': async (d) => {
+    await onActivityChanged(d.userId);
+  },
   'events.reminders': () => sendEventReminders(),
   'media.process': (d) => processMedia(d.mediaId),
   'media.cleanup': () => cleanupStaleMedia(),
+  'challenges.finalize': () => finalizeEndedChallenges(),
+  'leaderboards.compute': () => computeLeaderboards(),
+  'achievements.evaluate': (d) => evaluateAchievements(d.userId),
 };

@@ -19,6 +19,7 @@ import { conversationsRouter } from './modules/messaging/messaging.routes';
 import { localUploadRouter, mediaRouter } from './modules/media/media.routes';
 import { localStorageDriver } from './modules/media/storage';
 import { commentsRouter, feedRouter, followRoutes, postsRouter, reportsRouter } from './modules/social/social.routes';
+import { achievementsRouter, challengesRouter, leaderboardsRouter } from './modules/challenges/challenges.routes';
 import { notificationsRouter } from './modules/notifications/notifications.routes';
 import { subscriptionsRouter } from './modules/subscriptions/subscriptions.routes';
 import { buildOpenApiDocument } from './openapi';
@@ -62,6 +63,9 @@ export function createApp(): Express {
   api.use('/clubs', clubsRouter);
   api.use('/activities', activitiesRouter);
   api.use('/events', eventsRouter);
+  api.use('/challenges', challengesRouter);
+  api.use('/leaderboards', leaderboardsRouter);
+  api.use('/achievements', achievementsRouter);
   api.use('/feed', feedRouter);
   api.use('/posts', postsRouter);
   api.use('/comments', commentsRouter);

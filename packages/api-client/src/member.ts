@@ -226,6 +226,53 @@ export interface ReportDto {
   reporter: { id: string; username: string };
 }
 
+export interface ChallengeDto {
+  id: string;
+  scope: 'PLATFORM' | 'CLUB' | 'CLUB_VS_CLUB' | 'SPONSORED';
+  clubId: string | null;
+  title: string;
+  description: string | null;
+  metric: 'DISTANCE_M' | 'ACTIVITIES' | 'MOVING_SECONDS' | 'ACTIVE_DAYS';
+  activityTypes: string[];
+  target: number | null;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  isPremium: boolean;
+  isSponsored: boolean;
+  sponsorName: string | null;
+  rules: string | null;
+  rewardDescription: string | null;
+  maxDailyDistanceM: number;
+  club?: { id: string; name: string; slug: string } | null;
+  teams?: { clubId: string; club: { id: string; name: string } }[];
+  participants?: number;
+  _count?: { participants: number };
+  me?: { progressValue: number; completedAt: string | null; teamClubId: string | null; hideFromLeaderboard: boolean; progress: number | null } | null;
+}
+
+export interface ChallengeLeaderboardDto {
+  challenge: { id: string; title: string; metric: string; target: number | null; status: string };
+  entries: { rank: number; value: number; completed: boolean; teamClubId: string | null; isMe: boolean; user: { id: string; username: string; displayName: string; avatarUrl: string | null } | null }[];
+  teams: { clubId: string; name: string; participants: number; total: number; average: number; rank: number }[];
+}
+
+export interface LeaderboardDto {
+  period: 'WEEK' | 'MONTH';
+  periodStart: string;
+  computedAt?: string | null;
+  entries: { rank: number; valueM: number; isMe: boolean; user: { id: string; username: string; displayName: string; avatarUrl: string | null } | null }[];
+}
+
+export interface AchievementDto {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  earnedAt: string | null;
+}
+
 export interface Announcement {
   id: string;
   clubId: string;
@@ -389,6 +436,23 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
     moderation: {
       clubReports: (clubId: string, status = 'OPEN') => http.page<ReportDto>(`/api/v1/clubs/${clubId}/reports`, { query: { status } }),
       resolveClubReport: (clubId: string, reportId: string, action: 'DISMISS' | 'HIDE', note?: string) => http.request<void>(`/api/v1/clubs/${clubId}/reports/${reportId}/resolve`, { method: 'POST', body: { action, note } }),
+    },
+    challenges: {
+      list: (query: { cursor?: string; mine?: boolean } = {}) => http.page<ChallengeDto>('/api/v1/challenges', { query }),
+      get: (id: string) => http.request<ChallengeDto>(`/api/v1/challenges/${id}`),
+      join: (id: string, body: { teamClubId?: string; hideFromLeaderboard?: boolean } = {}) => http.request<ChallengeDto>(`/api/v1/challenges/${id}/join`, { method: 'POST', body }),
+      leave: (id: string) => http.request<void>(`/api/v1/challenges/${id}/leave`, { method: 'POST' }),
+      leaderboard: (id: string) => http.request<ChallengeLeaderboardDto>(`/api/v1/challenges/${id}/leaderboard`),
+      createForClub: (clubId: string, body: In<typeof v.createChallengeSchema>) => http.request<ChallengeDto>(`/api/v1/clubs/${clubId}/challenges`, { method: 'POST', body }),
+      cancel: (id: string) => http.request<void>(`/api/v1/challenges/${id}/cancel`, { method: 'POST' }),
+    },
+    leaderboards: {
+      get: (query: { scope?: 'GLOBAL' | 'CLUB'; clubId?: string; period?: 'WEEK' | 'MONTH'; activityType?: 'WALK' | 'RUN' } = {}) => http.request<LeaderboardDto>('/api/v1/leaderboards', { query }),
+      following: (period: 'WEEK' | 'MONTH' = 'WEEK') => http.request<LeaderboardDto>('/api/v1/leaderboards/following', { query: { period } }),
+    },
+    achievements: {
+      mine: () => http.request<AchievementDto[]>('/api/v1/achievements/me'),
+      ofUser: (userId: string) => http.request<AchievementDto[]>(`/api/v1/achievements/users/${userId}`),
     },
     notifications: {
       list: (query: { cursor?: string; limit?: number } = {}) => http.requestWithMeta<AppNotification[]>('/api/v1/notifications', { query }),

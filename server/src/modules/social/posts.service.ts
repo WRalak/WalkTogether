@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../database/prisma';
+import { enqueue } from '../../queues';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../../shared/errors';
 import { decodeCursor, encodeCursor } from '../../shared/pagination';
 import { canViewActivity } from '../activities/visibility';
@@ -95,6 +96,7 @@ export async function createPost(authorId: string, input: { body?: string | null
     include: postInclude,
   });
   if (post.body) await notifyMentions(post.body, authorId, post.id, post.clubId);
+  await enqueue('achievements.evaluate', { userId: authorId }).catch(() => undefined);
   return serialize(post, { liked: new Set(), bookmarked: new Set() });
 }
 

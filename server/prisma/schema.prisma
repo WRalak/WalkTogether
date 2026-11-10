@@ -169,6 +169,9 @@ model User {
   reportsFiled         ContentReport[]           @relation("Reporter")
   conversationMembers  ConversationMember[]
   messages             Message[]
+  challengesCreated    Challenge[]               @relation("ChallengeCreator")
+  challengeEntries     ChallengeParticipant[]
+  achievements         UserAchievement[]
   following            Follow[]                  @relation("Follower")
   followers            Follow[]                  @relation("Followee")
 
@@ -426,6 +429,8 @@ model Club {
   events         Event[]
   posts          Post[]
   conversations  Conversation[]
+  challenges     Challenge[]
+  challengeTeams ChallengeClub[]
 
   @@index([status, visibility])
   @@index([countryCode, category])
@@ -1298,4 +1303,199 @@ model Message {
   @@unique([senderId, clientId])
   @@index([conversationId, createdAt])
   @@map("messages")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 6: challenges, leaderboards, achievements
+// ---------------------------------------------------------------------------
+
+enum ChallengeScope {
+  PLATFORM
+  CLUB
+  CLUB_VS_CLUB
+  SPONSORED
+}
+
+enum ChallengeMetric {
+  DISTANCE_M
+  ACTIVITIES
+  MOVING_SECONDS
+  ACTIVE_DAYS
+}
+
+enum ChallengeStatus {
+  DRAFT
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+model Challenge {
+  id                String          @id @default(uuid()) @db.Uuid
+  scope             ChallengeScope
+  clubId            String?         @map("club_id") @db.Uuid
+  createdById       String?         @map("created_by_id") @db.Uuid
+  createdByAdminId  String?         @map("created_by_admin_id") @db.Uuid
+  title             String          @db.VarChar(120)
+  description       String?         @db.VarChar(3000)
+  metric            ChallengeMetric
+  activityTypes     ActivityType[]  @map("activity_types")
+  /// Completion target; null = pure competition (leaderboard only).
+  target            Int?
+  startsAt          DateTime        @map("starts_at")
+  endsAt            DateTime        @map("ends_at")
+  visibility        EventVisibility @default(PUBLIC)
+  status            ChallengeStatus @default(ACTIVE)
+  isPremium         Boolean         @default(false) @map("is_premium")
+  rules             String?         @db.VarChar(5000)
+  rewardDescription String?         @map("reward_description") @db.VarChar(500)
+  /// Safety: credit at most this much distance per participant per day.
+  maxDailyDistanceM Int             @default(42195) @map("max_daily_distance_m")
+  sponsorName       String?         @map("sponsor_name") @db.VarChar(120)
+  coverUrl          String?         @map("cover_url") @db.VarChar(500)
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  club         Club?                  @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  createdBy    User?                  @relation("ChallengeCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  participants ChallengeParticipant[]
+  teams        ChallengeClub[]
+  progress     ChallengeProgress[]
+  results      ChallengeResult[]
+
+  @@index([status, scope, endsAt])
+  @@index([clubId, status])
+  @@map("challenges")
+}
+
+/// Clubs competing in a club-vs-club challenge.
+model ChallengeClub {
+  challengeId String @map("challenge_id") @db.Uuid
+  clubId      String @map("club_id") @db.Uuid
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  club      Club      @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@id([challengeId, clubId])
+  @@map("challenge_clubs")
+}
+
+model ChallengeParticipant {
+  challengeId         String    @map("challenge_id") @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  /// Team club for club-vs-club challenges.
+  teamClubId          String?   @map("team_club_id") @db.Uuid
+  /// Privacy-conscious participation: counted, but shown anonymously on leaderboards.
+  hideFromLeaderboard Boolean   @default(false) @map("hide_from_leaderboard")
+  progressValue       Int       @default(0) @map("progress_value")
+  progressUpdatedAt   DateTime? @map("progress_updated_at")
+  completedAt         DateTime? @map("completed_at")
+  notifiedHalfway     Boolean   @default(false) @map("notified_halfway")
+  joinedAt            DateTime  @default(now()) @map("joined_at")
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([challengeId, userId])
+  @@index([challengeId, progressValue])
+  @@index([userId])
+  @@map("challenge_participants")
+}
+
+/// Daily contributions (enables per-day safety caps and consistency counting).
+model ChallengeProgress {
+  challengeId String   @map("challenge_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  day         DateTime @db.Date
+  value       Int
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@id([challengeId, userId, day])
+  @@map("challenge_progress")
+}
+
+/// Final standings snapshot when a challenge ends.
+model ChallengeResult {
+  challengeId String   @map("challenge_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  rank        Int
+  value       Int
+  completed   Boolean
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@id([challengeId, userId])
+  @@index([challengeId, rank])
+  @@map("challenge_results")
+}
+
+enum LeaderboardScope {
+  GLOBAL
+  CLUB
+}
+
+enum LeaderboardPeriod {
+  WEEK
+  MONTH
+}
+
+/// Materialised leaderboard computed by a background job.
+model Leaderboard {
+  id           String            @id @default(uuid()) @db.Uuid
+  scope        LeaderboardScope
+  clubId       String?           @map("club_id") @db.Uuid
+  period       LeaderboardPeriod
+  periodStart  DateTime          @map("period_start") @db.Date
+  activityType ActivityType?     @map("activity_type")
+  computedAt   DateTime          @default(now()) @map("computed_at")
+
+  entries LeaderboardEntry[]
+
+  @@unique([scope, clubId, period, periodStart, activityType])
+  @@map("leaderboards")
+}
+
+model LeaderboardEntry {
+  leaderboardId String @map("leaderboard_id") @db.Uuid
+  rank          Int
+  userId        String @map("user_id") @db.Uuid
+  value         Int
+
+  leaderboard Leaderboard @relation(fields: [leaderboardId], references: [id], onDelete: Cascade)
+
+  @@id([leaderboardId, userId])
+  @@index([leaderboardId, rank])
+  @@map("leaderboard_entries")
+}
+
+/// Achievement definitions are data, configurable by platform admins.
+model FitnessAchievement {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(50)
+  name        String   @db.VarChar(80)
+  description String   @db.VarChar(300)
+  icon        String   @default("🏅") @db.VarChar(16)
+  rule        Json
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  awards UserAchievement[]
+
+  @@map("fitness_achievements")
+}
+
+model UserAchievement {
+  userId        String   @map("user_id") @db.Uuid
+  achievementId String   @map("achievement_id") @db.Uuid
+  earnedAt      DateTime @default(now()) @map("earned_at")
+  sourceId      String?  @map("source_id") @db.Uuid
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement FitnessAchievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@id([userId, achievementId])
+  @@map("user_achievements")
 }

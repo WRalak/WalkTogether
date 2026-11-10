@@ -208,7 +208,7 @@ describe('messaging', () => {
     intruder.disconnect();
     // Bad tokens are refused at the handshake.
     const anon = ioClient(`http://127.0.0.1:${port}/rt`, { auth: { token: 'nope' }, transports: ['websocket'] });
-    await expect(new Promise((resolve, reject) => { anon.on('connect', resolve); anon.on('connect_error', reject); })).rejects.toThrow();
+    await expect(new Promise((resolve, reject) => { anon.on('connect', () => resolve(null)); anon.on('connect_error', reject); })).rejects.toThrow();
     anon.disconnect();
     // Blocking ends the conversation.
     await api().post(`/api/v1/users/${a.id}/block`).set(bearer(b)).expect(204);

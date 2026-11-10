@@ -12,6 +12,8 @@ export default async function setup() {
   execSync('npx prisma migrate deploy', { stdio: 'pipe', env: { ...process.env, ...testEnv, CHECKPOINT_DISABLE: '1' } });
   const { syncPermissionCatalog } = await import('../src/modules/platform/catalog');
   await syncPermissionCatalog();
+  const { seedDefaultAchievements } = await import('../src/modules/challenges/achievements.service');
+  await seedDefaultAchievements();
   const { redis } = await import('../src/database/redis');
   await redis.flushdb();
   await redis.quit();

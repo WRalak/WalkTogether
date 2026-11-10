@@ -13,6 +13,7 @@ export default function Home() {
   const user = useAuthStore((s) => s.user);
   const clubs = useQuery({ queryKey: ['my-clubs'], queryFn: () => api.users.myClubs() });
   const stats = useQuery({ queryKey: ['stats'], queryFn: () => api.activities.stats() });
+  const myChallenges = useQuery({ queryKey: ['challenges', 'mine'], queryFn: () => api.challenges.list({ mine: true }) });
   const notes = useQuery({ queryKey: ['notifications'], queryFn: () => api.notifications.list({ limit: 1 }), refetchInterval: 60_000 });
   const unread = (notes.data?.meta as { unread?: number } | undefined)?.unread ?? 0;
   const name = user?.profile?.displayName?.split(' ')[0] ?? user?.username;
@@ -75,6 +76,16 @@ export default function Home() {
               <Text className="mt-1 text-xs text-white/80">{Math.round((stats.data.goals[0].progress ?? 0) * 100)}% of your {stats.data.goals[0].period.toLowerCase()}ly goal</Text>
             </View>
           )}
+        </Pressable>
+      </Link>
+
+      <Link href="/challenges" asChild>
+        <Pressable accessibilityRole="button" className="mt-4 flex-row items-center justify-between rounded-3xl border border-line bg-surface p-4 active:opacity-80">
+          <View>
+            <Text className="font-bold text-ink">Challenges & leaderboards</Text>
+            <Text className="text-sm text-ink-muted">{myChallenges.data?.items.length ? `${myChallenges.data.items.length} in progress` : 'Find a challenge to join'}</Text>
+          </View>
+          <Text className="text-xl">🏆</Text>
         </Pressable>
       </Link>
 

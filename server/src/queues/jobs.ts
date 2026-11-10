@@ -15,6 +15,9 @@ export interface JobMap {
   'events.reminders': Record<string, never>;
   'media.process': { mediaId: string };
   'media.cleanup': Record<string, never>;
+  'challenges.finalize': Record<string, never>;
+  'leaderboards.compute': Record<string, never>;
+  'achievements.evaluate': { userId: string };
 }
 
 export type JobName = keyof JobMap;
@@ -33,4 +36,7 @@ export const JOB_QUEUES: Record<JobName, 'notifications' | 'maintenance' | 'acti
   'events.reminders': 'maintenance',
   'media.process': 'activity',
   'media.cleanup': 'maintenance',
+  'challenges.finalize': 'maintenance',
+  'leaderboards.compute': 'maintenance',
+  'achievements.evaluate': 'activity',
 };

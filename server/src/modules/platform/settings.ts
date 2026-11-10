@@ -8,6 +8,10 @@ export const PLATFORM_SETTING_DEFAULTS = {
   'clubs.requireApproval': false,
   'clubs.maxOwnedPerUser': 5,
   'clubs.supportedCountries': ['KE', 'UG', 'TZ', 'RW'] as string[],
+  /** Safety cap: distance credited per person per day on leaderboards (metres). */
+  'leaderboards.maxDailyDistanceM': 60000,
+  'platform.supportedCurrencies': ['KES', 'UGX', 'TZS', 'RWF', 'USD'] as string[],
+  'platform.languages': ['en', 'sw'] as string[],
 } as const;
 
 export type PlatformSettingKey = keyof typeof PLATFORM_SETTING_DEFAULTS;

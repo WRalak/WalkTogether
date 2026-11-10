@@ -18,6 +18,7 @@ import { parse } from '../../middleware/validate';
 import { badRequest, unauthorized } from '../../shared/errors';
 import * as adminAuth from './admin-auth.service';
 import * as admin from './admin.service';
+import { audit } from '../audit/audit.service';
 import { planInputSchema, updatePlanSchema } from '@walktogether/validation';
 import * as subs from '../subscriptions/subscriptions.service';
 
@@ -182,4 +183,30 @@ adminRouter.post('/reports/:id/resolve', requireAdminPermission('moderation.mana
   const { action, note } = parse(adminReportResolveSchema, req.body);
   await reports.resolvePlatformReport(req.admin!.adminId, parse(idParam, req.params).id, action, note, auditCtx(req));
   res.status(204).end();
+});
+
+// Platform challenges & achievement definitions ------------------------------------------------
+import { achievementDefinitionSchema, adminChallengeSchema } from '@walktogether/validation';
+import { cancelChallenge, createPlatformChallenge } from '../challenges/challenges.service';
+import { achievementRuleSchema } from '../challenges/achievements.service';
+
+adminRouter.post('/challenges', requireAdminPermission('sponsorships.manage'), async (req, res) => {
+  res.status(201).json({ data: await createPlatformChallenge(req.admin!.adminId, parse(adminChallengeSchema, req.body), auditCtx(req)) });
+});
+adminRouter.get('/challenges', requireAdminPermission('platform.overview.view'), async (_req, res) => {
+  res.json({ data: await prisma.challenge.findMany({ orderBy: { createdAt: 'desc' }, take: 200, include: { _count: { select: { participants: true } }, club: { select: { name: true } } } }) });
+});
+adminRouter.post('/challenges/:id/cancel', requireAdminPermission('sponsorships.manage'), async (req, res) => {
+  await cancelChallenge(parse(idParam, req.params).id, { adminId: req.admin!.adminId }, auditCtx(req));
+  res.status(204).end();
+});
+adminRouter.get('/achievements', requireAdminPermission('settings.manage'), async (_req, res) => {
+  res.json({ data: await prisma.fitnessAchievement.findMany({ orderBy: { sortOrder: 'asc' }, include: { _count: { select: { awards: true } } } }) });
+});
+adminRouter.put('/achievements/:code', requireAdminPermission('settings.manage'), async (req, res) => {
+  const body = parse(achievementDefinitionSchema, { ...req.body, code: req.params.code });
+  const rule = achievementRuleSchema.parse(body.rule);
+  const row = await prisma.fitnessAchievement.upsert({ where: { code: body.code }, create: { ...body, rule }, update: { ...body, rule } });
+  await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.achievement_saved', targetType: 'achievement', targetId: row.id, metadata: { code: body.code } }, auditCtx(req));
+  res.json({ data: row });
 });

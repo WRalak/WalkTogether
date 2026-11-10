@@ -26,6 +26,7 @@ export default function Profile() {
   const signOut = useAuthStore((s) => s.signOut);
   const setUser = useAuthStore((s) => s.setUser);
   const stats = useQuery({ queryKey: ['stats'], queryFn: () => api.activities.stats() });
+  const achievements = useQuery({ queryKey: ['achievements'], queryFn: () => api.achievements.mine() });
   if (!user) return null;
   const name = user.profile?.displayName ?? user.username;
 
@@ -70,6 +71,21 @@ export default function Profile() {
         <Row href={{ pathname: '/users/[username]', params: { username: user.username } }} label="My public profile" />
       </Card>
 
+      {!!achievements.data?.some((a) => a.earnedAt) && (
+        <>
+          <SectionTitle>Achievements</SectionTitle>
+          <View className="flex-row flex-wrap gap-2">
+            {achievements.data
+              .filter((a) => a.earnedAt)
+              .map((a) => (
+                <View key={a.id} accessible accessibilityLabel={`${a.name}: ${a.description}`} className="items-center rounded-2xl border border-line bg-surface px-3 py-2">
+                  <Text className="text-2xl">{a.icon}</Text>
+                  <Text className="text-xs font-semibold text-ink">{a.name}</Text>
+                </View>
+              ))}
+          </View>
+        </>
+      )}
       <SectionTitle>Settings</SectionTitle>
       <Card className="py-0">
         <Row href="/settings/privacy" label="Privacy" detail={user.privacy?.profileVisibility.toLowerCase()} />
