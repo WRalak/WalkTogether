@@ -1,0 +1,24 @@
+{
+  "name": "walktogether",
+  "private": true,
+  "version": "0.1.0",
+  "description": "WalkTogether — multi-club fitness social network and SaaS platform",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev:server": "pnpm --filter @walktogether/server dev",
+    "dev:web": "pnpm --filter @walktogether/web dev",
+    "dev:club-admin": "pnpm --filter @walktogether/club-admin dev",
+    "dev:platform-admin": "pnpm --filter @walktogether/platform-admin dev",
+    "dev:mobile": "pnpm --filter @walktogether/mobile start",
+    "db:migrate": "pnpm --filter @walktogether/server db:migrate",
+    "db:deploy": "pnpm --filter @walktogether/server db:deploy",
+    "db:seed": "pnpm --filter @walktogether/server db:seed",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r --parallel lint",
+    "build": "pnpm -r build"
+  }
+}
