@@ -29,10 +29,14 @@ const config: ExpoConfig = {
     // Google Maps SDK key (restrict to the app's package + SHA-1 in Google Cloud Console).
     config: { googleMaps: { apiKey: process.env.GOOGLE_MAPS_ANDROID_KEY } },
     edgeToEdgeEnabled: true,
-    permissions: ['ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'ACCESS_BACKGROUND_LOCATION', 'FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_LOCATION', 'POST_NOTIFICATIONS'],
+    permissions: ['android.permission.health.READ_STEPS', 'ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'ACCESS_BACKGROUND_LOCATION', 'FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_LOCATION', 'POST_NOTIFICATIONS'],
   },
   plugins: [
     'expo-router',
+    // Health Connect requires Android minSdk 26; HealthKit entitlement for steps (read-only).
+    ['expo-build-properties', { android: { minSdkVersion: 26 } }],
+    'expo-health-connect',
+    ['@kingstinct/react-native-healthkit', { NSHealthShareUsageDescription: 'WalkTogether reads your daily step count to show it alongside your activities.', NSHealthUpdateUsageDescription: false, background: false }],
     'expo-sqlite',
     'expo-secure-store',
     [

@@ -100,7 +100,8 @@ export interface ActivityStatsDto {
   monthly: { start: string; activities: number; distanceM: number; movingSeconds: number; avgPaceSecPerKm: number | null }[];
   personalRecords: Record<string, Record<string, ActivityDto | null>>;
   goals: GoalDto[];
-  steps: null;
+  /** Only from Health Connect / HealthKit; null when not connected. */
+  steps: { today: number; thisWeek: number; last30Days: { day: string; steps: number }[]; sources: string[] } | null;
 }
 
 export interface EventDto {
@@ -431,6 +432,7 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
       update: (id: string, body: In<typeof v.updateActivitySchema>) => http.request<ActivityDto>(`/api/v1/activities/${id}`, { method: 'PATCH', body }),
       remove: (id: string) => http.request<void>(`/api/v1/activities/${id}`, { method: 'DELETE' }),
       stats: (query: { type?: string } = {}) => http.request<ActivityStatsDto>('/api/v1/activities/stats', { query }),
+      syncSteps: (body: In<typeof v.stepsSyncSchema>) => http.request<{ synced: number }>('/api/v1/activities/steps', { method: 'POST', body }),
       trends: () => http.request<Record<string, unknown>>('/api/v1/activities/stats/trends'),
       goals: () => http.request<GoalDto[]>('/api/v1/activities/goals'),
       createGoal: (body: In<typeof v.goalSchema>) => http.request<GoalDto>('/api/v1/activities/goals', { method: 'POST', body }),

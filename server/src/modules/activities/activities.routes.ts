@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { completeActivitySchema, createActivitySchema, goalSchema, gpsBatchSchema, listActivitiesQuerySchema, statsQuerySchema, updateActivitySchema } from '@walktogether/validation';
+import { stepsSyncSchema, completeActivitySchema, createActivitySchema, goalSchema, gpsBatchSchema, listActivitiesQuerySchema, statsQuerySchema, updateActivitySchema } from '@walktogether/validation';
 import { authUserId, optionalAuth, requireAuth } from '../../middleware/authenticate';
 import { parse } from '../../middleware/validate';
 import { requireFeature } from '../subscriptions/entitlements.service';
 import * as svc from './activities.service';
 import * as stats from './stats.service';
+import { syncSteps } from './steps.service';
 
 export const activitiesRouter = Router();
 const idParam = z.object({ id: z.string().uuid() });
@@ -25,6 +26,10 @@ activitiesRouter.get('/stats/trends', requireAuth, async (req, res) => {
   await requireFeature({ userId: authUserId(req) }, 'user.advanced_analytics');
   const { type } = parse(statsQuerySchema, req.query);
   res.json({ data: await stats.advancedTrends(authUserId(req), type) });
+});
+activitiesRouter.post('/steps', requireAuth, async (req, res) => {
+  const { source, days } = parse(stepsSyncSchema, req.body);
+  res.json({ data: await syncSteps(authUserId(req), source, days) });
 });
 activitiesRouter.get('/goals', requireAuth, async (req, res) => {
   res.json({ data: await stats.goalProgress(authUserId(req)) });

@@ -158,6 +158,7 @@ model User {
   notifications        Notification[]
   activities           Activity[]
   goals                PersonalGoal[]
+  dailySteps           DailySteps[]
   eventsCreated        Event[]                   @relation("EventCreator")
   eventRegistrations   EventRegistration[]
   eventAttendance      EventAttendance[]         @relation("Attendee")
@@ -1759,4 +1760,23 @@ model CampaignReward {
 
   @@unique([campaignId, userId])
   @@map("campaign_rewards")
+}
+
+enum StepsSource {
+  HEALTH_CONNECT
+  HEALTHKIT
+}
+
+/// Daily step totals imported from Apple Health / Android Health Connect only — never inferred from GPS.
+model DailySteps {
+  userId   String      @map("user_id") @db.Uuid
+  day      DateTime    @db.Date
+  source   StepsSource
+  steps    Int
+  syncedAt DateTime    @default(now()) @map("synced_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day, source])
+  @@map("daily_steps")
 }

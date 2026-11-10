@@ -1,4 +1,6 @@
-import { Alert, Image, Pressable, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Image, Platform, Pressable, Text, View } from 'react-native';
+import { connectHealth, healthStatus, syncSteps, type HealthStatus } from '@/services/health';
 import { pickAndUploadImage } from '@/services/upload';
 import { errorMessage } from '@/utils/errors';
 import { Link, type Href } from 'expo-router';
@@ -26,6 +28,14 @@ export default function Profile() {
   const signOut = useAuthStore((s) => s.signOut);
   const setUser = useAuthStore((s) => s.setUser);
   const stats = useQuery({ queryKey: ['stats'], queryFn: () => api.activities.stats() });
+  const [health, setHealth] = useState<HealthStatus>('unavailable');
+  useEffect(() => {
+    void healthStatus().then((h) => {
+      setHealth(h);
+      if (h === 'granted') void syncSteps().then(() => stats.refetch()).catch(() => undefined);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const achievements = useQuery({ queryKey: ['achievements'], queryFn: () => api.achievements.mine() });
   if (!user) return null;
   const name = user.profile?.displayName ?? user.username;
@@ -86,6 +96,20 @@ export default function Profile() {
           </View>
         </>
       )}
+      <Card className="mt-4">
+        <Text className="font-semibold text-ink">Steps</Text>
+        {stats.data?.steps ? (
+          <Text className="mt-1 text-ink">
+            {stats.data.steps.today.toLocaleString()} today · {stats.data.steps.thisWeek.toLocaleString()} this week
+          </Text>
+        ) : (
+          <Text className="mt-1 text-sm text-ink-muted">Connect {Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect'} to see your step count. We never estimate steps from GPS.</Text>
+        )}
+        {health !== 'granted' && health !== 'unavailable' && (
+          <Button title={`Connect ${Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect'}`} variant="outline" className="mt-3" onPress={() => void connectHealth().then(() => { setHealth('granted'); void stats.refetch(); })} />
+        )}
+        {health === 'unavailable' && !stats.data?.steps && <Text className="mt-2 text-xs text-ink-muted">Not available on this device or build.</Text>}
+      </Card>
       <SectionTitle>Settings</SectionTitle>
       <Card className="py-0">
         <Row href="/settings/privacy" label="Privacy" detail={user.privacy?.profileVisibility.toLowerCase()} />

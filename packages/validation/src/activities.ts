@@ -63,3 +63,13 @@ export const goalSchema = z
     target: z.number().int().min(1).max(100_000_000),
   })
   .strict();
+
+export const stepsSyncSchema = z
+  .object({
+    source: z.enum(['HEALTH_CONNECT', 'HEALTHKIT']),
+    days: z
+      .array(z.object({ day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), steps: z.number().int().min(0).max(200_000) }).strict())
+      .min(1)
+      .max(31),
+  })
+  .strict();

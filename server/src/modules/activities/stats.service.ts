@@ -1,6 +1,7 @@
 import { Prisma, type ActivityType } from '@prisma/client';
 import { prisma } from '../../database/prisma';
 import { notFound } from '../../shared/errors';
+import { stepsSummary } from './steps.service';
 
 const DAY = 86_400_000;
 
@@ -121,8 +122,8 @@ export async function myStats(userId: string, q: { type?: ActivityType; from?: D
     monthly,
     personalRecords: records,
     goals,
-    // Step counts come only from Health Connect / HealthKit integrations, never from GPS.
-    steps: null,
+    // Step counts come only from Health Connect / HealthKit, never from GPS (null = not connected).
+    steps: await stepsSummary(userId),
   };
 }
 

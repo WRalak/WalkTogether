@@ -143,7 +143,13 @@ describe('stats, goals and premium features', () => {
     expect(s.body.data.weekly).toHaveLength(12);
     expect(s.body.data.personalRecords.RUN.fastestPace1k).toBeTruthy();
     expect(s.body.data.goals[0].progress).toBeGreaterThan(0.4);
-    expect(s.body.data.steps).toBeNull();
+    expect(s.body.data.steps).toBeNull(); // never inferred from GPS
+    const today = new Date().toISOString().slice(0, 10);
+    await api().post('/api/v1/activities/steps').set(bearer(u)).send({ source: 'HEALTH_CONNECT', days: [{ day: today, steps: 8432 }] }).expect(200);
+    await api().post('/api/v1/activities/steps').set(bearer(u)).send({ source: 'HEALTHKIT', days: [{ day: today, steps: 8000 }] }).expect(200);
+    await api().post('/api/v1/activities/steps').set(bearer(u)).send({ source: 'HEALTH_CONNECT', days: [{ day: '2001-01-01', steps: 5 }] }).expect(400);
+    const s2 = await api().get('/api/v1/activities/stats').set(bearer(u)).expect(200);
+    expect(s2.body.data.steps).toMatchObject({ today: 8432 }); // max per day, no double counting
 
     const gated = await api().get('/api/v1/activities/stats/trends').set(bearer(u)).expect(402);
     expect(gated.body.error.code).toBe('PLAN_UPGRADE_REQUIRED');
