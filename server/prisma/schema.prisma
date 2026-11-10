@@ -172,6 +172,8 @@ model User {
   challengesCreated    Challenge[]               @relation("ChallengeCreator")
   challengeEntries     ChallengeParticipant[]
   achievements         UserAchievement[]
+  payments             Payment[]                 @relation("Payer")
+  sponsorsOwned        Sponsor[]
   following            Follow[]                  @relation("Follower")
   followers            Follow[]                  @relation("Followee")
 
@@ -1005,6 +1007,7 @@ model Event {
   registrations EventRegistration[]
   attendance    EventAttendance[]
   reminders     EventReminder[]
+  sponsorship   SponsoredEvent?
 
   @@index([clubId, startsAt])
   @@index([status, visibility, startsAt])
@@ -1331,30 +1334,31 @@ enum ChallengeStatus {
 }
 
 model Challenge {
-  id                String          @id @default(uuid()) @db.Uuid
+  id                String             @id @default(uuid()) @db.Uuid
   scope             ChallengeScope
-  clubId            String?         @map("club_id") @db.Uuid
-  createdById       String?         @map("created_by_id") @db.Uuid
-  createdByAdminId  String?         @map("created_by_admin_id") @db.Uuid
-  title             String          @db.VarChar(120)
-  description       String?         @db.VarChar(3000)
+  clubId            String?            @map("club_id") @db.Uuid
+  createdById       String?            @map("created_by_id") @db.Uuid
+  createdByAdminId  String?            @map("created_by_admin_id") @db.Uuid
+  title             String             @db.VarChar(120)
+  description       String?            @db.VarChar(3000)
   metric            ChallengeMetric
-  activityTypes     ActivityType[]  @map("activity_types")
+  activityTypes     ActivityType[]     @map("activity_types")
   /// Completion target; null = pure competition (leaderboard only).
   target            Int?
-  startsAt          DateTime        @map("starts_at")
-  endsAt            DateTime        @map("ends_at")
-  visibility        EventVisibility @default(PUBLIC)
-  status            ChallengeStatus @default(ACTIVE)
-  isPremium         Boolean         @default(false) @map("is_premium")
-  rules             String?         @db.VarChar(5000)
-  rewardDescription String?         @map("reward_description") @db.VarChar(500)
+  startsAt          DateTime           @map("starts_at")
+  endsAt            DateTime           @map("ends_at")
+  visibility        EventVisibility    @default(PUBLIC)
+  status            ChallengeStatus    @default(ACTIVE)
+  isPremium         Boolean            @default(false) @map("is_premium")
+  rules             String?            @db.VarChar(5000)
+  rewardDescription String?            @map("reward_description") @db.VarChar(500)
   /// Safety: credit at most this much distance per participant per day.
-  maxDailyDistanceM Int             @default(42195) @map("max_daily_distance_m")
-  sponsorName       String?         @map("sponsor_name") @db.VarChar(120)
-  coverUrl          String?         @map("cover_url") @db.VarChar(500)
-  createdAt         DateTime        @default(now()) @map("created_at")
-  updatedAt         DateTime        @updatedAt @map("updated_at")
+  maxDailyDistanceM Int                @default(42195) @map("max_daily_distance_m")
+  sponsorName       String?            @map("sponsor_name") @db.VarChar(120)
+  campaign          SponsoredCampaign?
+  coverUrl          String?            @map("cover_url") @db.VarChar(500)
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
 
   club         Club?                  @relation(fields: [clubId], references: [id], onDelete: Cascade)
   createdBy    User?                  @relation("ChallengeCreator", fields: [createdById], references: [id], onDelete: SetNull)
@@ -1387,6 +1391,8 @@ model ChallengeParticipant {
   teamClubId          String?   @map("team_club_id") @db.Uuid
   /// Privacy-conscious participation: counted, but shown anonymously on leaderboards.
   hideFromLeaderboard Boolean   @default(false) @map("hide_from_leaderboard")
+  /// Explicit consent to sponsored-challenge terms (required for SPONSORED challenges).
+  consentedAt         DateTime? @map("consented_at")
   progressValue       Int       @default(0) @map("progress_value")
   progressUpdatedAt   DateTime? @map("progress_updated_at")
   completedAt         DateTime? @map("completed_at")
@@ -1498,4 +1504,255 @@ model UserAchievement {
 
   @@id([userId, achievementId])
   @@map("user_achievements")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 7: payments, invoices, promotions, sponsorships
+// ---------------------------------------------------------------------------
+
+enum PaymentPurpose {
+  SUBSCRIPTION
+  SPONSORSHIP
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+/// A payment is only marked SUCCEEDED from a verified provider confirmation, never from a client.
+model Payment {
+  id             String         @id @default(uuid()) @db.Uuid
+  purpose        PaymentPurpose
+  payerUserId    String         @map("payer_user_id") @db.Uuid
+  planId         String?        @map("plan_id") @db.Uuid
+  subjectClubId  String?        @map("subject_club_id") @db.Uuid
+  subjectUserId  String?        @map("subject_user_id") @db.Uuid
+  campaignId     String?        @map("campaign_id") @db.Uuid
+  promotionCode  String?        @map("promotion_code") @db.VarChar(40)
+  amountMinor    Int            @map("amount_minor")
+  currency       String         @db.Char(3)
+  status         PaymentStatus  @default(PENDING)
+  provider       String         @db.VarChar(20)
+  providerRef    String?        @map("provider_ref") @db.VarChar(200)
+  idempotencyKey String         @map("idempotency_key") @db.VarChar(100)
+  phone          String?        @db.VarChar(20)
+  failureReason  String?        @map("failure_reason") @db.VarChar(300)
+  refundedMinor  Int            @default(0) @map("refunded_minor")
+  lastCheckedAt  DateTime?      @map("last_checked_at")
+  confirmedAt    DateTime?      @map("confirmed_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  payer        User                 @relation("Payer", fields: [payerUserId], references: [id], onDelete: Restrict)
+  transactions PaymentTransaction[]
+  invoice      Invoice?
+  refunds      Refund[]
+  campaign     SponsoredCampaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@unique([payerUserId, idempotencyKey])
+  @@unique([provider, providerRef])
+  @@index([status, createdAt])
+  @@index([subjectClubId, createdAt])
+  @@index([subjectUserId, createdAt])
+  @@map("payments")
+}
+
+/// Log of every provider interaction (requests, callbacks, status queries) for reconciliation.
+model PaymentTransaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  paymentId String   @map("payment_id") @db.Uuid
+  kind      String   @db.VarChar(30)
+  status    String   @db.VarChar(40)
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId, createdAt])
+  @@map("payment_transactions")
+}
+
+model Invoice {
+  id        String   @id @default(uuid()) @db.Uuid
+  number    String   @unique @db.VarChar(30)
+  paymentId String   @unique @map("payment_id") @db.Uuid
+  billedTo  Json     @map("billed_to")
+  lines     Json
+  subtotal  Int
+  discount  Int      @default(0)
+  tax       Int      @default(0)
+  total     Int
+  currency  String   @db.Char(3)
+  issuedAt  DateTime @default(now()) @map("issued_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@map("invoices")
+}
+
+enum RefundStatus {
+  SUCCEEDED
+  PENDING_MANUAL
+  FAILED
+}
+
+model Refund {
+  id          String       @id @default(uuid()) @db.Uuid
+  paymentId   String       @map("payment_id") @db.Uuid
+  amountMinor Int          @map("amount_minor")
+  reason      String       @db.VarChar(300)
+  status      RefundStatus
+  providerRef String?      @map("provider_ref") @db.VarChar(200)
+  adminId     String       @map("admin_id") @db.Uuid
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@index([paymentId])
+  @@map("refunds")
+}
+
+/// Idempotent webhook processing: each provider event is handled at most once.
+model WebhookEvent {
+  provider       String    @db.VarChar(20)
+  eventId        String    @map("event_id") @db.VarChar(200)
+  signatureValid Boolean   @map("signature_valid")
+  payload        Json
+  receivedAt     DateTime  @default(now()) @map("received_at")
+  processedAt    DateTime? @map("processed_at")
+  error          String?   @db.VarChar(300)
+
+  @@id([provider, eventId])
+  @@map("webhook_events")
+}
+
+model Promotion {
+  id             String    @id @default(uuid()) @db.Uuid
+  code           String    @unique @db.VarChar(40)
+  description    String?   @db.VarChar(200)
+  percentOff     Int?      @map("percent_off")
+  amountOffMinor Int?      @map("amount_off_minor")
+  planCodes      String[]  @default([]) @map("plan_codes")
+  maxRedemptions Int?      @map("max_redemptions")
+  redeemed       Int       @default(0)
+  expiresAt      DateTime? @map("expires_at")
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@map("promotions")
+}
+
+enum SponsorStatus {
+  PENDING_REVIEW
+  ACTIVE
+  SUSPENDED
+}
+
+model Sponsor {
+  id           String        @id @default(uuid()) @db.Uuid
+  ownerUserId  String        @map("owner_user_id") @db.Uuid
+  name         String        @db.VarChar(120)
+  slug         String        @unique @db.VarChar(60)
+  description  String?       @db.VarChar(2000)
+  logoUrl      String?       @map("logo_url") @db.VarChar(500)
+  websiteUrl   String?       @map("website_url") @db.VarChar(500)
+  contactEmail String        @map("contact_email") @db.VarChar(254)
+  status       SponsorStatus @default(PENDING_REVIEW)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  owner     User                @relation(fields: [ownerUserId], references: [id], onDelete: Restrict)
+  campaigns SponsoredCampaign[]
+
+  @@map("sponsors")
+}
+
+enum CampaignType {
+  CHALLENGE
+  EVENT
+}
+
+enum CampaignStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  ACTIVE
+  ENDED
+  REJECTED
+  CANCELLED
+}
+
+model SponsoredCampaign {
+  id               String         @id @default(uuid()) @db.Uuid
+  sponsorId        String         @map("sponsor_id") @db.Uuid
+  name             String         @db.VarChar(120)
+  type             CampaignType
+  status           CampaignStatus @default(DRAFT)
+  budgetMinor      Int            @map("budget_minor")
+  currency         String         @default("KES") @db.Char(3)
+  startsAt         DateTime       @map("starts_at")
+  endsAt           DateTime       @map("ends_at")
+  /// Published rules participants must accept (competition terms, eligibility, data use).
+  terms            String         @db.VarChar(10000)
+  eligibility      Json           @default("{}")
+  prizeDescription String?        @map("prize_description") @db.VarChar(1000)
+  /// Challenge configuration used to create the sponsored challenge on activation.
+  challengeConfig  Json?          @map("challenge_config")
+  challengeId      String?        @unique @map("challenge_id") @db.Uuid
+  reviewNote       String?        @map("review_note") @db.VarChar(500)
+  paidAt           DateTime?      @map("paid_at")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  sponsor   Sponsor          @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+  challenge Challenge?       @relation(fields: [challengeId], references: [id], onDelete: SetNull)
+  events    SponsoredEvent[]
+  rewards   CampaignReward[]
+  payments  Payment[]
+
+  @@index([sponsorId, status])
+  @@index([status, startsAt])
+  @@map("sponsored_campaigns")
+}
+
+/// A sponsor's offer to sponsor a club event; the club must accept before it is shown.
+model SponsoredEvent {
+  eventId    String    @id @map("event_id") @db.Uuid
+  campaignId String    @map("campaign_id") @db.Uuid
+  acceptedAt DateTime? @map("accepted_at")
+  acceptedBy String?   @map("accepted_by") @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  event    Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  campaign SponsoredCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@map("sponsored_events")
+}
+
+enum RewardStatus {
+  PENDING
+  FULFILLED
+  FORFEITED
+}
+
+model CampaignReward {
+  id          String       @id @default(uuid()) @db.Uuid
+  campaignId  String       @map("campaign_id") @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
+  rank        Int?
+  description String       @db.VarChar(300)
+  status      RewardStatus @default(PENDING)
+  fulfilledAt DateTime?    @map("fulfilled_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  campaign SponsoredCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+  @@map("campaign_rewards")
 }

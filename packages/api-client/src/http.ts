@@ -39,6 +39,7 @@ export interface RequestOptions {
   query?: Record<string, string | number | boolean | undefined | null>;
   auth?: boolean;
   signal?: AbortSignal;
+  headers?: Record<string, string>;
 }
 
 export interface Page<T> {
@@ -62,6 +63,7 @@ export class HttpClient {
     if (o.body !== undefined) headers['Content-Type'] = 'application/json';
     if (this.opts.mode === 'web') headers['X-WT-Client'] = 'web';
     if (accessToken && o.auth !== false) headers.Authorization = `Bearer ${accessToken}`;
+    Object.assign(headers, o.headers ?? {});
     const fetchImpl = this.opts.fetchImpl ?? fetch;
     const timeout = AbortSignal.timeout(this.opts.timeoutMs ?? 20_000);
     return fetchImpl(this.url(path, o.query), {

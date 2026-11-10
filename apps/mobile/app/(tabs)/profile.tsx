@@ -90,6 +90,7 @@ export default function Profile() {
       <Card className="py-0">
         <Row href="/settings/privacy" label="Privacy" detail={user.privacy?.profileVisibility.toLowerCase()} />
         <Row href="/settings/security" label="Security & devices" />
+        <Row href="/settings/subscription" label="Subscription" />
       </Card>
 
       <Button

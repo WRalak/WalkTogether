@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import { buttonVariants, Card, CardContent } from '@walktogether/ui';
 import { PageHeader } from '@/components/page-header';
 import { siteConfig } from '@/lib/config';
+import { fetchPlans } from '@/lib/api';
 
+export const revalidate = 300;
 export const metadata: Metadata = { title: 'Pricing', description: 'Free for members and clubs to start. Club Pro, Enterprise and individual Premium plans.', alternates: { canonical: '/pricing' } };
 
 /**
@@ -15,7 +17,9 @@ const clubPlans = [
   { name: 'Club Enterprise', tagline: 'For organizations', features: ['Multiple branches', 'Advanced permissions', 'Organisation-wide reporting', 'Corporate wellness tools', 'Priority support'] },
 ];
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const plans = await fetchPlans();
+  const priceFor = (name: string) => plans.find((p) => p.name === name && p.amountMinor > 0);
   return (
     <>
       <PageHeader eyebrow="Pricing" title="Free to start. Upgrade when you’re ready." description="Personal GPS tracking stays free for everyone, and never depends on a club’s plan." />
@@ -25,6 +29,14 @@ export default function PricingPage() {
             <CardContent className="flex h-full flex-col p-6">
               <h2 className="text-xl font-bold">{p.name}</h2>
               <p className="text-sm text-muted-foreground">{p.tagline}</p>
+              {priceFor(p.name) ? (
+                <p className="mt-3 text-3xl font-extrabold">
+                  {priceFor(p.name)!.currency} {(priceFor(p.name)!.amountMinor / 100).toLocaleString()}
+                  <span className="text-sm font-normal text-muted-foreground"> / {priceFor(p.name)!.interval.toLowerCase()}</span>
+                </p>
+              ) : (
+                <p className="mt-3 text-3xl font-extrabold">{p.name === 'Free Club' ? 'Free' : '—'}</p>
+              )}
               <ul className="mt-5 flex-1 space-y-2 text-sm">
                 {p.features.map((f) => (
                   <li key={f} className="flex gap-2">
@@ -33,8 +45,8 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <a href={p.name === 'Free Club' ? `${siteConfig.clubAdminUrl}/signup` : `mailto:${siteConfig.contactEmail}?subject=${encodeURIComponent(p.name)}`} className={buttonVariants({ className: 'mt-6', variant: p.highlight ? 'default' : 'outline' })}>
-                {p.name === 'Free Club' ? 'Create a free club' : 'Contact us for pricing'}
+              <a href={p.name === 'Free Club' || priceFor(p.name) ? `${siteConfig.clubAdminUrl}/signup` : `mailto:${siteConfig.contactEmail}?subject=${encodeURIComponent(p.name)}`} className={buttonVariants({ className: 'mt-6', variant: p.highlight ? 'default' : 'outline' })}>
+                {p.name === 'Free Club' ? 'Create a free club' : priceFor(p.name) ? 'Get started' : 'Contact us for pricing'}
               </a>
             </CardContent>
           </Card>
@@ -44,7 +56,7 @@ export default function PricingPage() {
         <Card>
           <CardContent className="p-6">
             <h2 className="text-xl font-bold">WalkTogether Premium (individuals)</h2>
-            <p className="mt-2 text-muted-foreground">Advanced analytics, pace trends, route analysis, goals and training insights. Independent of any club subscription. Payments via M-Pesa and cards are coming soon.</p>
+            <p className="mt-2 text-muted-foreground">Advanced analytics, pace trends, route analysis, goals and training insights. Independent of any club subscription. Pay with M-Pesa or card.</p>
           </CardContent>
         </Card>
       </div>

@@ -18,8 +18,11 @@ export default function SponsorsPage() {
         ]}
       />
       <div className="container text-center">
-        <a href={`mailto:${siteConfig.contactEmail}?subject=Sponsorship%20enquiry`} className={buttonVariants({ size: 'lg' })}>
-          Become a sponsor
+        <a href={`${siteConfig.clubAdminUrl}/sponsor`} className={buttonVariants({ size: 'lg' })}>
+          Open the sponsor portal
+        </a>
+        <a href={`mailto:${siteConfig.contactEmail}?subject=Sponsorship%20enquiry`} className={buttonVariants({ size: 'lg', variant: 'outline', className: 'ml-3' })}>
+          Talk to us
         </a>
       </div>
     </>

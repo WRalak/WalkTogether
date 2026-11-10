@@ -20,6 +20,8 @@ import { localUploadRouter, mediaRouter } from './modules/media/media.routes';
 import { localStorageDriver } from './modules/media/storage';
 import { commentsRouter, feedRouter, followRoutes, postsRouter, reportsRouter } from './modules/social/social.routes';
 import { achievementsRouter, challengesRouter, leaderboardsRouter } from './modules/challenges/challenges.routes';
+import { paymentsRouter, checkoutRouter } from './modules/payments/payments.routes';
+import { sponsorshipsRouter } from './modules/sponsorships/sponsorships.routes';
 import { notificationsRouter } from './modules/notifications/notifications.routes';
 import { subscriptionsRouter } from './modules/subscriptions/subscriptions.routes';
 import { buildOpenApiDocument } from './openapi';
@@ -50,7 +52,8 @@ export function createApp(): Express {
       maxAge: 600,
     }),
   );
-  app.use(express.json({ limit: '1mb' }));
+  // Keep the raw body for webhook signature verification (Stripe, sandbox).
+  app.use(express.json({ limit: '1mb', verify: (req, _res, buf) => void ((req as unknown as { rawBody?: Buffer }).rawBody = buf) }));
   app.use(cookieParser());
 
   app.use('/health', healthRouter);
@@ -78,7 +81,10 @@ export function createApp(): Express {
     app.use('/media-files', express.static(localStorageDriver.root, { immutable: true, maxAge: '1y', fallthrough: false }));
   }
   api.use('/notifications', notificationsRouter);
+  api.use('/subscriptions', checkoutRouter);
   api.use('/subscriptions', subscriptionsRouter);
+  api.use('/payments', paymentsRouter);
+  api.use('/', sponsorshipsRouter);
   api.use('/platform-admin', adminRouter);
   app.use('/api/v1', api);
 

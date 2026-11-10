@@ -9,6 +9,8 @@ import { finalizeEndedChallenges, onActivityChanged } from '../modules/challenge
 import { computeLeaderboards } from '../modules/challenges/leaderboards.service';
 import { evaluateAchievements } from '../modules/challenges/achievements.service';
 import { prisma } from '../database/prisma';
+import { activateCampaign, endFinishedCampaigns } from '../modules/sponsorships/sponsorships.service';
+import { reconcilePendingPayments } from '../modules/payments/payments.service';
 import { processMedia } from '../modules/media/media.service';
 import { upsertActivityPost } from '../modules/social/posts.service';
 import { cleanupStaleMedia } from '../modules/media/maintenance';
@@ -39,4 +41,7 @@ export const processors: { [K in JobName]: (data: JobMap[K]) => Promise<unknown>
   'challenges.finalize': () => finalizeEndedChallenges(),
   'leaderboards.compute': () => computeLeaderboards(),
   'achievements.evaluate': (d) => evaluateAchievements(d.userId),
+  'campaigns.activate': (d) => activateCampaign(d.campaignId),
+  'campaigns.end': () => endFinishedCampaigns(),
+  'payments.reconcile': () => reconcilePendingPayments(),
 };

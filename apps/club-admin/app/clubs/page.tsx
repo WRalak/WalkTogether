@@ -17,9 +17,14 @@ export default function ClubPickerPage() {
           <h1 className="text-2xl font-bold">Your clubs</h1>
           <p className="text-sm text-muted-foreground">Clubs you own or help manage.</p>
         </div>
-        <Link href="/clubs/new" className={buttonVariants()}>
-          Create a club
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/sponsor" className={buttonVariants({ variant: 'outline' })}>
+            Sponsor portal
+          </Link>
+          <Link href="/clubs/new" className={buttonVariants()}>
+            Create a club
+          </Link>
+        </div>
       </div>
       <div className="mt-6">
         {isLoading ? (

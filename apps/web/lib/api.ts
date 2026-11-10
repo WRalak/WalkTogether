@@ -28,3 +28,25 @@ export async function fetchClub(slug: string) {
   const res = await get<ClubDetail & { latitude: number | null; longitude: number | null }>(`/api/v1/clubs/${encodeURIComponent(slug)}`, 120);
   return res?.data ?? null;
 }
+
+export interface PublicPlan {
+  id: string;
+  code: string;
+  audience: 'CLUB' | 'INDIVIDUAL';
+  name: string;
+  description: string | null;
+  currency: string;
+  amountMinor: number;
+  interval: 'MONTH' | 'YEAR';
+  trialDays: number;
+  isDefault: boolean;
+}
+
+/** Live plan catalogue: prices are configured by platform admins, never hardcoded in the site. */
+export async function fetchPlans() {
+  try {
+    return (await get<PublicPlan[]>('/api/v1/subscriptions/plans', 300))?.data ?? [];
+  } catch {
+    return [];
+  }
+}

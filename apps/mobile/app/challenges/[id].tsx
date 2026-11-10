@@ -16,8 +16,9 @@ export default function ChallengeDetail() {
   const myClubs = useQuery({ queryKey: ['my-clubs'], queryFn: () => api.users.myClubs() });
   const [hidden, setHidden] = useState(false);
   const [team, setTeam] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
   const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ['challenge', id] }), qc.invalidateQueries({ queryKey: ['challenge-lb', id] })]);
-  const join = useMutation({ mutationFn: () => api.challenges.join(id, { hideFromLeaderboard: hidden, teamClubId: team ?? undefined }), onSuccess: refresh, onError: (e) => Alert.alert('Could not join', errorMessage(e)) });
+  const join = useMutation({ mutationFn: () => api.challenges.join(id, { hideFromLeaderboard: hidden, teamClubId: team ?? undefined, acceptTerms: consent || undefined }), onSuccess: refresh, onError: (e) => Alert.alert('Could not join', errorMessage(e)) });
   const leave = useMutation({ mutationFn: () => api.challenges.leave(id), onSuccess: refresh, onError: (e) => Alert.alert('Could not leave', errorMessage(e)) });
   if (c.isLoading) return <Loading />;
   if (!c.data) return <ErrorState message={errorMessage(c.error, 'Challenge not found')} />;
@@ -69,7 +70,13 @@ export default function ChallengeDetail() {
             <Text className="flex-1 text-ink">Hide my name on the leaderboard</Text>
             <Switch accessibilityLabel="Hide my name on the leaderboard" value={hidden} onValueChange={setHidden} trackColor={{ true: '#127a50' }} />
           </View>
-          <Button title="Join challenge" loading={join.isPending} disabled={ch.scope === 'CLUB_VS_CLUB' && !team} onPress={() => join.mutate()} />
+          {ch.isSponsored && (
+            <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: consent }} onPress={() => setConsent((v) => !v)} className="mb-3 flex-row items-start gap-3">
+              <View className={`mt-0.5 h-6 w-6 items-center justify-center rounded-md border-2 ${consent ? 'border-primary bg-primary' : 'border-line'}`}>{consent && <Text className="font-bold text-white">✓</Text>}</View>
+              <Text className="flex-1 text-sm text-ink-muted">I accept {ch.sponsorName}’s competition terms below. My personal data is not shared with the sponsor.</Text>
+            </Pressable>
+          )}
+          <Button title="Join challenge" loading={join.isPending} disabled={(ch.scope === 'CLUB_VS_CLUB' && !team) || (ch.isSponsored && !consent)} onPress={() => join.mutate()} />
         </Card>
       ) : null}
       {(ch.rules || ch.rewardDescription) && (

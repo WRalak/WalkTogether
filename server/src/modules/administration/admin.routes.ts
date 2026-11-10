@@ -210,3 +210,59 @@ adminRouter.put('/achievements/:code', requireAdminPermission('settings.manage')
   await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.achievement_saved', targetType: 'achievement', targetId: row.id, metadata: { code: body.code } }, auditCtx(req));
   res.json({ data: row });
 });
+
+// Monetization: payments, refunds, promotions, sponsors, campaigns, revenue -------------------
+import { promotionSchema } from '@walktogether/validation';
+import { refundPayment } from '../payments/payments.service';
+import { awardRewards, campaignReport, reviewCampaign } from '../sponsorships/sponsorships.service';
+import { revenueOverview } from './revenue.service';
+
+adminRouter.get('/revenue', requireAdminPermission('billing.view'), async (_req, res) => {
+  res.json({ data: await revenueOverview() });
+});
+adminRouter.get('/payments', requireAdminPermission('billing.view'), async (req, res) => {
+  const { status } = parse(z.object({ status: z.enum(['PENDING', 'SUCCEEDED', 'FAILED', 'CANCELLED', 'REFUNDED', 'PARTIALLY_REFUNDED']).optional() }), req.query);
+  res.json({ data: await prisma.payment.findMany({ where: status ? { status } : {}, orderBy: { createdAt: 'desc' }, take: 200, include: { invoice: { select: { number: true } }, payer: { select: { username: true } } } }) });
+});
+adminRouter.post('/payments/:id/refund', requireAdminPermission('plans.manage'), async (req, res) => {
+  const { amountMinor, reason } = parse(z.object({ amountMinor: z.number().int().positive(), reason: z.string().trim().min(3).max(300) }).strict(), req.body);
+  res.json({ data: await refundPayment(req.admin!.adminId, parse(idParam, req.params).id, amountMinor, reason, auditCtx(req)) });
+});
+adminRouter.get('/promotions', requireAdminPermission('plans.manage'), async (_req, res) => {
+  res.json({ data: await prisma.promotion.findMany({ orderBy: { createdAt: 'desc' } }) });
+});
+adminRouter.put('/promotions/:code', requireAdminPermission('plans.manage'), async (req, res) => {
+  const body = parse(promotionSchema, { ...req.body, code: req.params.code });
+  const row = await prisma.promotion.upsert({ where: { code: body.code }, create: body, update: body });
+  await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.promotion_saved', targetType: 'promotion', targetId: row.id, metadata: { code: row.code } }, auditCtx(req));
+  res.json({ data: row });
+});
+adminRouter.get('/sponsors', requireAdminPermission('sponsorships.manage'), async (_req, res) => {
+  res.json({ data: await prisma.sponsor.findMany({ orderBy: { createdAt: 'desc' }, include: { owner: { select: { username: true } }, _count: { select: { campaigns: true } } } }) });
+});
+adminRouter.post('/sponsors/:id/status', requireAdminPermission('sponsorships.manage'), async (req, res) => {
+  const { status } = parse(z.object({ status: z.enum(['ACTIVE', 'SUSPENDED']) }).strict(), req.body);
+  const row = await prisma.sponsor.update({ where: { id: parse(idParam, req.params).id }, data: { status } });
+  await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.sponsor_status', targetType: 'sponsor', targetId: row.id, metadata: { status } }, auditCtx(req));
+  res.json({ data: row });
+});
+adminRouter.get('/campaigns', requireAdminPermission('sponsorships.manage'), async (_req, res) => {
+  res.json({ data: await prisma.sponsoredCampaign.findMany({ orderBy: { createdAt: 'desc' }, take: 200, include: { sponsor: { select: { name: true } }, _count: { select: { events: true, rewards: true } } } }) });
+});
+adminRouter.post('/campaigns/:id/review', requireAdminPermission('sponsorships.manage'), async (req, res) => {
+  const { decision, note } = parse(z.object({ decision: z.enum(['APPROVE', 'REJECT']), note: z.string().trim().min(3).max(500) }).strict(), req.body);
+  await reviewCampaign(req.admin!.adminId, parse(idParam, req.params).id, decision, note, auditCtx(req));
+  res.status(204).end();
+});
+adminRouter.get('/campaigns/:id/report', requireAdminPermission('sponsorships.manage'), async (req, res) => {
+  res.json({ data: await campaignReport(parse(idParam, req.params).id, { admin: true }) });
+});
+adminRouter.post('/campaigns/:id/rewards', requireAdminPermission('sponsorships.manage'), async (req, res) => {
+  const { topN, description } = parse(z.object({ topN: z.number().int().min(1).max(100), description: z.string().trim().min(3).max(300) }).strict(), req.body);
+  res.json({ data: await awardRewards(req.admin!.adminId, parse(idParam, req.params).id, topN, description, auditCtx(req)) });
+});
+adminRouter.post('/rewards/:id/fulfil', requireAdminPermission('sponsorships.manage'), async (req, res) => {
+  const row = await prisma.campaignReward.update({ where: { id: parse(idParam, req.params).id }, data: { status: 'FULFILLED', fulfilledAt: new Date() } });
+  await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.reward_fulfilled', targetType: 'reward', targetId: row.id }, auditCtx(req));
+  res.json({ data: row });
+});

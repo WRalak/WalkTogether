@@ -8,3 +8,4 @@ export * from './activities';
 export * from './events';
 export * from './social';
 export * from './challenges';
+export * from './payments';

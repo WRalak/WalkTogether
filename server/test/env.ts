@@ -8,6 +8,7 @@ export const testEnv: Record<string, string> = {
   TOKEN_HASH_SECRET: 'test-token-hash-secret-0123456789abcdef012345',
   ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
   QUEUE_DRIVER: 'inline',
+  PAYMENT_PROVIDERS: 'sandbox',
   RATE_LIMIT_ENABLED: 'false',
   EMAIL_PROVIDER: 'console',
   SMS_PROVIDER: 'console',

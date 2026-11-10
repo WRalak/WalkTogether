@@ -97,6 +97,7 @@ const eventSelect = {
   meetingPoint: true, meetingLat: true, meetingLng: true, routeDescription: true, distanceM: true, difficulty: true, maxParticipants: true, registrationClosesAt: true,
   coverUrl: true, cancelReason: true, goingCount: true, createdAt: true,
   club: { select: { id: true, slug: true, name: true, logoUrl: true, visibility: true, status: true } },
+  sponsorship: { select: { acceptedAt: true, campaign: { select: { status: true, sponsor: { select: { name: true, logoUrl: true, websiteUrl: true } } } } } },
 } satisfies Prisma.EventSelect;
 
 async function loadVisibleEvent(eventId: string, viewerId: string | undefined) {
@@ -112,7 +113,9 @@ async function loadVisibleEvent(eventId: string, viewerId: string | undefined) {
 
 export async function getEvent(eventId: string, viewerId?: string) {
   const { event, access } = await loadVisibleEvent(eventId, viewerId);
-  const { checkInSecret: _s, ...rest } = event;
+  const { checkInSecret: _s, sponsorship, ...rest } = event;
+  // Sponsored content is always clearly labelled, and only once the club accepted it.
+  const sponsor = sponsorship?.acceptedAt && sponsorship.campaign.status === 'ACTIVE' ? { label: 'Sponsored', ...sponsorship.campaign.sponsor } : null;
   const [registration, attendance] = viewerId
     ? await Promise.all([
         prisma.eventRegistration.findUnique({ where: { eventId_userId: { eventId, userId: viewerId } }, select: { status: true } }),
@@ -121,6 +124,7 @@ export async function getEvent(eventId: string, viewerId?: string) {
     : [null, null];
   return {
     ...rest,
+    sponsor,
     viewer: {
       registration: registration?.status ?? null,
       checkedInAt: attendance?.checkedInAt ?? null,

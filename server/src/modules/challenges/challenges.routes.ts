@@ -21,7 +21,7 @@ challengesRouter.get('/:id', optionalAuth, async (req, res) => {
   res.json({ data: await svc.getChallenge(parse(idParam, req.params).id, req.auth?.userId) });
 });
 challengesRouter.post('/:id/join', requireAuth, async (req, res) => {
-  const body = parse(z.object({ teamClubId: z.string().uuid().optional(), hideFromLeaderboard: z.boolean().optional() }).strict(), req.body);
+  const body = parse(z.object({ teamClubId: z.string().uuid().optional(), hideFromLeaderboard: z.boolean().optional(), acceptTerms: z.boolean().optional() }).strict(), req.body);
   res.json({ data: await svc.joinChallenge(parse(idParam, req.params).id, authUserId(req), body) });
 });
 challengesRouter.post('/:id/leave', requireAuth, async (req, res) => {

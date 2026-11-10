@@ -104,10 +104,11 @@ export async function listChallenges(viewerId: string | undefined, q: { cursor?:
   return { items, nextCursor: hasMore && last ? encodeCursor(last) : null };
 }
 
-export async function joinChallenge(challengeId: string, userId: string, input: { teamClubId?: string; hideFromLeaderboard?: boolean }) {
+export async function joinChallenge(challengeId: string, userId: string, input: { teamClubId?: string; hideFromLeaderboard?: boolean; acceptTerms?: boolean }) {
   const c = await loadVisible(challengeId, userId);
   if (c.status !== 'ACTIVE' || c.endsAt < new Date()) throw conflict('This challenge is not open', 'CHALLENGE_CLOSED');
   if (c.isPremium) await requireFeature({ userId }, 'user.premium_challenges');
+  if (c.scope === 'SPONSORED' && input.acceptTerms !== true) throw badRequest('Accept the sponsor’s competition terms to join', { requiresConsent: true });
   if (c.clubId) {
     const m = await prisma.clubMembership.findFirst({ where: { clubId: c.clubId, userId, status: 'ACTIVE' } });
     if (!m) throw forbidden('Join the club to take part', 'MEMBERS_ONLY');
@@ -121,7 +122,7 @@ export async function joinChallenge(challengeId: string, userId: string, input: 
   }
   await prisma.challengeParticipant.upsert({
     where: { challengeId_userId: { challengeId, userId } },
-    create: { challengeId, userId, teamClubId, hideFromLeaderboard: input.hideFromLeaderboard ?? false },
+    create: { challengeId, userId, teamClubId, hideFromLeaderboard: input.hideFromLeaderboard ?? false, consentedAt: c.scope === 'SPONSORED' ? new Date() : null },
     update: { hideFromLeaderboard: input.hideFromLeaderboard ?? undefined },
   });
   // Activities already recorded during the challenge window count immediately.

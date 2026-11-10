@@ -226,3 +226,16 @@ clubsRouter.post('/:clubId/challenges', requireAuth, async (req, res) => {
   const { clubId } = parse(clubParam, req.params);
   res.status(201).json({ data: await createClubChallenge(clubId, authUserId(req), parse(createChallengeSchema, req.body), auditCtx(req)) });
 });
+
+// Phase 7: event sponsorship offers ------------------------------------------------------------
+import { clubSponsorshipOffers, respondToEventSponsorship } from '../sponsorships/sponsorships.service';
+
+clubsRouter.get('/:clubId/sponsorship-offers', requireAuth, async (req, res) => {
+  res.json({ data: await clubSponsorshipOffers(parse(clubParam, req.params).clubId, authUserId(req)) });
+});
+clubsRouter.post('/:clubId/sponsorship-offers/:eventId', requireAuth, async (req, res) => {
+  const { clubId, eventId } = parse(clubParam.extend({ eventId: z.string().uuid() }), req.params);
+  const { accept } = parse(z.object({ accept: z.boolean() }).strict(), req.body);
+  await respondToEventSponsorship(clubId, eventId, authUserId(req), accept, auditCtx(req));
+  res.status(204).end();
+});

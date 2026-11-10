@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
+import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { EventCard } from '@/components/event-card';
 import { ClubCard } from '@/components/club-card';
-import { EmptyState, ErrorState, Loading, TextField } from '@/components/ui';
+import { Badge, EmptyState, ErrorState, Loading, TextField } from '@/components/ui';
 import { api } from '@/services/api';
 import { errorMessage } from '@/utils/errors';
 
@@ -19,6 +20,7 @@ export default function Explore() {
   });
   const items = clubs.data?.pages.flatMap((p) => p.items) ?? [];
   const events = useQuery({ queryKey: ['public-events'], queryFn: () => api.events.discover({ limit: 5 }) });
+  const sponsored = useQuery({ queryKey: ['sponsored'], queryFn: () => api.sponsorships.active() });
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-surface-muted">
@@ -37,6 +39,19 @@ export default function Explore() {
             <Text accessibilityRole="header" className="mb-4 text-3xl font-extrabold text-ink">
               Explore clubs
             </Text>
+            {!!sponsored.data?.length && (
+              <View className="mb-4">
+                {sponsored.data.map((sp) => (
+                  <Link key={sp.id} href={sp.challenge ? { pathname: '/challenges/[id]', params: { id: sp.challenge.id } } : sp.events[0] ? { pathname: '/events/[id]', params: { id: sp.events[0].id } } : '/challenges'} asChild>
+                    <Pressable accessibilityRole="link" className="mb-2 rounded-3xl border border-orange-200 bg-orange-50 p-4">
+                      <Badge label={`${sp.label} · ${sp.sponsor.name}`} tone="warning" />
+                      <Text className="mt-2 font-bold text-ink">{sp.challenge?.title ?? sp.name}</Text>
+                      {sp.prizeDescription ? <Text className="text-sm text-ink-muted">🎁 {sp.prizeDescription}</Text> : null}
+                    </Pressable>
+                  </Link>
+                ))}
+              </View>
+            )}
             {!!events.data?.items.length && (
               <View className="mb-4">
                 <Text accessibilityRole="header" className="mb-3 text-lg font-bold text-ink">

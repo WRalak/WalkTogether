@@ -111,6 +111,10 @@ function loadEnv(): Env {
     if (env.STORAGE_DRIVER === 'local') problems.push('STORAGE_DRIVER must be "s3"');
     if (env.STORAGE_DRIVER === 's3' && !env.S3_BUCKET) problems.push('S3_BUCKET is required');
     if (env.MALWARE_SCANNER === 'none') problems.push('MALWARE_SCANNER must be "clamav"');
+    if (env.PAYMENT_PROVIDERS.includes('sandbox')) problems.push('the sandbox payment provider is not allowed');
+    if (env.PAYMENT_PROVIDERS.includes('mpesa') && (!env.MPESA_CONSUMER_KEY || !env.MPESA_CONSUMER_SECRET || !env.MPESA_SHORTCODE || !env.MPESA_PASSKEY || !env.MPESA_CALLBACK_SECRET || env.MPESA_CALLBACK_SECRET.length < 24))
+      problems.push('M-Pesa requires MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY and a long MPESA_CALLBACK_SECRET');
+    if (env.PAYMENT_PROVIDERS.includes('stripe') && (!env.STRIPE_SECRET_KEY || !env.STRIPE_WEBHOOK_SECRET)) problems.push('Stripe requires STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET');
     if (env.EMAIL_PROVIDER === 'smtp' && !env.SMTP_URL) problems.push('SMTP_URL is required');
     if (env.SMS_PROVIDER === 'africastalking' && (!env.AFRICASTALKING_API_KEY || !env.AFRICASTALKING_USERNAME))
       problems.push("AFRICASTALKING_USERNAME and AFRICASTALKING_API_KEY are required");

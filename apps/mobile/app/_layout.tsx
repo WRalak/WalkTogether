@@ -65,6 +65,7 @@ export default function RootLayout() {
           <Stack.Screen name="challenges/index" options={{ headerShown: true, title: 'Challenges', headerTintColor: '#127a50' }} />
           <Stack.Screen name="challenges/[id]" options={{ headerShown: true, title: 'Challenge', headerTintColor: '#127a50' }} />
           <Stack.Screen name="notifications" options={{ headerShown: true, title: 'Notifications', headerTintColor: '#127a50' }} />
+          <Stack.Screen name="settings/subscription" options={{ headerShown: true, title: 'Subscription', headerTintColor: '#127a50' }} />
           <Stack.Screen name="settings/privacy" options={{ headerShown: true, title: 'Privacy', headerTintColor: '#127a50' }} />
           <Stack.Screen name="settings/security" options={{ headerShown: true, title: 'Security', headerTintColor: '#127a50' }} />
         </Stack>

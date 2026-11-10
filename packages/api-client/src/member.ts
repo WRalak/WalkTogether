@@ -126,6 +126,7 @@ export interface EventDto {
   cancelReason: string | null;
   coverUrl: string | null;
   club: { id: string; slug: string; name: string; logoUrl: string | null };
+  sponsor?: { label: 'Sponsored'; name: string; logoUrl: string | null; websiteUrl: string | null } | null;
   viewer?: { registration: string | null; checkedInAt: string | null; canManage: boolean; canManageAttendance: boolean };
 }
 
@@ -271,6 +272,65 @@ export interface AchievementDto {
   description: string;
   icon: string;
   earnedAt: string | null;
+}
+
+export interface CheckoutResultDto {
+  paymentId: string | null;
+  status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' | 'REFUNDED' | 'PARTIALLY_REFUNDED';
+  amountMinor: number;
+  currency: string;
+  provider?: string;
+  failureReason?: string | null;
+  discountMinor?: number;
+  clientAction?: { type: 'stk_push'; message: string } | { type: 'redirect'; url: string } | null;
+}
+
+export interface PaymentRowDto {
+  id: string;
+  purpose: string;
+  status: string;
+  amountMinor: number;
+  currency: string;
+  provider: string;
+  createdAt: string;
+  confirmedAt: string | null;
+  invoice: { id: string; number: string; total: number; currency: string; issuedAt: string } | null;
+}
+
+export interface SponsorDto {
+  id: string;
+  name: string;
+  slug: string;
+  status: 'PENDING_REVIEW' | 'ACTIVE' | 'SUSPENDED';
+  contactEmail: string;
+}
+
+export interface CampaignDto {
+  id: string;
+  name: string;
+  type: 'CHALLENGE' | 'EVENT';
+  status: string;
+  budgetMinor: number;
+  currency: string;
+  startsAt: string;
+  endsAt: string;
+  paidAt: string | null;
+  reviewNote: string | null;
+  challengeId: string | null;
+}
+
+export interface SponsoredContentDto {
+  id: string;
+  label: 'Sponsored';
+  name: string;
+  type: 'CHALLENGE' | 'EVENT';
+  sponsor: { name: string; logoUrl: string | null; websiteUrl: string | null };
+  prizeDescription: string | null;
+  terms: string;
+  startsAt: string;
+  endsAt: string;
+  challenge: { id: string; title: string; endsAt: string } | null;
+  events: { id: string; title: string; startsAt: string; meetingPoint: string }[];
 }
 
 export interface Announcement {
@@ -440,7 +500,7 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
     challenges: {
       list: (query: { cursor?: string; mine?: boolean } = {}) => http.page<ChallengeDto>('/api/v1/challenges', { query }),
       get: (id: string) => http.request<ChallengeDto>(`/api/v1/challenges/${id}`),
-      join: (id: string, body: { teamClubId?: string; hideFromLeaderboard?: boolean } = {}) => http.request<ChallengeDto>(`/api/v1/challenges/${id}/join`, { method: 'POST', body }),
+      join: (id: string, body: { teamClubId?: string; hideFromLeaderboard?: boolean; acceptTerms?: boolean } = {}) => http.request<ChallengeDto>(`/api/v1/challenges/${id}/join`, { method: 'POST', body }),
       leave: (id: string) => http.request<void>(`/api/v1/challenges/${id}/leave`, { method: 'POST' }),
       leaderboard: (id: string) => http.request<ChallengeLeaderboardDto>(`/api/v1/challenges/${id}/leaderboard`),
       createForClub: (clubId: string, body: In<typeof v.createChallengeSchema>) => http.request<ChallengeDto>(`/api/v1/clubs/${clubId}/challenges`, { method: 'POST', body }),
@@ -453,6 +513,25 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
     achievements: {
       mine: () => http.request<AchievementDto[]>('/api/v1/achievements/me'),
       ofUser: (userId: string) => http.request<AchievementDto[]>(`/api/v1/achievements/users/${userId}`),
+    },
+    billing: {
+      providers: () => http.request<{ id: string; currencies: string[] }[]>('/api/v1/subscriptions/providers', { auth: false }),
+      checkout: (body: In<typeof v.checkoutSchema>, idempotencyKey: string) => http.request<CheckoutResultDto>('/api/v1/subscriptions/checkout', { method: 'POST', body, headers: { 'Idempotency-Key': idempotencyKey } }),
+      payment: (id: string) => http.request<CheckoutResultDto>(`/api/v1/payments/${id}`),
+      myPayments: () => http.request<PaymentRowDto[]>('/api/v1/payments/me'),
+      clubPayments: (clubId: string) => http.request<PaymentRowDto[]>(`/api/v1/payments/clubs/${clubId}`),
+      invoiceHtml: (invoiceId: string) => http.text(`/api/v1/payments/invoices/${invoiceId}/html`),
+    },
+    sponsorships: {
+      active: () => http.request<SponsoredContentDto[]>('/api/v1/sponsored', { auth: false }),
+      mine: () => http.request<(SponsorDto & { campaigns: CampaignDto[] })[]>('/api/v1/sponsors/mine'),
+      apply: (body: In<typeof v.sponsorSchema>) => http.request<SponsorDto>('/api/v1/sponsors', { method: 'POST', body }),
+      createCampaign: (sponsorId: string, body: In<typeof v.campaignSchema>) => http.request<CampaignDto>(`/api/v1/sponsors/${sponsorId}/campaigns`, { method: 'POST', body }),
+      submit: (campaignId: string) => http.request<CampaignDto>(`/api/v1/campaigns/${campaignId}/submit`, { method: 'POST' }),
+      checkout: (campaignId: string, body: In<typeof v.campaignCheckoutSchema>, idempotencyKey: string) => http.request<CheckoutResultDto>(`/api/v1/payments/campaigns/${campaignId}/checkout`, { method: 'POST', body, headers: { 'Idempotency-Key': idempotencyKey } }),
+      report: (campaignId: string) => http.request<Record<string, unknown>>(`/api/v1/campaigns/${campaignId}/report`),
+      clubOffers: (clubId: string) => http.request<{ eventId: string; acceptedAt: string | null; event: { id: string; title: string; startsAt: string }; campaign: { id: string; name: string; terms: string; prizeDescription: string | null; sponsor: { name: string; logoUrl: string | null; websiteUrl: string | null } } }[]>(`/api/v1/clubs/${clubId}/sponsorship-offers`),
+      respondOffer: (clubId: string, eventId: string, accept: boolean) => http.request<void>(`/api/v1/clubs/${clubId}/sponsorship-offers/${eventId}`, { method: 'POST', body: { accept } }),
     },
     notifications: {
       list: (query: { cursor?: string; limit?: number } = {}) => http.requestWithMeta<AppNotification[]>('/api/v1/notifications', { query }),

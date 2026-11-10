@@ -18,6 +18,9 @@ export interface JobMap {
   'challenges.finalize': Record<string, never>;
   'leaderboards.compute': Record<string, never>;
   'achievements.evaluate': { userId: string };
+  'campaigns.activate': { campaignId: string };
+  'campaigns.end': Record<string, never>;
+  'payments.reconcile': Record<string, never>;
 }
 
 export type JobName = keyof JobMap;
@@ -39,4 +42,7 @@ export const JOB_QUEUES: Record<JobName, 'notifications' | 'maintenance' | 'acti
   'challenges.finalize': 'maintenance',
   'leaderboards.compute': 'maintenance',
   'achievements.evaluate': 'activity',
+  'campaigns.activate': 'maintenance',
+  'campaigns.end': 'maintenance',
+  'payments.reconcile': 'maintenance',
 };

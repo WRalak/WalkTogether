@@ -46,6 +46,11 @@ export default function EventDetail() {
       <Text className="mt-1 text-ink-muted">
         {start.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })} · {start.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
       </Text>
+      {e.sponsor && (
+        <View className="mt-2">
+          <Badge label={`Sponsored by ${e.sponsor.name}`} tone="warning" />
+        </View>
+      )}
       <View className="mt-3 flex-row flex-wrap gap-2">
         <Badge label={e.difficulty.toLowerCase()} tone="primary" />
         {e.distanceM ? <Badge label={`${(e.distanceM / 1000).toFixed(1)} km`} /> : null}
