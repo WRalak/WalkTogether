@@ -15,12 +15,14 @@ await syncPermissionCatalog();
 const app = createApp();
 const server = app.listen(env.PORT, () => logger.info({ port: env.PORT }, 'WalkTogether API listening'));
 server.requestTimeout = 30_000;
+const { attachRealtime, closeRealtime } = await import('./modules/messaging/realtime');
+attachRealtime(server);
 server.headersTimeout = 35_000;
 
 async function shutdown(signal: string) {
   logger.info({ signal }, 'shutting down');
   server.close(async () => {
-    await Promise.allSettled([prisma.$disconnect(), closeQueues(), redis.quit()]);
+    await Promise.allSettled([closeRealtime(), prisma.$disconnect(), closeQueues(), redis.quit()]);
     process.exit(0);
   });
   setTimeout(() => process.exit(1), 15_000).unref();

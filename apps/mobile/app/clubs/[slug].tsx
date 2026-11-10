@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Linking, Text, View } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Avatar, Badge, Button, Card, ErrorState, Loading, TextField } from '@/components/ui';
 import { Screen } from '@/components/screen';
@@ -12,6 +12,7 @@ import { EventCard } from '@/components/event-card';
 export default function ClubDetail() {
   const { slug, invite } = useLocalSearchParams<{ slug: string; invite?: string }>();
   const qc = useQueryClient();
+  const router = useRouter();
   const [code, setCode] = useState(invite ?? '');
   const [message, setMessage] = useState<string | null>(null);
   const club = useQuery({ queryKey: ['club', slug], queryFn: () => api.clubs.get(slug) });
@@ -76,6 +77,14 @@ export default function ClubDetail() {
         {status === 'ACTIVE' ? (
           <View className="gap-2">
             <Badge label={`You’re a member · ${c.viewer.role}`} tone="primary" />
+            <Button
+              title="Club chat"
+              variant="secondary"
+              onPress={async () => {
+                const conv = await api.messaging.club(c.id);
+                router.push({ pathname: '/messages/[id]', params: { id: conv.id } });
+              }}
+            />
             {!isOwner && (
               <Button
                 title="Leave club"

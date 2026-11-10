@@ -161,6 +161,14 @@ model User {
   eventsCreated        Event[]                   @relation("EventCreator")
   eventRegistrations   EventRegistration[]
   eventAttendance      EventAttendance[]         @relation("Attendee")
+  posts                Post[]
+  comments             Comment[]
+  postLikes            PostLike[]
+  bookmarks            Bookmark[]
+  mediaAssets          MediaAsset[]
+  reportsFiled         ContentReport[]           @relation("Reporter")
+  conversationMembers  ConversationMember[]
+  messages             Message[]
   following            Follow[]                  @relation("Follower")
   followers            Follow[]                  @relation("Followee")
 
@@ -416,6 +424,8 @@ model Club {
   subscriptions  Subscription[]
   activityShares ActivityClubShare[]
   events         Event[]
+  posts          Post[]
+  conversations  Conversation[]
 
   @@index([status, visibility])
   @@index([countryCode, category])
@@ -823,6 +833,7 @@ model Activity {
   user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   points     ActivityGpsPoint[]
   clubShares ActivityClubShare[]
+  posts      Post[]
 
   @@unique([userId, clientId])
   @@index([userId, status, startedAt])
@@ -1039,4 +1050,252 @@ model EventReminder {
 
   @@id([eventId, kind])
   @@map("event_reminders")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5: social community, media, messaging, moderation
+// ---------------------------------------------------------------------------
+
+enum MediaKind {
+  IMAGE
+  VIDEO
+}
+
+enum MediaStatus {
+  PENDING_UPLOAD
+  PROCESSING
+  READY
+  REJECTED
+}
+
+enum MediaPurpose {
+  AVATAR
+  CLUB_LOGO
+  CLUB_COVER
+  POST
+  EVENT_COVER
+}
+
+/// Media lives in object storage (S3/R2); only metadata is stored here.
+model MediaAsset {
+  id           String       @id @default(uuid()) @db.Uuid
+  ownerId      String       @map("owner_id") @db.Uuid
+  purpose      MediaPurpose
+  kind         MediaKind
+  status       MediaStatus  @default(PENDING_UPLOAD)
+  storageKey   String       @unique @map("storage_key") @db.VarChar(300)
+  mimeType     String       @map("mime_type") @db.VarChar(100)
+  sizeBytes    Int          @map("size_bytes")
+  width        Int?
+  height       Int?
+  /// Processed variants: { thumb: key, medium: key, ... }
+  variants     Json         @default("{}")
+  rejectReason String?      @map("reject_reason") @db.VarChar(200)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  owner User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  posts PostMedia[]
+
+  @@index([ownerId, createdAt])
+  @@index([status, createdAt])
+  @@map("media_assets")
+}
+
+model Post {
+  id           String     @id @default(uuid()) @db.Uuid
+  authorId     String     @map("author_id") @db.Uuid
+  /// Club posts are visible to that club's active members only.
+  clubId       String?    @map("club_id") @db.Uuid
+  /// Activity posts inherit the activity's visibility and club shares.
+  activityId   String?    @unique @map("activity_id") @db.Uuid
+  body         String?    @db.VarChar(5000)
+  visibility   Visibility @default(FOLLOWERS)
+  likeCount    Int        @default(0) @map("like_count")
+  commentCount Int        @default(0) @map("comment_count")
+  hiddenAt     DateTime?  @map("hidden_at")
+  hiddenReason String?    @map("hidden_reason") @db.VarChar(200)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  deletedAt    DateTime?  @map("deleted_at")
+
+  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  club      Club?       @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  activity  Activity?   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  media     PostMedia[]
+  comments  Comment[]
+  likes     PostLike[]
+  bookmarks Bookmark[]
+
+  @@index([authorId, createdAt])
+  @@index([clubId, createdAt])
+  @@index([createdAt])
+  @@map("posts")
+}
+
+model PostMedia {
+  postId   String @map("post_id") @db.Uuid
+  mediaId  String @map("media_id") @db.Uuid
+  position Int    @default(0)
+
+  post  Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  media MediaAsset @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([postId, mediaId])
+  @@map("post_media")
+}
+
+model Comment {
+  id        String    @id @default(uuid()) @db.Uuid
+  postId    String    @map("post_id") @db.Uuid
+  authorId  String    @map("author_id") @db.Uuid
+  parentId  String?   @map("parent_id") @db.Uuid
+  body      String    @db.VarChar(2000)
+  likeCount Int       @default(0) @map("like_count")
+  hiddenAt  DateTime? @map("hidden_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  post      Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent    Comment?          @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]         @relation("Replies")
+  reactions CommentReaction[]
+
+  @@index([postId, createdAt])
+  @@map("comments")
+}
+
+model PostLike {
+  postId    String   @map("post_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId])
+  @@map("post_likes")
+}
+
+model CommentReaction {
+  commentId String   @map("comment_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, userId])
+  @@map("comment_reactions")
+}
+
+model Bookmark {
+  postId    String   @map("post_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId, createdAt])
+  @@map("bookmarks")
+}
+
+enum ReportTarget {
+  POST
+  COMMENT
+  MESSAGE
+  USER
+  CLUB
+  ACTIVITY
+}
+
+enum ReportStatus {
+  OPEN
+  ACTIONED
+  DISMISSED
+}
+
+model ContentReport {
+  id         String       @id @default(uuid()) @db.Uuid
+  reporterId String       @map("reporter_id") @db.Uuid
+  targetType ReportTarget @map("target_type")
+  targetId   String       @map("target_id") @db.Uuid
+  /// Set when the content belongs to a club, so club moderators can act.
+  clubId     String?      @map("club_id") @db.Uuid
+  reason     String       @db.VarChar(40)
+  details    String?      @db.VarChar(1000)
+  status     ReportStatus @default(OPEN)
+  resolution String?      @db.VarChar(300)
+  reviewedBy String?      @map("reviewed_by") @db.Uuid
+  reviewedAt DateTime?    @map("reviewed_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  reporter User @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@unique([reporterId, targetType, targetId])
+  @@index([status, createdAt])
+  @@index([clubId, status])
+  @@map("content_reports")
+}
+
+enum ConversationKind {
+  DIRECT
+  CLUB
+  EVENT
+}
+
+model Conversation {
+  id            String           @id @default(uuid()) @db.Uuid
+  kind          ConversationKind
+  clubId        String?          @map("club_id") @db.Uuid
+  eventId       String?          @unique @map("event_id") @db.Uuid
+  /// Sorted "userA:userB" for DIRECT conversations (one per pair).
+  directKey     String?          @unique @map("direct_key") @db.VarChar(80)
+  title         String?          @db.VarChar(120)
+  lastMessageAt DateTime?        @map("last_message_at")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  club     Club?                @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  members  ConversationMember[]
+  messages Message[]
+
+  @@index([clubId, kind])
+  @@map("conversations")
+}
+
+model ConversationMember {
+  conversationId String    @map("conversation_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  lastReadAt     DateTime? @map("last_read_at")
+  mutedAt        DateTime? @map("muted_at")
+  joinedAt       DateTime  @default(now()) @map("joined_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @map("conversation_id") @db.Uuid
+  senderId       String    @map("sender_id") @db.Uuid
+  /// Client-generated id for idempotent sends over flaky connections.
+  clientId       String?   @map("client_id") @db.Uuid
+  body           String    @db.VarChar(4000)
+  hiddenAt       DateTime? @map("hidden_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, clientId])
+  @@index([conversationId, createdAt])
+  @@map("messages")
 }

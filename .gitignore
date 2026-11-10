@@ -17,3 +17,4 @@ apps/mobile/ios/
 .DS_Store
 next-env.d.ts
 .expo-export-check/
+.uploads/

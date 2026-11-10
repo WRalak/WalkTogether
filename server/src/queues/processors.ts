@@ -5,6 +5,9 @@ import { purgeDueAccounts } from '../modules/users/account-deletion';
 import { cleanupExpiredSessions } from '../modules/auth/session-maintenance';
 import { deliverPush } from '../modules/notifications/notifications.service';
 import { fanOutAnnouncement } from '../modules/announcements/announcements.service';
+import { processMedia } from '../modules/media/media.service';
+import { upsertActivityPost } from '../modules/social/posts.service';
+import { cleanupStaleMedia } from '../modules/media/maintenance';
 import { sendEventReminders } from '../modules/events/events.service';
 import { runSubscriptionLifecycle } from '../modules/subscriptions/subscriptions.service';
 
@@ -16,8 +19,11 @@ export const processors: { [K in JobName]: (data: JobMap[K]) => Promise<unknown>
   'push.send': (d) => deliverPush(d),
   'announcement.fanout': (d) => fanOutAnnouncement(d.announcementId),
   'subscriptions.lifecycle': () => runSubscriptionLifecycle(),
-  // Challenge progress and achievements hook in here (Phase 6).
-  'activity.completed': async () => undefined,
+  'activity.completed': async (d) => {
+    await upsertActivityPost(d.activityId);
+  },
   'activity.deleted': async () => undefined,
   'events.reminders': () => sendEventReminders(),
+  'media.process': (d) => processMedia(d.mediaId),
+  'media.cleanup': () => cleanupStaleMedia(),
 };

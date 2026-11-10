@@ -169,3 +169,17 @@ adminRouter.post('/subscriptions/grant', requireAdminPermission('plans.manage'),
   if ((plan.audience === 'CLUB') !== !!body.clubId) throw badRequest('Plan audience does not match subject');
   res.status(201).json({ data: await subs.adminGrantPlan(req.admin!.adminId, body.clubId ? { clubId: body.clubId } : { userId: body.userId! }, body.planId, auditCtx(req)) });
 });
+
+// Moderation queue ---------------------------------------------------------------------------
+import { adminReportResolveSchema, reportListQuerySchema } from '@walktogether/validation';
+import * as reports from '../moderation/reports.service';
+
+adminRouter.get('/reports', requireAdminPermission('moderation.manage'), async (req, res) => {
+  const { items, nextCursor } = await reports.platformReports(parse(reportListQuerySchema, req.query));
+  res.json({ data: items, meta: { nextCursor, limit: items.length } });
+});
+adminRouter.post('/reports/:id/resolve', requireAdminPermission('moderation.manage'), async (req, res) => {
+  const { action, note } = parse(adminReportResolveSchema, req.body);
+  await reports.resolvePlatformReport(req.admin!.adminId, parse(idParam, req.params).id, action, note, auditCtx(req));
+  res.status(204).end();
+});

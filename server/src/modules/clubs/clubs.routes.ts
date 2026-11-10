@@ -185,3 +185,35 @@ clubsRouter.get('/:clubId/reports/members.csv', requireAuth, async (req, res) =>
   res.setHeader('Content-Disposition', 'attachment; filename="members.csv"');
   res.send(csv);
 });
+
+// Phase 5: club community moderation & branding ------------------------------------------------
+import { clubBrandingSchema, clubReportResolveSchema, moderateContentSchema, reportListQuerySchema } from '@walktogether/validation';
+import * as reportsSvc from '../moderation/reports.service';
+import { moderateClubContent } from '../social/posts.service';
+import { readyAssetUrl } from '../media/media.service';
+
+clubsRouter.get('/:clubId/reports', requireAuth, async (req, res) => {
+  const { items, nextCursor } = await reportsSvc.clubReports(parse(clubParam, req.params).clubId, authUserId(req), parse(reportListQuerySchema, req.query));
+  res.json({ data: items, meta: { nextCursor, limit: items.length } });
+});
+clubsRouter.post('/:clubId/reports/:reportId/resolve', requireAuth, async (req, res) => {
+  const { clubId, reportId } = parse(clubParam.extend({ reportId: z.string().uuid() }), req.params);
+  const { action, note } = parse(clubReportResolveSchema, req.body);
+  await reportsSvc.resolveClubReport(clubId, reportId, authUserId(req), action, note, auditCtx(req));
+  res.status(204).end();
+});
+clubsRouter.post('/:clubId/moderation', requireAuth, async (req, res) => {
+  const { clubId } = parse(clubParam, req.params);
+  const b = parse(moderateContentSchema, req.body);
+  await moderateClubContent(clubId, authUserId(req), { type: b.targetType, id: b.targetId }, b.hide, b.reason, auditCtx(req));
+  res.status(204).end();
+});
+clubsRouter.put('/:clubId/branding', requireAuth, async (req, res) => {
+  const { clubId } = parse(clubParam, req.params);
+  const b = parse(clubBrandingSchema, req.body);
+  const userId = authUserId(req);
+  const data: { logoUrl?: string; coverUrl?: string } = {};
+  if (b.logoMediaId) data.logoUrl = await readyAssetUrl(userId, b.logoMediaId, ['CLUB_LOGO']);
+  if (b.coverMediaId) data.coverUrl = await readyAssetUrl(userId, b.coverMediaId, ['CLUB_COVER']);
+  res.json({ data: await clubs.updateClub(clubId, userId, data, auditCtx(req)) });
+});

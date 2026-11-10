@@ -67,6 +67,10 @@ const envSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   MEDIA_PUBLIC_BASE_URL: z.string().optional(),
+  // Malware scanning of uploads: clamav (clamd INSTREAM) | none (development only)
+  MALWARE_SCANNER: z.enum(['none', 'clamav']).default('none'),
+  CLAMAV_HOST: z.string().default('localhost'),
+  CLAMAV_PORT: z.coerce.number().int().default(3310),
 
   // Payments
   PAYMENT_PROVIDERS: csv.default(''),
@@ -106,6 +110,7 @@ function loadEnv(): Env {
     if (env.PUSH_PROVIDER === 'console') problems.push('PUSH_PROVIDER must not be "console"');
     if (env.STORAGE_DRIVER === 'local') problems.push('STORAGE_DRIVER must be "s3"');
     if (env.STORAGE_DRIVER === 's3' && !env.S3_BUCKET) problems.push('S3_BUCKET is required');
+    if (env.MALWARE_SCANNER === 'none') problems.push('MALWARE_SCANNER must be "clamav"');
     if (env.EMAIL_PROVIDER === 'smtp' && !env.SMTP_URL) problems.push('SMTP_URL is required');
     if (env.SMS_PROVIDER === 'africastalking' && (!env.AFRICASTALKING_API_KEY || !env.AFRICASTALKING_USERNAME))
       problems.push("AFRICASTALKING_USERNAME and AFRICASTALKING_API_KEY are required");

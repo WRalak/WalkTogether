@@ -13,6 +13,8 @@ export interface JobMap {
   'activity.completed': { activityId: string };
   'activity.deleted': { userId: string; activityId: string; type: string };
   'events.reminders': Record<string, never>;
+  'media.process': { mediaId: string };
+  'media.cleanup': Record<string, never>;
 }
 
 export type JobName = keyof JobMap;
@@ -29,4 +31,6 @@ export const JOB_QUEUES: Record<JobName, 'notifications' | 'maintenance' | 'acti
   'activity.completed': 'activity',
   'activity.deleted': 'activity',
   'events.reminders': 'maintenance',
+  'media.process': 'activity',
+  'media.cleanup': 'maintenance',
 };

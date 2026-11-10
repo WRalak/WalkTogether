@@ -136,6 +136,8 @@ export async function updateActivity(userId: string, id: string, input: { title?
       await tx.activityClubShare.createMany({ data: clubIds.map((clubId) => ({ activityId: id, clubId })), skipDuplicates: true });
     }
   });
+  const { upsertActivityPost } = await import('../social/posts.service');
+  await upsertActivityPost(id);
   return getActivity(id, userId);
 }
 

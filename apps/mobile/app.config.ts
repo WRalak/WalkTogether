@@ -44,6 +44,7 @@ const config: ExpoConfig = {
       },
     ],
     ['expo-notifications', { color: '#127a50' }],
+    ['expo-image-picker', { photosPermission: 'Choose photos to share with your clubs and followers.', cameraPermission: false }],
     ['expo-camera', { cameraPermission: 'WalkTogether uses the camera only to scan event check-in QR codes.', recordAudioAndroid: false }],
   ],
   experiments: { typedRoutes: true },

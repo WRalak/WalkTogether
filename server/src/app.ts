@@ -15,6 +15,10 @@ import { healthRouter } from './modules/health/health.routes';
 import { usersRouter } from './modules/users/users.routes';
 import { activitiesRouter } from './modules/activities/activities.routes';
 import { eventsRouter } from './modules/events/events.routes';
+import { conversationsRouter } from './modules/messaging/messaging.routes';
+import { localUploadRouter, mediaRouter } from './modules/media/media.routes';
+import { localStorageDriver } from './modules/media/storage';
+import { commentsRouter, feedRouter, followRoutes, postsRouter, reportsRouter } from './modules/social/social.routes';
 import { notificationsRouter } from './modules/notifications/notifications.routes';
 import { subscriptionsRouter } from './modules/subscriptions/subscriptions.routes';
 import { buildOpenApiDocument } from './openapi';
@@ -53,10 +57,22 @@ export function createApp(): Express {
   const api = express.Router();
   api.use(globalLimiter);
   api.use('/auth', authRouter);
+  api.use('/users', followRoutes);
   api.use('/users', usersRouter);
   api.use('/clubs', clubsRouter);
   api.use('/activities', activitiesRouter);
   api.use('/events', eventsRouter);
+  api.use('/feed', feedRouter);
+  api.use('/posts', postsRouter);
+  api.use('/comments', commentsRouter);
+  api.use('/reports', reportsRouter);
+  api.use('/conversations', conversationsRouter);
+  api.use('/media', mediaRouter);
+  if (localStorageDriver) {
+    // Development-only stand-ins for S3 presigned uploads and CDN delivery.
+    api.use('/media', localUploadRouter);
+    app.use('/media-files', express.static(localStorageDriver.root, { immutable: true, maxAge: '1y', fallthrough: false }));
+  }
   api.use('/notifications', notificationsRouter);
   api.use('/subscriptions', subscriptionsRouter);
   api.use('/platform-admin', adminRouter);

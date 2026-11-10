@@ -1,4 +1,6 @@
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Image, Pressable, Text, View } from 'react-native';
+import { pickAndUploadImage } from '@/services/upload';
+import { errorMessage } from '@/utils/errors';
 import { Link, type Href } from 'expo-router';
 import { Avatar, Button, Card, SectionTitle } from '@/components/ui';
 import { Screen } from '@/components/screen';
@@ -22,6 +24,7 @@ function Row({ href, label, detail }: { href: Href; label: string; detail?: stri
 export default function Profile() {
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
+  const setUser = useAuthStore((s) => s.setUser);
   const stats = useQuery({ queryKey: ['stats'], queryFn: () => api.activities.stats() });
   if (!user) return null;
   const name = user.profile?.displayName ?? user.username;
@@ -29,7 +32,20 @@ export default function Profile() {
   return (
     <Screen>
       <View className="items-center">
-        <Avatar label={initials(name)} size={84} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Change profile photo"
+          onPress={async () => {
+            try {
+              const m = await pickAndUploadImage('AVATAR');
+              if (m) setUser(await api.media.setAvatar(m.id));
+            } catch (e) {
+              Alert.alert('Could not update photo', errorMessage(e));
+            }
+          }}
+        >
+          {user.profile?.avatarUrl ? <Image source={{ uri: user.profile.avatarUrl }} className="h-[84px] w-[84px] rounded-full" accessibilityIgnoresInvertColors /> : <Avatar label={initials(name)} size={84} />}
+        </Pressable>
         <Text accessibilityRole="header" className="mt-3 text-2xl font-extrabold text-ink">
           {name}
         </Text>
@@ -51,6 +67,7 @@ export default function Profile() {
       </Card>
       <Card className="mt-4 py-0">
         <Row href="/activities" label="Activity history" detail={stats.data ? `${stats.data.allTime.activities}` : undefined} />
+        <Row href={{ pathname: '/users/[username]', params: { username: user.username } }} label="My public profile" />
       </Card>
 
       <SectionTitle>Settings</SectionTitle>

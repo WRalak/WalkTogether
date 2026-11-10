@@ -25,6 +25,7 @@ export const NOTIFICATION_CATEGORY = {
   'subscription.expired': null,
   'sponsored.event': 'marketing',
   'message.new': null,
+  mention: 'comments',
 } as const;
 export type NotificationType = keyof typeof NOTIFICATION_CATEGORY;
 

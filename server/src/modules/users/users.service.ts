@@ -5,6 +5,7 @@ import { badRequest, conflict, notFound } from '../../shared/errors';
 import { audit, type AuditContext } from '../audit/audit.service';
 import { issueEmailVerification } from '../auth/auth.service';
 import { publicStats } from '../activities/stats.service';
+import { followCounts } from '../social/follows.service';
 
 const meInclude = { profile: true, privacySettings: true } satisfies Prisma.UserInclude;
 type UserWithMe = Prisma.UserGetPayload<{ include: typeof meInclude }>;
@@ -124,8 +125,11 @@ export async function getPublicProfile(username: string, viewerId?: string) {
 
   const isSelf = viewerId === user.id;
   const privacy = user.privacySettings;
-  // Follow relationships arrive in Phase 5; until then FOLLOWERS-only profiles are limited for everyone but the owner.
-  const full = isSelf || privacy?.profileVisibility === 'PUBLIC';
+  const follows =
+    !isSelf && viewerId && privacy?.profileVisibility === 'FOLLOWERS'
+      ? (await prisma.follow.findUnique({ where: { followerId_followeeId: { followerId: viewerId, followeeId: user.id } } }))?.status === 'ACCEPTED'
+      : false;
+  const full = isSelf || privacy?.profileVisibility === 'PUBLIC' || follows;
 
   const base = {
     id: user.id,
@@ -135,7 +139,7 @@ export async function getPublicProfile(username: string, viewerId?: string) {
     isPrivate: !full,
     suspended: user.status === 'SUSPENDED',
   };
-  if (!full) return base;
+  if (!full) return { ...base, ...(await followCounts(user.id)), viewerFollows: viewerId ? ((await prisma.follow.findUnique({ where: { followerId_followeeId: { followerId: viewerId, followeeId: user.id } } }))?.status ?? null) : null };
 
   const showClubs = isSelf || privacy?.showClubs !== false;
   const clubs = showClubs
@@ -161,6 +165,8 @@ export async function getPublicProfile(username: string, viewerId?: string) {
     joinedAt: user.createdAt.toISOString(),
     clubs: clubs.map((c) => c.club),
     stats: await publicStats(user.id),
+    ...(await followCounts(user.id)),
+    viewerFollows: viewerId && viewerId !== user.id ? ((await prisma.follow.findUnique({ where: { followerId_followeeId: { followerId: viewerId, followeeId: user.id } } }))?.status ?? null) : null,
   };
 }
 

@@ -151,6 +151,81 @@ export interface ClubGrowthDto {
   topAttendees: { userId: string; username?: string; displayName?: string; events: number }[];
 }
 
+export interface PostDto {
+  id: string;
+  author: { id: string; username: string; displayName: string; avatarUrl: string | null };
+  club: { id: string; slug: string; name: string } | null;
+  activity: { id: string; type: string; title: string | null; distanceM: number; movingSeconds: number; avgPaceSecPerKm: number | null; startedAt: string } | null;
+  body: string | null;
+  visibility: string;
+  media: { id: string; kind: string; width: number | null; height: number | null; urls: Record<string, string> }[];
+  likeCount: number;
+  commentCount: number;
+  likedByMe: boolean;
+  bookmarkedByMe: boolean;
+  hidden: boolean;
+  createdAt: string;
+}
+
+export interface CommentDto {
+  id: string;
+  postId: string;
+  parentId: string | null;
+  body: string;
+  likeCount: number;
+  createdAt: string;
+  author: { id: string; username: string; profile: { displayName: string; avatarUrl: string | null } | null };
+}
+
+export interface MediaDto {
+  id: string;
+  kind: string;
+  purpose: string;
+  status: 'PENDING_UPLOAD' | 'PROCESSING' | 'READY' | 'REJECTED';
+  urls: Record<string, string>;
+  rejectReason: string | null;
+}
+
+export interface MessageDto {
+  id: string;
+  conversationId?: string;
+  senderId: string;
+  body: string;
+  createdAt: string;
+  clientId: string | null;
+}
+
+export interface ConversationDto {
+  id: string;
+  kind: 'DIRECT' | 'CLUB' | 'EVENT';
+  title: string | null;
+  clubId: string | null;
+  members: { id: string; username: string; profile: { displayName: string; avatarUrl: string | null } | null; lastReadAt: string | null }[];
+  unread: number;
+}
+
+export interface ConversationSummaryDto {
+  id: string;
+  kind: 'DIRECT' | 'CLUB' | 'EVENT';
+  title: string | null;
+  lastMessageAt: string | null;
+  lastMessage: { body: string; senderId: string; createdAt: string } | null;
+  members: { id: string; username: string; profile: { displayName: string; avatarUrl: string | null } | null }[];
+  unread: boolean;
+}
+
+export interface ReportDto {
+  id: string;
+  targetType: string;
+  targetId: string;
+  reason: string;
+  details: string | null;
+  status: string;
+  preview: string | null;
+  createdAt: string;
+  reporter: { id: string; username: string };
+}
+
 export interface Announcement {
   id: string;
   clubId: string;
@@ -274,6 +349,46 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
       growth: (clubId: string) => http.request<ClubGrowthDto>(`/api/v1/clubs/${clubId}/analytics/growth`),
       attendance: (clubId: string) => http.request<{ id: string; title: string; startsAt: string; status: string; going: number; capacity: number | null; attended: number; rate: number | null }[]>(`/api/v1/clubs/${clubId}/reports/attendance`),
       membersCsv: (clubId: string) => http.text(`/api/v1/clubs/${clubId}/reports/members.csv`),
+    },
+    social: {
+      feed: (query: { cursor?: string; limit?: number; clubId?: string } = {}) => http.page<PostDto>('/api/v1/feed', { query }),
+      createPost: (body: In<typeof v.createPostSchema>) => http.request<PostDto>('/api/v1/posts', { method: 'POST', body }),
+      post: (id: string) => http.request<PostDto>(`/api/v1/posts/${id}`),
+      deletePost: (id: string) => http.request<void>(`/api/v1/posts/${id}`, { method: 'DELETE' }),
+      like: (id: string, on: boolean) => http.request<{ liked: boolean }>(`/api/v1/posts/${id}/like`, { method: on ? 'POST' : 'DELETE' }),
+      bookmark: (id: string, on: boolean) => http.request<{ bookmarked: boolean }>(`/api/v1/posts/${id}/bookmark`, { method: on ? 'POST' : 'DELETE' }),
+      bookmarks: (query: { cursor?: string } = {}) => http.page<PostDto>('/api/v1/posts/bookmarks', { query }),
+      comments: (postId: string, query: { cursor?: string } = {}) => http.page<CommentDto>(`/api/v1/posts/${postId}/comments`, { query }),
+      comment: (postId: string, body: string, parentId?: string) => http.request<CommentDto>(`/api/v1/posts/${postId}/comments`, { method: 'POST', body: { body, parentId } }),
+      deleteComment: (id: string) => http.request<void>(`/api/v1/comments/${id}`, { method: 'DELETE' }),
+      follow: (userId: string) => http.request<{ status: string }>(`/api/v1/users/${userId}/follow`, { method: 'POST' }),
+      unfollow: (userId: string) => http.request<void>(`/api/v1/users/${userId}/follow`, { method: 'DELETE' }),
+      followRequests: () => http.request<{ id: string; username: string; profile: { displayName: string } | null; requestedAt: string }[]>('/api/v1/users/me/follow-requests'),
+      respond: (userId: string, accept: boolean) => http.request<void>(`/api/v1/users/me/follow-requests/${userId}`, { method: 'POST', body: { accept } }),
+      userPosts: (userId: string, query: { cursor?: string } = {}) => http.page<PostDto>(`/api/v1/users/${userId}/posts`, { query }),
+      report: (body: In<typeof v.reportSchema>) => http.request<{ id: string }>('/api/v1/reports', { method: 'POST', body }),
+    },
+    media: {
+      request: (body: { purpose: 'AVATAR' | 'CLUB_LOGO' | 'CLUB_COVER' | 'POST' | 'EVENT_COVER'; mimeType: string; sizeBytes: number }) =>
+        http.request<{ mediaId: string; upload: { method: 'PUT'; url: string; headers: Record<string, string>; expiresAt: string } }>('/api/v1/media', { method: 'POST', body }),
+      complete: (id: string) => http.request<MediaDto>(`/api/v1/media/${id}/complete`, { method: 'POST' }),
+      get: (id: string) => http.request<MediaDto>(`/api/v1/media/${id}`),
+      setAvatar: (mediaId: string) => http.request<MeUser>('/api/v1/users/me/avatar', { method: 'PUT', body: { mediaId } }),
+      setClubBranding: (clubId: string, body: { logoMediaId?: string; coverMediaId?: string }) => http.request<unknown>(`/api/v1/clubs/${clubId}/branding`, { method: 'PUT', body }),
+    },
+    messaging: {
+      list: () => http.request<ConversationSummaryDto[]>('/api/v1/conversations'),
+      direct: (userId: string) => http.request<ConversationDto>('/api/v1/conversations/direct', { method: 'POST', body: { userId } }),
+      club: (clubId: string) => http.request<ConversationDto>(`/api/v1/conversations/club/${clubId}`, { method: 'POST' }),
+      event: (eventId: string) => http.request<ConversationDto>(`/api/v1/conversations/event/${eventId}`, { method: 'POST' }),
+      get: (id: string) => http.request<ConversationDto>(`/api/v1/conversations/${id}`),
+      messages: (id: string, query: { cursor?: string; limit?: number } = {}) => http.page<MessageDto>(`/api/v1/conversations/${id}/messages`, { query }),
+      send: (id: string, body: string, clientId?: string) => http.request<MessageDto>(`/api/v1/conversations/${id}/messages`, { method: 'POST', body: { body, clientId } }),
+      read: (id: string) => http.request<unknown>(`/api/v1/conversations/${id}/read`, { method: 'POST' }),
+    },
+    moderation: {
+      clubReports: (clubId: string, status = 'OPEN') => http.page<ReportDto>(`/api/v1/clubs/${clubId}/reports`, { query: { status } }),
+      resolveClubReport: (clubId: string, reportId: string, action: 'DISMISS' | 'HIDE', note?: string) => http.request<void>(`/api/v1/clubs/${clubId}/reports/${reportId}/resolve`, { method: 'POST', body: { action, note } }),
     },
     notifications: {
       list: (query: { cursor?: string; limit?: number } = {}) => http.requestWithMeta<AppNotification[]>('/api/v1/notifications', { query }),

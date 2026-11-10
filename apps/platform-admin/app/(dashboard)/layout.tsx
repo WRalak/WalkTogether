@@ -9,6 +9,7 @@ const NAV = [
   { href: '/', label: 'Overview', permission: 'platform.overview.view' },
   { href: '/users', label: 'Users', permission: 'users.view' },
   { href: '/clubs', label: 'Clubs', permission: 'clubs.view' },
+  { href: '/moderation', label: 'Moderation', permission: 'moderation.manage' },
   { href: '/audit-logs', label: 'Audit log', permission: 'audit_logs.view' },
   { href: '/settings', label: 'Settings & flags', permission: 'settings.manage' },
 ];

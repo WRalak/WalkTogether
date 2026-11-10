@@ -8,6 +8,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/auth';
 // Defines the background location task at module scope (required by TaskManager).
 import { startTrackingServices } from '@/services/tracking';
+import { registerForPush } from '@/services/push';
+import { closeSocket } from '@/services/realtime';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -34,7 +36,11 @@ export default function RootLayout() {
   }, [bootstrap]);
   useEffect(() => {
     if (status !== 'booting') void SplashScreen.hideAsync();
-    if (status === 'signedIn') startTrackingServices();
+    if (status === 'signedIn') {
+      startTrackingServices();
+      void registerForPush().catch(() => undefined);
+    }
+    if (status === 'signedOut') closeSocket();
   }, [status]);
   useProtectedRoutes();
 
@@ -52,6 +58,11 @@ export default function RootLayout() {
           <Stack.Screen name="events/[id]/index" options={{ headerShown: true, title: 'Event', headerTintColor: '#127a50' }} />
           <Stack.Screen name="events/[id]/check-in" options={{ headerShown: true, title: 'Check in', headerTintColor: '#127a50' }} />
           <Stack.Screen name="events/scan" options={{ headerShown: true, title: 'Scan QR code', headerTintColor: '#127a50' }} />
+          <Stack.Screen name="posts/new" options={{ headerShown: true, title: 'New post', headerTintColor: '#127a50', presentation: 'modal' }} />
+          <Stack.Screen name="posts/[id]" options={{ headerShown: true, title: 'Post', headerTintColor: '#127a50' }} />
+          <Stack.Screen name="messages/[id]" options={{ headerShown: true, title: 'Chat', headerTintColor: '#127a50' }} />
+          <Stack.Screen name="users/[username]" options={{ headerShown: true, title: '', headerTintColor: '#127a50' }} />
+          <Stack.Screen name="notifications" options={{ headerShown: true, title: 'Notifications', headerTintColor: '#127a50' }} />
           <Stack.Screen name="settings/privacy" options={{ headerShown: true, title: 'Privacy', headerTintColor: '#127a50' }} />
           <Stack.Screen name="settings/security" options={{ headerShown: true, title: 'Security', headerTintColor: '#127a50' }} />
         </Stack>

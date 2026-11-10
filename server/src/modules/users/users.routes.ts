@@ -53,6 +53,13 @@ usersRouter.delete('/me/devices/:id', requireAuth, async (req, res) => {
   res.status(204).end();
 });
 
+usersRouter.put('/me/avatar', requireAuth, async (req, res) => {
+  const { mediaId } = parse(z.object({ mediaId: z.string().uuid() }).strict(), req.body);
+  const { readyAssetUrl } = await import('../media/media.service');
+  const url = await readyAssetUrl(authUserId(req), mediaId, ['AVATAR']);
+  res.json({ data: await users.updateMe(authUserId(req), { avatarUrl: url }, auditCtx(req)) });
+});
+
 usersRouter.get('/me/clubs', requireAuth, async (req, res) => {
   res.json({ data: await listMyClubs(authUserId(req)) });
 });

@@ -13,14 +13,30 @@ export default function Home() {
   const user = useAuthStore((s) => s.user);
   const clubs = useQuery({ queryKey: ['my-clubs'], queryFn: () => api.users.myClubs() });
   const stats = useQuery({ queryKey: ['stats'], queryFn: () => api.activities.stats() });
+  const notes = useQuery({ queryKey: ['notifications'], queryFn: () => api.notifications.list({ limit: 1 }), refetchInterval: 60_000 });
+  const unread = (notes.data?.meta as { unread?: number } | undefined)?.unread ?? 0;
   const name = user?.profile?.displayName?.split(' ')[0] ?? user?.username;
 
   return (
     <Screen refreshing={clubs.isRefetching} onRefresh={() => void Promise.all([clubs.refetch(), stats.refetch()])}>
-      <Text className="text-sm text-ink-muted">{greeting()},</Text>
-      <Text accessibilityRole="header" className="text-3xl font-extrabold text-ink">
-        {name}
-      </Text>
+      <View className="flex-row items-start justify-between">
+        <View>
+          <Text className="text-sm text-ink-muted">{greeting()},</Text>
+          <Text accessibilityRole="header" className="text-3xl font-extrabold text-ink">
+            {name}
+          </Text>
+        </View>
+        <Link href="/notifications" asChild>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Notifications${unread ? `, ${unread} unread` : ''}`} className="mt-2 h-11 w-11 items-center justify-center rounded-full bg-surface">
+            <Text className="text-lg">🔔</Text>
+            {unread > 0 && (
+              <View className="absolute -right-0.5 -top-0.5 min-w-[18px] items-center rounded-full bg-accent px-1">
+                <Text className="text-[10px] font-bold text-white">{unread > 99 ? '99+' : unread}</Text>
+              </View>
+            )}
+          </Pressable>
+        </Link>
+      </View>
 
       {user && !user.emailVerified && !user.phoneVerified && (
         <Card className="mt-5 border-orange-200 bg-orange-50">

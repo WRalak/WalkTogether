@@ -16,6 +16,7 @@ const NAV: { href: string; label: string; permission?: ClubPermissionKey }[] = [
   { href: '/invitations', label: 'Invitations', permission: 'members.invite' },
   { href: '/roles', label: 'Roles', permission: 'roles.manage' },
   { href: '/announcements', label: 'Announcements', permission: 'club.view_private' },
+  { href: '/moderation', label: 'Community moderation', permission: 'community.moderate' },
   { href: '/settings', label: 'Settings', permission: 'club.settings.update' },
 ];
 

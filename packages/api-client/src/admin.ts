@@ -96,6 +96,10 @@ export function createAdminApi(options: Omit<HttpClientOptions, 'refreshPath'>) 
         http.request<unknown>(`/api/v1/platform-admin/clubs/${id}/status`, { method: 'POST', body: { action, reason } }),
       approve: (id: string) => http.request<unknown>(`/api/v1/platform-admin/clubs/${id}/approve`, { method: 'POST', body: {} }),
     },
+    reports: {
+      list: (query: Query = {}) => http.page<{ id: string; targetType: string; targetId: string; reason: string; details: string | null; status: string; preview: string | null; createdAt: string; reporter: { username: string } }>('/api/v1/platform-admin/reports', { query }),
+      resolve: (id: string, action: 'DISMISS' | 'HIDE_CONTENT' | 'SUSPEND_USER', note: string) => http.request<void>(`/api/v1/platform-admin/reports/${id}/resolve`, { method: 'POST', body: { action, note } }),
+    },
     auditLogs: (query: Query = {}) => http.page<AuditLogRow>('/api/v1/platform-admin/audit-logs', { query }),
     settings: {
       list: () => http.request<{ key: string; value: unknown; description: string | null; updatedAt: string }[]>('/api/v1/platform-admin/settings'),

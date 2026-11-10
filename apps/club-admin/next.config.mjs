@@ -14,7 +14,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline'" + (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''),
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
-      `connect-src 'self' ${apiOrigin}`,
+      `connect-src 'self' ${apiOrigin} ${process.env.NEXT_PUBLIC_MEDIA_UPLOAD_ORIGIN ?? ''}`.trim(),
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
