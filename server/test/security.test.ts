@@ -151,7 +151,7 @@ describe('injection and mass assignment', () => {
     await api().patch('/api/v1/users/me').set(bearer(u)).send({ bio: payload }).expect(200);
     const res = await api().get('/api/v1/users/me').set(bearer(u)).expect(200);
     expect(res.headers['content-type']).toMatch(/application\/json/);
-    expect(JSON.stringify(res.body)).not.toContain('49');
+    expect(res.body.data.profile.bio).toBe(payload);
   });
 });
 
