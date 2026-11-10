@@ -86,3 +86,11 @@ usersRouter.get('/:username', optionalAuth, async (req, res) => {
   const { username } = parse(z.object({ username: z.string().min(1).max(40) }), req.params);
   res.json({ data: await users.getPublicProfile(username, req.auth?.userId) });
 });
+
+usersRouter.get('/:id/activities', optionalAuth, async (req, res) => {
+  const { id } = parse(idParam, req.params);
+  const q = parse(z.object({ cursor: z.string().max(200).optional(), limit: z.coerce.number().int().min(1).max(50).default(20) }), req.query);
+  const { listUserActivities } = await import('../activities/activities.service');
+  const { items, nextCursor } = await listUserActivities(id, req.auth?.userId, q);
+  res.json({ data: items, meta: { nextCursor, limit: items.length } });
+});

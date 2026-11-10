@@ -46,6 +46,10 @@ export async function anonymiseUser(userId: string) {
     await tx.phoneVerification.deleteMany({ where: { userId } });
     await tx.loginEvent.deleteMany({ where: { userId } });
     await tx.userBlock.deleteMany({ where: { OR: [{ blockerId: userId }, { blockedId: userId }] } });
+    // Personal fitness data is deleted with the account (points cascade).
+    await tx.activity.deleteMany({ where: { userId } });
+    await tx.personalGoal.deleteMany({ where: { userId } });
+    await tx.follow.deleteMany({ where: { OR: [{ followerId: userId }, { followeeId: userId }] } });
     const leaving = await tx.clubMembership.findMany({ where: { userId, status: 'ACTIVE' }, select: { clubId: true } });
     for (const m of leaving) await tx.club.update({ where: { id: m.clubId }, data: { memberCount: { decrement: 1 } } });
     await tx.clubMembership.deleteMany({ where: { userId } });

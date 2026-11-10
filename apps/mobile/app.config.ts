@@ -26,11 +26,14 @@ const config: ExpoConfig = {
   android: {
     package: 'app.walktogether.mobile',
     adaptiveIcon: { backgroundColor: '#127a50' },
+    // Google Maps SDK key (restrict to the app's package + SHA-1 in Google Cloud Console).
+    config: { googleMaps: { apiKey: process.env.GOOGLE_MAPS_ANDROID_KEY } },
     edgeToEdgeEnabled: true,
     permissions: ['ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'ACCESS_BACKGROUND_LOCATION', 'FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_LOCATION', 'POST_NOTIFICATIONS'],
   },
   plugins: [
     'expo-router',
+    'expo-sqlite',
     'expo-secure-store',
     [
       'expo-location',
@@ -45,6 +48,7 @@ const config: ExpoConfig = {
   experiments: { typedRoutes: true },
   extra: {
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:4000',
+    mapProvider: process.env.EXPO_PUBLIC_MAP_PROVIDER ?? 'google',
     eas: { projectId: process.env.EAS_PROJECT_ID },
   },
 };

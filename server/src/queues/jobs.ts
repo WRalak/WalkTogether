@@ -10,12 +10,14 @@ export interface JobMap {
   'push.send': { userIds: string[]; title: string; body: string; data?: Record<string, unknown> };
   'announcement.fanout': { announcementId: string };
   'subscriptions.lifecycle': Record<string, never>;
+  'activity.completed': { activityId: string };
+  'activity.deleted': { userId: string; activityId: string; type: string };
 }
 
 export type JobName = keyof JobMap;
 
 /** Queue each job runs on, so slow maintenance work cannot starve user-facing notifications. */
-export const JOB_QUEUES: Record<JobName, 'notifications' | 'maintenance'> = {
+export const JOB_QUEUES: Record<JobName, 'notifications' | 'maintenance' | 'activity'> = {
   'email.send': 'notifications',
   'sms.send': 'notifications',
   'account.purge-due': 'maintenance',
@@ -23,4 +25,6 @@ export const JOB_QUEUES: Record<JobName, 'notifications' | 'maintenance'> = {
   'push.send': 'notifications',
   'announcement.fanout': 'notifications',
   'subscriptions.lifecycle': 'maintenance',
+  'activity.completed': 'activity',
+  'activity.deleted': 'activity',
 };

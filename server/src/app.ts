@@ -13,6 +13,7 @@ import { authRouter } from './modules/auth/auth.routes';
 import { clubsRouter } from './modules/clubs/clubs.routes';
 import { healthRouter } from './modules/health/health.routes';
 import { usersRouter } from './modules/users/users.routes';
+import { activitiesRouter } from './modules/activities/activities.routes';
 import { notificationsRouter } from './modules/notifications/notifications.routes';
 import { subscriptionsRouter } from './modules/subscriptions/subscriptions.routes';
 import { buildOpenApiDocument } from './openapi';
@@ -53,6 +54,7 @@ export function createApp(): Express {
   api.use('/auth', authRouter);
   api.use('/users', usersRouter);
   api.use('/clubs', clubsRouter);
+  api.use('/activities', activitiesRouter);
   api.use('/notifications', notificationsRouter);
   api.use('/subscriptions', subscriptionsRouter);
   api.use('/platform-admin', adminRouter);

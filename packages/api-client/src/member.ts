@@ -51,6 +51,58 @@ export interface SessionInfo {
   lastUsedAt: string;
 }
 
+export interface ActivityDto {
+  id: string;
+  userId: string;
+  type: 'WALK' | 'RUN' | 'HIKE';
+  status?: string;
+  title: string | null;
+  notes: string | null;
+  visibility: string;
+  startedAt: string;
+  endedAt: string | null;
+  distanceM: number;
+  movingSeconds: number;
+  elapsedSeconds: number;
+  avgPaceSecPerKm: number | null;
+  avgSpeedMps: number | null;
+  maxSpeedMps: number | null;
+  elevationGainM: number | null;
+  caloriesEstimate?: number | null;
+  routePolyline: string | null;
+  flagged?: boolean;
+  clubIds?: string[];
+}
+
+export interface TotalsDto {
+  activities: number;
+  distanceM: number;
+  movingSeconds: number;
+  byType: Record<string, { activities: number; distanceM: number; movingSeconds: number }>;
+}
+
+export interface GoalDto {
+  id: string;
+  metric: 'DISTANCE_M' | 'ACTIVITIES' | 'MOVING_SECONDS';
+  period: 'WEEK' | 'MONTH' | 'YEAR';
+  activityType: string | null;
+  target: number;
+  value?: number;
+  progress?: number;
+}
+
+export interface ActivityStatsDto {
+  allTime: TotalsDto;
+  thisWeek: TotalsDto;
+  thisMonth: TotalsDto;
+  avgPaceSecPerKm: number | null;
+  weekly: { start: string; activities: number; distanceM: number; movingSeconds: number; avgPaceSecPerKm: number | null }[];
+  monthly: { start: string; activities: number; distanceM: number; movingSeconds: number; avgPaceSecPerKm: number | null }[];
+  personalRecords: Record<string, Record<string, ActivityDto | null>>;
+  goals: GoalDto[];
+  steps: null;
+}
+
 export interface Announcement {
   id: string;
   clubId: string;
@@ -138,6 +190,22 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
       completePhoneRegistration: async (body: In<typeof v.phoneRegistrationSchema>) =>
         storeTokens(await http.request<AuthTokens>('/api/v1/auth/phone/register', { method: 'POST', body, auth: false })),
       oauth: async (body: In<typeof v.oauthLoginSchema>) => storeTokens(await http.request<AuthTokens & { created: boolean }>('/api/v1/auth/oauth', { method: 'POST', body, auth: false })),
+    },
+    activities: {
+      create: (body: In<typeof v.createActivitySchema>) => http.request<ActivityDto>('/api/v1/activities', { method: 'POST', body }),
+      addPoints: (id: string, points: In<typeof v.gpsPointSchema>[]) => http.request<{ accepted: number; ignored: number }>(`/api/v1/activities/${id}/gps-points`, { method: 'POST', body: { points } }),
+      complete: (id: string, body: In<typeof v.completeActivitySchema>) => http.request<ActivityDto>(`/api/v1/activities/${id}/complete`, { method: 'POST', body }),
+      discard: (id: string) => http.request<void>(`/api/v1/activities/${id}/discard`, { method: 'POST', body: {} }),
+      list: (query: Partial<In<typeof v.listActivitiesQuerySchema>> = {}) => http.page<ActivityDto>('/api/v1/activities', { query: query as Record<string, string> }),
+      get: (id: string) => http.request<ActivityDto>(`/api/v1/activities/${id}`),
+      update: (id: string, body: In<typeof v.updateActivitySchema>) => http.request<ActivityDto>(`/api/v1/activities/${id}`, { method: 'PATCH', body }),
+      remove: (id: string) => http.request<void>(`/api/v1/activities/${id}`, { method: 'DELETE' }),
+      stats: (query: { type?: string } = {}) => http.request<ActivityStatsDto>('/api/v1/activities/stats', { query }),
+      trends: () => http.request<Record<string, unknown>>('/api/v1/activities/stats/trends'),
+      goals: () => http.request<GoalDto[]>('/api/v1/activities/goals'),
+      createGoal: (body: In<typeof v.goalSchema>) => http.request<GoalDto>('/api/v1/activities/goals', { method: 'POST', body }),
+      deleteGoal: (id: string) => http.request<void>(`/api/v1/activities/goals/${id}`, { method: 'DELETE' }),
+      ofUser: (userId: string, query: { cursor?: string } = {}) => http.page<ActivityDto>(`/api/v1/users/${userId}/activities`, { query }),
     },
     notifications: {
       list: (query: { cursor?: string; limit?: number } = {}) => http.requestWithMeta<AppNotification[]>('/api/v1/notifications', { query }),

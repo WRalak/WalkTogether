@@ -10,7 +10,7 @@ import { logger } from './shared/logger';
 if (env.SENTRY_DSN) Sentry.init({ dsn: env.SENTRY_DSN, environment: env.NODE_ENV });
 
 /** Background worker process. Run separately from the API so heavy jobs never block requests. */
-const workers = (['notifications', 'maintenance'] as const).map(
+const workers = (['notifications', 'maintenance', 'activity'] as const).map(
   (queueName) =>
     new Worker(
       queueName,
@@ -19,7 +19,7 @@ const workers = (['notifications', 'maintenance'] as const).map(
         if (!processor) throw new Error(`No processor registered for job ${job.name}`);
         return processor(job.data);
       },
-      { connection: createQueueConnection(), concurrency: queueName === 'notifications' ? 10 : 2 },
+      { connection: createQueueConnection(), concurrency: queueName === 'notifications' ? 10 : queueName === 'activity' ? 5 : 2 },
     ),
 );
 

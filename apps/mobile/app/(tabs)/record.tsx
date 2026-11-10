@@ -1,57 +1,134 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Linking, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Linking, Pressable, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import type { ActivityKind } from '@walktogether/gps';
+import { RouteMap } from '@/components/map/route-map';
 import { Button, Card } from '@/components/ui';
 import { Screen } from '@/components/screen';
+import { useTracking } from '@/hooks/use-tracking';
+import { trackingSession } from '@/services/tracking';
+import { formatDuration, formatPace, km, typeLabel } from '@/utils/units';
 
-type Perm = 'unknown' | 'granted' | 'denied' | 'blocked';
+const KINDS: ActivityKind[] = ['WALK', 'RUN', 'HIKE'];
 
-/**
- * GPS recording is delivered in Phase 3 (see DEVELOPMENT_STATUS.md). This screen already performs the
- * real location-permission flow so users understand why access is needed before their first recording.
- */
+function Stat({ label, value, big }: { label: string; value: string; big?: boolean }) {
+  return (
+    <View className="flex-1 items-center" accessible accessibilityLabel={`${label} ${value}`}>
+      <Text className={`font-extrabold tabular-nums text-ink ${big ? 'text-6xl' : 'text-3xl'}`}>{value}</Text>
+      <Text className="mt-1 text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</Text>
+    </View>
+  );
+}
+
 export default function Record() {
-  const [perm, setPerm] = useState<Perm>('unknown');
+  const router = useRouter();
+  const { activity, snapshot, recent, backgroundCapable } = useTracking();
+  const [kind, setKind] = useState<ActivityKind>('WALK');
+  const [busy, setBusy] = useState(false);
+  const [permBlocked, setPermBlocked] = useState(false);
 
-  const check = useCallback(async () => {
-    const res = await Location.getForegroundPermissionsAsync();
-    setPerm(res.granted ? 'granted' : res.canAskAgain ? 'unknown' : 'blocked');
+  useEffect(() => {
+    void Location.getForegroundPermissionsAsync().then((p) => setPermBlocked(!p.granted && !p.canAskAgain));
   }, []);
   useEffect(() => {
-    void check();
-  }, [check]);
+    if (activity?.status === 'recording') void activateKeepAwakeAsync('recording');
+    else deactivateKeepAwake('recording');
+  }, [activity?.status]);
 
-  const request = async () => {
-    const res = await Location.requestForegroundPermissionsAsync();
-    setPerm(res.granted ? 'granted' : res.canAskAgain ? 'denied' : 'blocked');
+  const start = async () => {
+    setBusy(true);
+    try {
+      await trackingSession.start(kind);
+    } catch (e) {
+      if (e instanceof Error && e.message === 'LOCATION_PERMISSION_DENIED') {
+        Alert.alert('Location needed', 'WalkTogether needs your location to record distance, pace and your route.', [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Open settings', onPress: () => void Linking.openSettings() },
+        ]);
+      } else Alert.alert('Could not start recording', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setBusy(false);
+    }
   };
 
+  if (!activity) {
+    return (
+      <Screen>
+        <Text accessibilityRole="header" className="text-3xl font-extrabold text-ink">
+          Record
+        </Text>
+        <Text className="mt-1 text-ink-muted">Choose an activity and start when you’re ready.</Text>
+        <View className="mt-6 flex-row gap-2" accessibilityRole="radiogroup">
+          {KINDS.map((k) => (
+            <Pressable
+              key={k}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: kind === k }}
+              onPress={() => setKind(k)}
+              className={`flex-1 items-center rounded-2xl border py-4 ${kind === k ? 'border-primary bg-primary-soft' : 'border-line bg-surface'}`}
+            >
+              <Text className={`text-base font-bold ${kind === k ? 'text-primary' : 'text-ink'}`}>{typeLabel(k)}</Text>
+            </Pressable>
+          ))}
+        </View>
+        {permBlocked && (
+          <Card className="mt-4 bg-red-50">
+            <Text className="text-danger">Location access is off for WalkTogether. Turn it on in Settings to record.</Text>
+            <Button title="Open settings" variant="outline" className="mt-3" onPress={() => void Linking.openSettings()} />
+          </Card>
+        )}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Start ${typeLabel(kind).toLowerCase()}`}
+          disabled={busy}
+          onPress={() => void start()}
+          className="mt-10 h-44 w-44 items-center justify-center self-center rounded-full bg-primary shadow-lg active:opacity-80"
+        >
+          <Text className="text-2xl font-extrabold text-white">{busy ? '…' : 'START'}</Text>
+        </Pressable>
+        <Text className="mt-6 text-center text-xs text-ink-muted">Recording works offline. Your route’s start and end are hidden from others by default.</Text>
+      </Screen>
+    );
+  }
+
+  const s = snapshot!;
+  const recording = activity.status === 'recording';
   return (
     <Screen>
-      <Text accessibilityRole="header" className="text-3xl font-extrabold text-ink">
-        Record
-      </Text>
-      <Card className="mt-5">
-        <Text className="text-lg font-bold text-ink">GPS walk & run recording is coming next</Text>
-        <Text className="mt-2 text-ink-muted">You’ll be able to record walks and runs with live distance, time and pace, even without a connection. The start and end of your routes are hidden by default.</Text>
-      </Card>
-      <Card className="mt-4">
-        <Text className="font-semibold text-ink">Location access</Text>
-        {perm === 'granted' ? (
-          <Text className="mt-1 text-success">Location access is allowed. You’re ready for recording.</Text>
-        ) : perm === 'blocked' ? (
-          <View>
-            <Text className="mt-1 text-ink-muted">Location access is turned off for WalkTogether. Enable it in your phone’s settings to record activities.</Text>
-            <Button title="Open settings" variant="outline" className="mt-3" onPress={() => void Linking.openSettings()} />
-          </View>
+      <View className="flex-row items-center justify-between">
+        <Text className="text-lg font-bold text-ink">{typeLabel(activity.type)}</Text>
+        <Text className={`text-sm font-semibold ${recording ? 'text-success' : 'text-accent'}`}>{recording ? '● Recording' : '❚❚ Paused'}</Text>
+      </View>
+      <View className="mt-4">
+        <RouteMap points={recent} follow={recording} height={220} />
+      </View>
+      {!backgroundCapable && recording && <Text className="mt-2 text-xs text-ink-muted">Keep the app open: screen-off recording needs background location permission.</Text>}
+      <View className="mt-6">
+        <Stat label="Kilometres" value={km(s.distanceM)} big />
+      </View>
+      <View className="mt-6 flex-row">
+        <Stat label="Time" value={formatDuration(Math.floor(s.elapsedMs / 1000))} />
+        <Stat label="Pace /km" value={recording ? formatPace(s.currentPaceSecPerKm) : '--:--'} />
+        <Stat label="Avg pace" value={formatPace(s.distanceM > 50 ? (s.movingMs / 1000) / (s.distanceM / 1000) : null)} />
+      </View>
+      <View className="mt-8 flex-row gap-3">
+        {recording ? (
+          <Button title="Pause" variant="secondary" className="flex-1" onPress={() => void trackingSession.pause()} />
         ) : (
-          <View>
-            <Text className="mt-1 text-ink-muted">WalkTogether only uses your location while you record an activity, to measure distance, pace and route.</Text>
-            {perm === 'denied' && <Text className="mt-2 text-danger">Permission was not granted.</Text>}
-            <Button title="Allow location access" className="mt-3" onPress={() => void request()} />
-          </View>
+          <Button title="Resume" className="flex-1" onPress={() => void trackingSession.resume()} />
         )}
-      </Card>
+        <Button
+          title="Finish"
+          variant="outline"
+          className="flex-1"
+          onPress={async () => {
+            await trackingSession.stop();
+            router.push('/activities/summary');
+          }}
+        />
+      </View>
     </Screen>
   );
 }

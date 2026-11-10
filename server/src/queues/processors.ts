@@ -15,4 +15,7 @@ export const processors: { [K in JobName]: (data: JobMap[K]) => Promise<unknown>
   'push.send': (d) => deliverPush(d),
   'announcement.fanout': (d) => fanOutAnnouncement(d.announcementId),
   'subscriptions.lifecycle': () => runSubscriptionLifecycle(),
+  // Challenge progress and achievements hook in here (Phase 6).
+  'activity.completed': async () => undefined,
+  'activity.deleted': async () => undefined,
 };

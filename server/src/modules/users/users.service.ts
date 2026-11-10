@@ -4,6 +4,7 @@ import { prisma } from '../../database/prisma';
 import { badRequest, conflict, notFound } from '../../shared/errors';
 import { audit, type AuditContext } from '../audit/audit.service';
 import { issueEmailVerification } from '../auth/auth.service';
+import { publicStats } from '../activities/stats.service';
 
 const meInclude = { profile: true, privacySettings: true } satisfies Prisma.UserInclude;
 type UserWithMe = Prisma.UserGetPayload<{ include: typeof meInclude }>;
@@ -159,6 +160,7 @@ export async function getPublicProfile(username: string, viewerId?: string) {
     preferredActivityTypes: user.profile?.preferredActivityTypes ?? [],
     joinedAt: user.createdAt.toISOString(),
     clubs: clubs.map((c) => c.club),
+    stats: await publicStats(user.id),
   };
 }
 
@@ -201,6 +203,8 @@ export async function exportMyData(userId: string) {
       loginEvents: { select: { method: true, success: true, ipAddress: true, userAgent: true, createdAt: true }, orderBy: { createdAt: 'desc' }, take: 500 },
       memberships: { select: { status: true, joinedAt: true, createdAt: true, club: { select: { name: true, slug: true } }, role: { select: { name: true } } } },
       blocking: { select: { blockedId: true, createdAt: true } },
+      activities: { select: { id: true, type: true, title: true, startedAt: true, endedAt: true, distanceM: true, movingSeconds: true, visibility: true }, orderBy: { startedAt: 'desc' } },
+      goals: true,
     },
   });
   const { passwordHash: _p, failedLoginCount: _f, lockedUntil: _l, ...rest } = user;

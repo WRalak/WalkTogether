@@ -156,6 +156,10 @@ model User {
   announcements        ClubAnnouncement[]
   subscriptions        Subscription[]            @relation("UserSubscriptions")
   notifications        Notification[]
+  activities           Activity[]
+  goals                PersonalGoal[]
+  following            Follow[]                  @relation("Follower")
+  followers            Follow[]                  @relation("Followee")
 
   @@index([status])
   @@index([createdAt])
@@ -172,6 +176,8 @@ model UserProfile {
   countryCode            String?        @map("country_code") @db.Char(2)
   fitnessInterests       String[]       @default([]) @map("fitness_interests")
   preferredActivityTypes ActivityType[] @default([]) @map("preferred_activity_types")
+  /// Optional, used only for calorie estimates. Never shared.
+  weightKg               Float?         @map("weight_kg")
   updatedAt              DateTime       @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -398,13 +404,14 @@ model Club {
   updatedAt        DateTime                               @updatedAt @map("updated_at")
   deletedAt        DateTime?                              @map("deleted_at")
 
-  owner         User               @relation("ClubOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  settings      ClubSettings?
-  roles         ClubRole[]
-  memberships   ClubMembership[]
-  invitations   ClubInvitation[]
-  announcements ClubAnnouncement[]
-  subscriptions Subscription[]
+  owner          User                @relation("ClubOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  settings       ClubSettings?
+  roles          ClubRole[]
+  memberships    ClubMembership[]
+  invitations    ClubInvitation[]
+  announcements  ClubAnnouncement[]
+  subscriptions  Subscription[]
+  activityShares ActivityClubShare[]
 
   @@index([status, visibility])
   @@index([countryCode, category])
@@ -765,4 +772,139 @@ model Notification {
   @@index([userId, createdAt])
   @@index([userId, readAt])
   @@map("notifications")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3: activities & GPS
+// ---------------------------------------------------------------------------
+
+enum ActivityStatus {
+  RECORDING
+  COMPLETED
+  DISCARDED
+}
+
+/// Personal activity. Owned by the user — never by a club. Clubs see it only via explicit shares.
+model Activity {
+  id               String                                      @id @default(uuid()) @db.Uuid
+  userId           String                                      @map("user_id") @db.Uuid
+  /// Client-generated UUID: makes creation idempotent for offline sync retries.
+  clientId         String                                      @map("client_id") @db.Uuid
+  type             ActivityType
+  status           ActivityStatus                              @default(RECORDING)
+  title            String?                                     @db.VarChar(120)
+  notes            String?                                     @db.VarChar(1000)
+  visibility       Visibility                                  @default(FOLLOWERS)
+  startedAt        DateTime                                    @map("started_at")
+  endedAt          DateTime?                                   @map("ended_at")
+  distanceM        Float                                       @default(0) @map("distance_m")
+  movingSeconds    Int                                         @default(0) @map("moving_seconds")
+  elapsedSeconds   Int                                         @default(0) @map("elapsed_seconds")
+  avgPaceSecPerKm  Int?                                        @map("avg_pace_sec_per_km")
+  avgSpeedMps      Float?                                      @map("avg_speed_mps")
+  maxSpeedMps      Float?                                      @map("max_speed_mps")
+  elevationGainM   Int?                                        @map("elevation_gain_m")
+  caloriesEstimate Int?                                        @map("calories_estimate")
+  pointCount       Int                                         @default(0) @map("point_count")
+  /// Simplified display route (encoded polyline) for the OWNER; others get a privacy-trimmed version.
+  routePolyline    String?                                     @map("route_polyline")
+  route            Unsupported("geography(LineString, 4326)")?
+  /// Anti-cheat signals; flagged activities are excluded from leaderboards/challenges.
+  flagged          Boolean                                     @default(false)
+  flags            Json                                        @default("{}")
+  clientStats      Json?                                       @map("client_stats")
+  createdAt        DateTime                                    @default(now()) @map("created_at")
+  updatedAt        DateTime                                    @updatedAt @map("updated_at")
+
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points     ActivityGpsPoint[]
+  clubShares ActivityClubShare[]
+
+  @@unique([userId, clientId])
+  @@index([userId, status, startedAt])
+  @@index([status, visibility, startedAt])
+  @@index([route], map: "activities_route_gist", type: Gist)
+  @@map("activities")
+}
+
+/// One row per GPS point (never a JSON blob). Consider monthly range partitioning at scale.
+model ActivityGpsPoint {
+  activityId        String   @map("activity_id") @db.Uuid
+  seq               Int
+  segment           Int      @default(0)
+  recordedAt        DateTime @map("recorded_at")
+  lat               Float
+  lng               Float
+  accuracyM         Float?   @map("accuracy_m")
+  altitudeM         Float?   @map("altitude_m")
+  altitudeAccuracyM Float?   @map("altitude_accuracy_m")
+  speedMps          Float?   @map("speed_mps")
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@id([activityId, seq])
+  @@index([recordedAt], map: "activity_gps_points_recorded_brin", type: Brin)
+  @@map("activity_gps_points")
+}
+
+/// Explicit, revocable sharing of a personal activity with a club the user belongs to.
+model ActivityClubShare {
+  activityId String   @map("activity_id") @db.Uuid
+  clubId     String   @map("club_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  club     Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@id([activityId, clubId])
+  @@index([clubId, createdAt])
+  @@map("activity_club_shares")
+}
+
+enum GoalPeriod {
+  WEEK
+  MONTH
+  YEAR
+}
+
+enum GoalMetric {
+  DISTANCE_M
+  ACTIVITIES
+  MOVING_SECONDS
+}
+
+model PersonalGoal {
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @map("user_id") @db.Uuid
+  metric       GoalMetric
+  period       GoalPeriod
+  activityType ActivityType? @map("activity_type")
+  target       Int
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, active])
+  @@map("personal_goals")
+}
+
+enum FollowStatus {
+  PENDING
+  ACCEPTED
+}
+
+/// Follow graph. Private profiles require approval (PENDING → ACCEPTED).
+model Follow {
+  followerId String       @map("follower_id") @db.Uuid
+  followeeId String       @map("followee_id") @db.Uuid
+  status     FollowStatus
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  follower User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followee User @relation("Followee", fields: [followeeId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followeeId])
+  @@index([followeeId, status, createdAt])
+  @@map("follows")
 }

@@ -28,6 +28,7 @@
     "@asteasolutions/zod-to-openapi": "7.3.4",
     "@prisma/client": "6.19.3",
     "@sentry/node": "9.47.2",
+    "@walktogether/gps": "workspace:*",
     "@walktogether/shared-types": "workspace:*",
     "@walktogether/validation": "workspace:*",
     "argon2": "0.44.0",

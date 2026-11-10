@@ -12,6 +12,7 @@ export const updateMeSchema = z
     avatarUrl: urlSchema.nullable().optional(),
     fitnessInterests: z.array(z.string().trim().min(1).max(40)).max(15).optional(),
     preferredActivityTypes: z.array(z.enum(ACTIVITY_TYPES)).max(ACTIVITY_TYPES.length).optional(),
+    weightKg: z.number().min(20).max(300).nullable().optional(),
   })
   .strict();
 export type UpdateMeInput = z.infer<typeof updateMeSchema>;

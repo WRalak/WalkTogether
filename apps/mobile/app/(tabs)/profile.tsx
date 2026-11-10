@@ -4,6 +4,9 @@ import { Avatar, Button, Card, SectionTitle } from '@/components/ui';
 import { Screen } from '@/components/screen';
 import { useAuthStore } from '@/store/auth';
 import { initials } from '@/utils/format';
+import { km } from '@/utils/units';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/services/api';
 
 function Row({ href, label, detail }: { href: Href; label: string; detail?: string }) {
   return (
@@ -19,6 +22,7 @@ function Row({ href, label, detail }: { href: Href; label: string; detail?: stri
 export default function Profile() {
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
+  const stats = useQuery({ queryKey: ['stats'], queryFn: () => api.activities.stats() });
   if (!user) return null;
   const name = user.profile?.displayName ?? user.username;
 
@@ -35,9 +39,9 @@ export default function Profile() {
 
       <Card className="mt-6 flex-row justify-around">
         {[
-          ['Activities', '—'],
-          ['Distance', '—'],
-          ['Clubs', '—'],
+          ['Activities', stats.data ? String(stats.data.allTime.activities) : '—'],
+          ['Walked km', stats.data ? km(stats.data.allTime.byType.WALK?.distanceM ?? 0) : '—'],
+          ['Ran km', stats.data ? km(stats.data.allTime.byType.RUN?.distanceM ?? 0) : '—'],
         ].map(([k, v]) => (
           <View key={k} className="items-center">
             <Text className="text-xl font-bold text-ink">{v}</Text>
@@ -45,7 +49,9 @@ export default function Profile() {
           </View>
         ))}
       </Card>
-      <Text className="mt-2 text-center text-xs text-ink-muted">Fitness statistics appear once you start recording activities.</Text>
+      <Card className="mt-4 py-0">
+        <Row href="/activities" label="Activity history" detail={stats.data ? `${stats.data.allTime.activities}` : undefined} />
+      </Card>
 
       <SectionTitle>Settings</SectionTitle>
       <Card className="py-0">
