@@ -48,8 +48,8 @@ importers:
         specifier: 7.91.0
         version: 7.91.0(@types/react@19.1.17)(react@19.1.0)
       zod:
-        specifier: 3.25.76
-        version: 3.25.76
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@testing-library/react':
         specifier: 16.3.3
@@ -196,8 +196,8 @@ importers:
         specifier: 4.8.4
         version: 4.8.4
       zod:
-        specifier: 3.25.76
-        version: 3.25.76
+        specifier: 4.6.7
+        version: 4.6.7
       zustand:
         specifier: 5.0.8
         version: 5.0.8(@types/react@19.1.17)(react@19.1.0)(use-sync-external-store@1.7.0(react@19.1.0))
@@ -266,8 +266,8 @@ importers:
         specifier: 7.91.0
         version: 7.91.0(@types/react@19.1.17)(react@19.1.0)
       zod:
-        specifier: 3.25.76
-        version: 3.25.76
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@testing-library/react':
         specifier: 16.3.3
@@ -336,8 +336,8 @@ importers:
         specifier: 7.91.0
         version: 7.91.0(@types/react@19.1.17)(react@19.1.0)
       zod:
-        specifier: 3.25.76
-        version: 3.25.76
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@testing-library/react':
         specifier: 16.3.3
@@ -392,8 +392,8 @@ importers:
         specifier: 3.2.7
         version: 3.2.7(@types/node@22.20.5)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
       zod:
-        specifier: 3.25.76
-        version: 3.25.76
+        specifier: 4.6.7
+        version: 4.6.7
 
   packages/configuration: {}
 
@@ -443,8 +443,8 @@ importers:
         specifier: workspace:*
         version: link:../shared-types
       zod:
-        specifier: 3.25.76
-        version: 3.25.76
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       typescript:
         specifier: 5.9.3
@@ -456,8 +456,8 @@ importers:
   server:
     dependencies:
       '@asteasolutions/zod-to-openapi':
-        specifier: 7.3.4
-        version: 7.3.4(zod@3.25.76)
+        specifier: 8.5.0
+        version: 8.5.0(zod@4.6.7)
       '@aws-sdk/client-s3':
         specifier: 3.1165.0
         version: 3.1165.0
@@ -540,8 +540,8 @@ importers:
         specifier: 5.0.1
         version: 5.0.1(express@5.3.0)
       zod:
-        specifier: 3.25.76
-        version: 3.25.76
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@types/cookie-parser':
         specifier: 1.4.10
@@ -603,10 +603,10 @@ packages:
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
 
-  '@asteasolutions/zod-to-openapi@7.3.4':
-    resolution: {integrity: sha512-/2rThQ5zPi9OzVwes6U7lK1+Yvug0iXu25olp7S0XsYmOqnyMfxH7gdSQjn/+DSOHRg7wnotwGJSyL+fBKdnEA==}
+  '@asteasolutions/zod-to-openapi@8.5.0':
+    resolution: {integrity: sha512-SABbKiObg5dLRiTFnqiW1WWwGcg1BJfmHtT2asIBnBHg6Smy/Ms2KHc650+JI4Hw7lSkdiNebEGXpwoxfben8Q==}
     peerDependencies:
-      zod: ^3.20.2
+      zod: ^4.0.0
 
   '@aws-sdk/checksums@3.1002.4':
     resolution: {integrity: sha512-C3EkQ34SUaVFhALeGrxCJQx0DM0r6NLxUVoYtt9jh/SSK5CqyYvhLn2kgUxW+XoLYxeytpmxk809H7ay4YyMFw==}
@@ -7035,8 +7035,8 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
   zustand@5.0.8:
     resolution: {integrity: sha512-gyPKpIaxY9XcO2vSMrLbiER7QMAMGOQZVRdJ6Zi782jkbzZygq5GI9nG8g+sMgitRtndwaBSl7uiqC49o1SSiw==}
@@ -7070,10 +7070,10 @@ snapshots:
       '@csstools/css-tokenizer': 3.0.4
       lru-cache: 10.4.3
 
-  '@asteasolutions/zod-to-openapi@7.3.4(zod@3.25.76)':
+  '@asteasolutions/zod-to-openapi@8.5.0(zod@4.6.7)':
     dependencies:
       openapi3-ts: 4.6.2
-      zod: 3.25.76
+      zod: 4.6.7
 
   '@aws-sdk/checksums@3.1002.4':
     dependencies:
@@ -14608,7 +14608,7 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  zod@3.25.76: {}
+  zod@4.6.7: {}
 
   zustand@5.0.8(@types/react@19.1.17)(react@19.1.0)(use-sync-external-store@1.7.0(react@19.1.0)):
     optionalDependencies:

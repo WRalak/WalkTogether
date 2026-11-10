@@ -17,7 +17,7 @@ export const registerSchema = z
     username: usernameSchema,
     displayName: z.string().trim().min(1).max(60),
     phone: phoneSchema.optional(),
-    acceptTerms: z.literal(true, { errorMap: () => ({ message: 'You must accept the terms of service' }) }),
+    acceptTerms: z.literal(true, { error: 'You must accept the terms of service' }),
     device: deviceInfoSchema.optional(),
   })
   .strict();
@@ -73,7 +73,7 @@ export const phoneRegistrationSchema = z
     registrationToken: z.string().min(20).max(2048),
     username: usernameSchema,
     displayName: z.string().trim().min(1).max(60),
-    acceptTerms: z.literal(true, { errorMap: () => ({ message: 'You must accept the terms of service' }) }),
+    acceptTerms: z.literal(true, { error: 'You must accept the terms of service' }),
     device: deviceInfoSchema.optional(),
   })
   .strict();

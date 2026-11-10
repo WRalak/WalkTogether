@@ -15,5 +15,5 @@
     "@walktogether/shared-types": "workspace:*",
     "@walktogether/validation": "workspace:*"
   },
-  "devDependencies": { "typescript": "5.9.3", "vitest": "3.2.7", "zod": "3.25.76" }
+  "devDependencies": { "typescript": "5.9.3", "vitest": "3.2.7", "zod": "4.6.7" }
 }

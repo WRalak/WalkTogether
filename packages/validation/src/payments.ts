@@ -30,7 +30,7 @@ export const campaignSchema = z
     startsAt: date,
     endsAt: date,
     terms: z.string().trim().min(50, 'Publish clear competition terms (at least 50 characters)').max(10000),
-    eligibility: z.record(z.unknown()).default({}),
+    eligibility: z.record(z.string(), z.unknown()).default({}),
     prizeDescription: z.string().trim().max(1000).nullable().optional(),
     challengeConfig: z
       .object({

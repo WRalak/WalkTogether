@@ -27,7 +27,7 @@ const envSchema = z.object({
   ADMIN_ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(1800).default(600),
   ADMIN_SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(24).default(8),
 
-  CORS_ORIGINS: csv.default('http://localhost:3000,http://localhost:3001,http://localhost:3002'),
+  CORS_ORIGINS: csv.prefault('http://localhost:3000,http://localhost:3001,http://localhost:3002'),
   COOKIE_DOMAIN: z.string().optional(),
   COOKIE_SECURE: bool.optional(),
 
@@ -46,13 +46,13 @@ const envSchema = z.object({
   AFRICASTALKING_SENDER_ID: z.string().optional(),
 
   // OAuth
-  GOOGLE_CLIENT_IDS: csv.default(''),
-  APPLE_CLIENT_IDS: csv.default(''),
+  GOOGLE_CLIENT_IDS: csv.prefault(''),
+  APPLE_CLIENT_IDS: csv.prefault(''),
 
   // Queues: 'bullmq' in deployed environments, 'inline' runs jobs synchronously (tests only).
   QUEUE_DRIVER: z.enum(['bullmq', 'inline']).default('bullmq'),
 
-  RATE_LIMIT_ENABLED: bool.default('true'),
+  RATE_LIMIT_ENABLED: bool.prefault('true'),
 
   // Push notifications: console (dev only) | expo
   PUSH_PROVIDER: z.enum(['console', 'expo']).default('console'),
@@ -73,7 +73,7 @@ const envSchema = z.object({
   CLAMAV_PORT: z.coerce.number().int().default(3310),
 
   // Payments
-  PAYMENT_PROVIDERS: csv.default(''),
+  PAYMENT_PROVIDERS: csv.prefault(''),
   MPESA_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
   MPESA_CONSUMER_KEY: z.string().optional(),
   MPESA_CONSUMER_SECRET: z.string().optional(),

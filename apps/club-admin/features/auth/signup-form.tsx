@@ -16,7 +16,7 @@ const schema = z.object({
   username: usernameSchema,
   email: emailSchema,
   password: passwordSchema,
-  acceptTerms: z.literal(true, { errorMap: () => ({ message: 'You must accept the terms' }) }),
+  acceptTerms: z.literal(true, { error: 'You must accept the terms' }),
 });
 
 export function SignupForm() {

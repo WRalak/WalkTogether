@@ -32,7 +32,7 @@ export const achievementDefinitionSchema = z
     name: z.string().trim().min(2).max(80),
     description: z.string().trim().min(2).max(300),
     icon: z.string().max(16).default('🏅'),
-    rule: z.record(z.unknown()),
+    rule: z.record(z.string(), z.unknown()),
     active: z.boolean().default(true),
   })
   .strict();

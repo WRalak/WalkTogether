@@ -553,13 +553,13 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
       deleteAccount: (body: In<typeof v.deleteAccountSchema>) => http.request<{ scheduledAt: string }>('/api/v1/users/me', { method: 'DELETE', body }),
     },
     clubs: {
-      list: (query: Partial<In<typeof v.listClubsQuerySchema>> = {}) => http.page<ClubSummary>('/api/v1/clubs', { query, auth: true }),
+      list: (query: Partial<In<typeof v.listClubsQuerySchema>> = {}) => http.page<ClubSummary>('/api/v1/clubs', { query: query as Record<string, string | number | undefined>, auth: true }),
       get: (slugOrId: string) => http.request<ClubWithCoords>(`/api/v1/clubs/${encodeURIComponent(slugOrId)}`),
       create: (body: In<typeof v.createClubSchema>) => http.request<ClubWithCoords>('/api/v1/clubs', { method: 'POST', body }),
       update: (clubId: string, body: In<typeof v.updateClubSchema>) => http.request<ClubWithCoords>(`/api/v1/clubs/${clubId}`, { method: 'PATCH', body }),
       join: (clubId: string, body: In<typeof v.joinClubSchema> = {}) => http.request<{ membershipId: string; status: string }>(`/api/v1/clubs/${clubId}/join`, { method: 'POST', body }),
       leave: (clubId: string) => http.request<void>(`/api/v1/clubs/${clubId}/leave`, { method: 'POST' }),
-      members: (clubId: string, query: Partial<In<typeof v.listMembersQuerySchema>> = {}) => http.page<ClubMember>(`/api/v1/clubs/${clubId}/members`, { query }),
+      members: (clubId: string, query: Partial<In<typeof v.listMembersQuerySchema>> = {}) => http.page<ClubMember>(`/api/v1/clubs/${clubId}/members`, { query: query as Record<string, string | number | undefined> }),
       review: (clubId: string, membershipId: string, body: In<typeof v.reviewMembershipSchema>) =>
         http.request<{ status: string }>(`/api/v1/clubs/${clubId}/members/${membershipId}/review`, { method: 'POST', body }),
       assignRole: (clubId: string, membershipId: string, roleId: string) => http.request<unknown>(`/api/v1/clubs/${clubId}/members/${membershipId}/role`, { method: 'PUT', body: { roleId } }),

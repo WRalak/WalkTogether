@@ -28,7 +28,7 @@ export function buildOpenApiDocument() {
   };
 
   type Method = 'get' | 'post' | 'patch' | 'put' | 'delete';
-  const route = (method: Method, path: string, tag: string, summary: string, opts: { body?: ZodTypeAny; query?: z.AnyZodObject; auth?: 'member' | 'admin' } = {}) =>
+  const route = (method: Method, path: string, tag: string, summary: string, opts: { body?: ZodTypeAny; query?: z.ZodObject; auth?: 'member' | 'admin' } = {}) =>
     registry.registerPath({
       method,
       path,
