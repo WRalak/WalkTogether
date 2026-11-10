@@ -26,6 +26,7 @@ import { notificationsRouter } from './modules/notifications/notifications.route
 import { subscriptionsRouter } from './modules/subscriptions/subscriptions.routes';
 import { buildOpenApiDocument } from './openapi';
 import { logger } from './shared/logger';
+import { metricsHandler, metricsMiddleware } from './shared/metrics';
 
 export function createApp(): Express {
   const app = express();
@@ -33,6 +34,7 @@ export function createApp(): Express {
   app.set('trust proxy', env.TRUST_PROXY);
 
   app.use(requestContext);
+  app.use(metricsMiddleware);
   app.use(
     pinoHttp({
       logger,
@@ -57,6 +59,7 @@ export function createApp(): Express {
   app.use(cookieParser());
 
   app.use('/health', healthRouter);
+  app.get('/metrics', metricsHandler);
 
   const api = express.Router();
   api.use(globalLimiter);

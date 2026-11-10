@@ -87,6 +87,8 @@ const envSchema = z.object({
   MAP_PROVIDER: z.enum(['google', 'mapbox']).default('google'),
 
   SENTRY_DSN: z.string().optional(),
+  /** Bearer token required to scrape /metrics (Prometheus). Unset = endpoint disabled. */
+  METRICS_TOKEN: z.string().min(24).optional(),
   ADMIN_TOTP_ISSUER: z.string().default('WalkTogether Admin'),
 });
 

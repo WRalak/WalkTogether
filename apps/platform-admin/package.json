@@ -33,7 +33,7 @@
     "@walktogether/configuration": "workspace:*",
     "autoprefixer": "10.4.21",
     "jsdom": "26.1.0",
-    "postcss": "8.5.6",
+    "postcss": "8.5.32",
     "tailwindcss": "3.4.19",
     "typescript": "5.9.3",
     "vitest": "3.2.7"

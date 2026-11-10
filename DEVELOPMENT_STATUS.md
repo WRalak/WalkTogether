@@ -1,125 +1,100 @@
 # Development Status
 
-_Last updated: 2026-11-10 — end of Phase 1._
+_Last updated: 2026-11-10 — Phases 1–8 implemented; Phase 9 hardening partially complete._
 
 ## Roadmap
 
 | Phase | Scope | Status |
 | --- | --- | --- |
-| 1 Foundation | Monorepo, backend, PostgreSQL/PostGIS, Prisma, Redis, auth, profiles, RBAC, multi-tenant club foundation, public website, mobile navigation, admin authentication | ✅ Complete |
-| 2 Club SaaS | Custom roles UI, ownership transfer, announcements, club plans & entitlements, dashboard analytics, browser E2E tests | ⏭ Next (membership core already built in Phase 1) |
-| 3 GPS tracking | Recording engine, background/offline, sync, activity history, personal stats | Designed (`docs/architecture/GPS_TRACKING_DESIGN.md`) |
-| 4 Events & attendance | Events, recurrence, RSVP, QR check-in, reminders, reports | Planned |
-| 5 Social community | Feed, posts, media pipeline, likes, comments, follows, messaging, push, moderation | Planned |
-| 6 Challenges | Challenge engine, leaderboards, badges/achievements | Planned |
-| 7 Monetization | Plans, payments (M-Pesa, Stripe), webhooks, invoices, sponsorships | Designed (`docs/architecture/MONETIZATION_DESIGN.md`) |
-| 8 Platform administration | Revenue analytics, plan management, sponsor management, moderation queues | Foundation built in Phase 1 |
-| 9 Production hardening | Pen test, load test, backup drills, monitoring, Play Store release | Planned |
+| 1 Foundation | Monorepo, auth, profiles, RBAC, multi-tenant clubs, web/mobile/admin foundations | ✅ |
+| 2 Club SaaS | Custom roles, ownership transfer, announcements, plans & entitlements, notifications | ✅ |
+| 3 GPS tracking | Shared engine, background/offline recording, sync, server validation, stats, goals | ✅ (device testing pending) |
+| 4 Events & attendance | Events, recurrence, RSVP/waitlist, QR check-in, reminders, reports, analytics | ✅ |
+| 5 Social community | Follows, posts, feed, comments, media pipeline, messaging (Socket.IO), moderation | ✅ |
+| 6 Challenges | Challenge engine, club-vs-club, leaderboards, achievements | ✅ |
+| 7 Monetization | M-Pesa/Stripe providers, verified checkout, invoices, refunds, promotions, sponsorships | ✅ (live provider testing pending) |
+| 8 Platform administration | KPIs, revenue, plans, sponsors, moderation, security, system health, admins | ✅ |
+| 9 Production hardening | Audit, metrics, OpenAPI, backup drill — load test, pen test, device builds outstanding | 🟡 Partial |
 
-## Phase 1 report
+## What exists (by area)
 
-### What was implemented
+**Backend (`server/`)** — Express 5 modular monolith, Prisma/PostgreSQL+PostGIS, Redis, BullMQ worker,
+Socket.IO. Modules: auth, users, clubs, memberships, announcements, subscriptions/entitlements,
+activities/GPS, events, social (follows, posts, comments, feed), media, messaging, moderation,
+challenges/leaderboards/achievements, payments, sponsorships, administration, notifications, audit.
+8 migrations (`init` … `phase7_payments_sponsorships`), no schema drift.
 
-**Backend (`server/`)**
-* Express 5 modular monolith with request ids, structured logging with secret redaction, helmet, strict
-  CORS, Redis-backed rate limits, central error envelope, Zod validation (`strict`, rejects unknown fields),
-  generated OpenAPI 3.1 docs, liveness/readiness probes, graceful shutdown, Sentry hook.
-* **Auth:** email/password registration and login (Argon2id), refresh-token rotation with reuse detection,
-  per-device sessions, logout one/all, immediate revocation (Redis deny-list), account lockout, login
-  history, suspicious-login detection + email, email verification, forgot/reset/change password,
-  **phone OTP sign-in and phone-first sign-up**, Google/Apple ID-token sign-in (JWKS-verified; returns
-  503 until client ids are configured), web cookie mode with CSRF header.
-* **Users:** profile, username/email change (re-verification), privacy settings (privacy-by-default),
-  notification preferences, push device registration, blocking (bidirectional 404), public profiles
-  respecting privacy, data export, account deletion with 30-day grace and anonymisation job.
-* **Clubs (tenants):** creation (verified accounts, per-user limit from platform settings, optional
-  platform approval), per-club system roles, discovery with search/category/country and **PostGIS
-  nearby search**, slug/id lookup with visibility rules, updates with audit.
-* **Memberships:** join (public instant / approval / private requests / invite-only), leave, approve/reject,
-  role assignment and moderation (suspend/reinstate/remove/ban) with **hierarchy and privilege-escalation
-  guards**, hashed invitation codes (recipient-bound, max uses, expiry, revoke, preview), "my clubs".
-* **Platform admin:** separate identity, **mandatory TOTP MFA** (encrypted secrets, replay protection),
-  admin RBAC, overview KPIs, user search/suspend/reactivate (revokes sessions), club
-  search/suspend/reactivate/approve, append-only audit log, platform settings, feature flags, CLI bootstrap.
-* Background jobs: typed BullMQ catalogue, worker with retries/backoff, recurring purge/cleanup schedulers.
+**Shared packages** — `shared-types`, `validation` (Zod), `api-client`, `gps` (filtering, statistics,
+`TrackingEngine`, polyline, privacy trimming), `ui`, `configuration`.
 
-**Web**
-* `apps/web`: home, features, discover clubs (search/filter/pagination), club pages (JSON-LD, Open Graph,
-  `noindex` for private clubs), for clubs, for organizations, sponsors, pricing (no hardcoded prices),
-  about, contact, privacy, terms, verify-email, reset-password, sitemap, robots, CSP.
-* `apps/club-admin`: sign up/in, session restore via httpOnly cookie, club picker, create club (with
-  verification prompt), overview, members (tabs, search, approve/reject, roles, suspend/reinstate/remove),
-  invitations (create/copy once/revoke), settings. Navigation shows only permitted sections.
-* `apps/platform-admin`: password → TOTP (QR enrolment) sign-in, overview, users, clubs, audit log,
-  settings & feature flags; permission-aware navigation.
+**Mobile (`apps/mobile`)** — auth (email, phone OTP), Record (background location task with
+foreground fallback, SQLite offline store, crash recovery, resumable batched sync), activity
+history/detail with maps, home/profile stats, explore (clubs, events, sponsored), club detail/chat,
+events with RSVP + QR scanner check-in, community feed, composer with photo upload, comments,
+messaging, user profiles/follows, notifications + push registration, challenges & leaderboards,
+achievements, Premium subscription (M-Pesa/card), privacy & security settings.
 
-**Mobile (`apps/mobile`)**
-* Expo SDK 54 app with Expo Router, NativeWind design system, TanStack Query, Zustand session store,
-  SecureStore token storage, auth flows (welcome, email sign-in/up, phone OTP sign-in/up, forgot password),
-  tabs (Home, Explore, Record, Community, Profile), club discovery with infinite scroll and club detail with
-  join/request/invitation/leave, privacy settings, security settings (devices, sign out everywhere,
-  account deletion). App config declares background-location permissions and the foreground service.
+**Club admin (`apps/club-admin`)** — members, invitations, roles & ownership transfer,
+announcements, events + live QR + attendance + CSV, challenges, analytics & reports, community
+moderation, sponsorship offers, billing (plans, checkout, invoices), settings with logo/cover upload,
+and a sponsor portal (apply, campaigns, pay, reports).
 
-### Honest limitations (not complete yet)
+**Platform admin (`apps/platform-admin`)** — MFA sign-in, overview KPIs (incl. MRR/ARR,
+sponsorship revenue), revenue, users (detail + history), clubs, plans/promotions/payments/refunds,
+sponsors & campaigns (review, reports, rewards), challenges & achievement rules, moderation queue,
+audit log, security monitoring, system health, settings/flags, administrators.
 
-* **Record tab**: only the real location-permission flow; GPS recording is Phase 3.
-* **Community tab, Home weekly stats, Profile statistics**: explanatory placeholders until Phases 3/5.
-* Mobile app has **not been run on a physical device or emulator** in this environment; it typechecks,
-  passes Jest tests, and its Android JS bundle compiles (`expo export`). Device testing is required.
-* Dockerfiles and the CI workflow have not been executed here (no Docker daemon / GitHub runner); the same
-  commands were run locally.
-* Image uploads are URL fields for now; the S3 upload/processing pipeline is Phase 5.
-* No subscription plans, entitlements or payments yet (Phase 2/7). The pricing page lists tiers only.
-* Club ownership transfer and custom-role editing UI are Phase 2.
-* Privacy policy and terms are drafts requiring legal review (Kenya DPA 2019).
+**Public web (`apps/web`)** — marketing pages, club discovery/SEO pages, live pricing from the plans
+API, sponsor portal entry, email-link pages.
 
-### Files and modules created
-
-`server/src/{config,database,middleware,queues,shared}`, `server/src/modules/{auth,users,clubs,memberships,administration,platform,notifications,audit,health}`,
-`server/prisma/{schema.prisma,migrations/*_init,seed.ts,seed-demo.ts}`, `server/scripts/create-admin.ts`,
-`server/test/*` · `packages/{shared-types,validation,api-client,ui,configuration}` ·
-`apps/{web,club-admin,platform-admin,mobile}` · `infrastructure/{docker,nginx}` · `docker-compose.yml` ·
-`.github/workflows/ci.yml`, `.github/dependabot.yml` · `docs/**`.
-
-### Database changes
-
-Migration `20261110100047_init`: PostGIS + pg_trgm extensions; 28 tables (identity, sessions/tokens,
-verification, OAuth, devices, login events, blocks, clubs, settings, permissions, roles, memberships,
-invitations, admin users/roles/permissions/sessions, audit logs, platform settings, feature flags);
-GIST/GIN indexes; CHECK constraints; composite tenant FKs; one-owner-per-club partial unique index;
-append-only audit trigger. Schema/migration drift check: no difference.
-
-### Tests executed (all passing)
+## Tests (all passing)
 
 | Suite | Tests |
 | --- | --- |
-| Server integration & unit (auth, users, clubs, **tenant isolation**, platform admin, audit immutability, journey) | 79 |
+| Server integration/unit (14 files: auth, users, clubs, tenant isolation, phase 2, activities, events, social/media/messaging, challenges, payments/sponsorships, platform admin, admin, journey, unit) | 132 |
+| `packages/gps` | 8 |
 | `packages/validation` | 6 |
-| `packages/api-client` (single-flight refresh, cookie mode, errors) | 4 |
-| `apps/web`, `apps/club-admin`, `apps/platform-admin` | 5 |
-| `apps/mobile` (Jest: schemas, token store, component) | 5 |
-| **Total** | **99** |
+| `packages/api-client` | 4 |
+| Web apps (web, club-admin, platform-admin) | 5 |
+| Mobile (Jest: schemas, token store, tracking session, offline sync, QR parsing, component) | 9 |
+| **Total** | **164** |
 
-Also verified: workspace typecheck, production builds of the API and all three Next.js apps, Android JS
-bundle export, schema drift check, and real-browser runs (Playwright) of club-admin sign-in → members →
-invitation creation → session restore, and platform-admin sign-in with TOTP enrolment → overview → audit log.
+Also verified: workspace typecheck, production builds of all three Next.js apps, Android JS bundle
+export (`expo export`), migration drift check, real-browser runs of club-admin and platform-admin
+(Phase 1), and a database backup/restore drill (`infrastructure/deployment/restore-drill.sh`).
 
-### Required environment variables
+## Phase 9 — done
 
-Documented in `server/.env.example` and `apps/*/.env.example`. External credentials needed for a real
-launch (none are faked): SMTP (email), Africa's Talking (SMS OTP), Google/Apple OAuth client ids, Sentry.
-See `docs/deployment/DEPLOYMENT_GUIDE.md` §7.
+* Dependency audit: upgraded `sharp` 0.35.5 (untrusted image processing), `nodemailer` 10.5,
+  `postcss` 8.5.32, `deepmerge-ts` 8; remaining advisories documented with mitigations in
+  `docs/security/DEPENDENCY_RISK_REGISTER.md`.
+* Prometheus metrics (`/metrics`, token-protected): HTTP latency by route, job and payment counters.
+* OpenAPI document covers Phases 1–8 (`/api/docs`).
+* Backup (`backup.sh`, encrypted pg_dump to S3) and a verified restore drill script.
+* Production configuration guards: the API refuses to start in staging/production with console
+  email/SMS/push providers, local storage, no malware scanner, sandbox payments, incomplete M-Pesa or
+  Stripe credentials, inline queues or placeholder secrets.
 
-### How to run
+## Honest limitations / remaining work
 
-See `README.md` → Getting started.
+* **Not run on real devices.** Background GPS, camera QR scanning, maps and push need an EAS
+  development build on Android hardware; battery and distance-accuracy testing are outstanding.
+* **Payments not tested against live providers.** M-Pesa (Daraja) and Stripe integrations are
+  implemented to their documented APIs; end-to-end runs need sandbox credentials. M-Pesa refunds are
+  recorded as `PENDING_MANUAL` (reversals are a separate Daraja product). Tests use the sandbox
+  provider, which is refused in staging/production.
+* **No load test or penetration test yet.** No scalability claims are made. Planned: k6 scenarios
+  for discovery, feed, GPS ingestion and messaging against staging; external pen test.
+* Video uploads are malware-scanned but not transcoded (metadata may remain); MediaConvert is the
+  planned next step. ClamAV must be deployed alongside the API in production.
+* GPS point table is not yet partitioned; add monthly partitioning before very large volumes.
+* Zod 3 → 4 migration pending (see risk register). Apple Health / Health Connect step counts not integrated.
+* Dockerfiles and the CI/deploy pipeline have not been executed in this environment.
+* Privacy policy and terms are drafts requiring legal review (Kenya DPA 2019).
 
-### Next (Phase 2: Club SaaS)
+## Required external configuration for launch
 
-1. Club ownership transfer, custom roles CRUD (`roles.manage`), membership questions.
-2. Club announcements with notification fan-out (queue) respecting preferences.
-3. `subscription_plans` / `subscription_entitlements` / `subscriptions` tables, admin plan management,
-   entitlement resolution + `requireEntitlement` guard, Free plan limits.
-4. Club dashboard analytics (growth, engagement) and CSV export (`reports.export`).
-5. Playwright browser E2E suite in CI for club-admin and platform-admin.
-6. Media upload pipeline groundwork (pre-signed S3 uploads for logos/covers).
+SMTP, Africa's Talking (SMS), Expo push (EAS project), S3/R2 bucket, ClamAV, Google/Apple OAuth
+client ids, Google Maps Android key, M-Pesa Daraja credentials + callback secret, Stripe keys +
+webhook secret, Sentry DSN, `METRICS_TOKEN`. All documented in `server/.env.example` and
+`docs/deployment/DEPLOYMENT_GUIDE.md`.

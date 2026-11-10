@@ -8,7 +8,7 @@ international markets.
 It is multi-tenant from day one: any user can create a club, belong to several clubs with different roles,
 and keep ownership of their personal fitness data. The first pilot walking club is just the first club.
 
-> Current state: **Phase 1 (Foundation) is complete.** See [`DEVELOPMENT_STATUS.md`](DEVELOPMENT_STATUS.md)
+> Current state: **Phases 1–8 are implemented; Phase 9 hardening is partially complete.** See [`DEVELOPMENT_STATUS.md`](DEVELOPMENT_STATUS.md)
 > for exactly what works today and what is next.
 
 ## Repository
@@ -117,7 +117,7 @@ pnpm test
 pnpm typecheck
 ```
 
-Highlights: authentication and session security, platform-admin MFA, and a dedicated
+164 automated tests. Highlights: authentication and session security, platform-admin MFA, and a dedicated
 **tenant-isolation suite** (`server/test/tenant-isolation.test.ts`) proving users cannot read or modify
 other clubs' data.
 
@@ -131,3 +131,4 @@ other clubs' data.
 * [GPS tracking design](docs/architecture/GPS_TRACKING_DESIGN.md)
 * [Monetization design](docs/architecture/MONETIZATION_DESIGN.md)
 * [Deployment guide](docs/deployment/DEPLOYMENT_GUIDE.md)
+* [Dependency risk register](docs/security/DEPENDENCY_RISK_REGISTER.md)

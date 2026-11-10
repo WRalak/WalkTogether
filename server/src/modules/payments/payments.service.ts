@@ -4,6 +4,7 @@ import { prisma, type Tx } from '../../database/prisma';
 import { enqueue } from '../../queues';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../../shared/errors';
 import { logger } from '../../shared/logger';
+import { paymentCounter } from '../../shared/metrics';
 import { audit, type AuditContext } from '../audit/audit.service';
 import { requireClubPermission } from '../clubs/club-access';
 import { notify } from '../notifications/notifications.service';
@@ -134,6 +135,7 @@ export async function confirmPayment(paymentId: string, source: string, raw: unk
     return p;
   });
   if (done) {
+    paymentCounter.inc({ provider: done.provider, outcome: 'succeeded' });
     await notify({ userIds: [done.payerUserId], type: 'subscription.payment', title: 'Payment received', body: `${(done.amountMinor / 100).toFixed(2)} ${done.currency} — thank you!`, data: { paymentId: done.id } });
     if (done.purpose === 'SPONSORSHIP') await enqueue('campaigns.activate', { campaignId: done.campaignId! }).catch(() => undefined);
   }

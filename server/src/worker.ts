@@ -6,6 +6,7 @@ import { getQueue } from './queues';
 import type { JobMap, JobName } from './queues/jobs';
 import { processors } from './queues/processors';
 import { logger } from './shared/logger';
+import { jobCounter } from './shared/metrics';
 
 if (env.SENTRY_DSN) Sentry.init({ dsn: env.SENTRY_DSN, environment: env.NODE_ENV });
 
@@ -17,7 +18,14 @@ const workers = (['notifications', 'maintenance', 'activity'] as const).map(
       async (job) => {
         const processor = processors[job.name as JobName] as ((d: JobMap[JobName]) => Promise<unknown>) | undefined;
         if (!processor) throw new Error(`No processor registered for job ${job.name}`);
-        return processor(job.data);
+        try {
+          const r = await processor(job.data);
+          jobCounter.inc({ job: job.name, outcome: 'ok' });
+          return r;
+        } catch (err) {
+          jobCounter.inc({ job: job.name, outcome: 'error' });
+          throw err;
+        }
       },
       { connection: createQueueConnection(), concurrency: queueName === 'notifications' ? 10 : queueName === 'activity' ? 5 : 2 },
     ),
