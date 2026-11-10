@@ -67,13 +67,14 @@ export class MpesaProvider implements PaymentProvider {
   async parseWebhook(req: import('express').Request) {
     const secret = String(req.query.secret ?? '');
     if (!env.MPESA_CALLBACK_SECRET || !safeEqual(secret, env.MPESA_CALLBACK_SECRET)) throw new WebhookAuthError();
-    const cb = (req.body as { Body?: { stkCallback?: { CheckoutRequestID: string; ResultCode: number; ResultDesc: string; MerchantRequestID: string } } })?.Body?.stkCallback;
+    const cb = (req.body as { Body?: { stkCallback?: { CheckoutRequestID: string; ResultCode: number; ResultDesc: string; MerchantRequestID: string; CallbackMetadata?: { Item?: { Name: string; Value?: string | number }[] } } } })?.Body?.stkCallback;
     if (!cb?.CheckoutRequestID) throw new WebhookAuthError('Malformed M-Pesa callback');
     return {
       eventId: `${cb.CheckoutRequestID}:${cb.ResultCode}`,
       providerRef: cb.CheckoutRequestID,
       outcome: cb.ResultCode === 0 ? ('SUCCEEDED' as const) : ('FAILED' as const),
       failureReason: cb.ResultCode === 0 ? undefined : cb.ResultDesc,
+      receipt: cb.CallbackMetadata?.Item?.find((i) => i.Name === 'MpesaReceiptNumber')?.Value?.toString(),
       raw: req.body,
     };
   }
@@ -94,6 +95,42 @@ export class MpesaProvider implements PaymentProvider {
       // "The transaction is being processed" is returned as an error while pending.
       return { outcome: 'PENDING' as const, raw: (err as { raw?: unknown }).raw ?? String(err) };
     }
+  }
+
+  /**
+   * Daraja Transaction Reversal. Requires an initiator (MPESA_INITIATOR_NAME) and its encrypted
+   * security credential (MPESA_SECURITY_CREDENTIAL). The result arrives asynchronously at
+   * /payments/webhooks/mpesa/reversal-result. Daraja reversals are full-amount only.
+   */
+  async refund(payment: { providerReceipt: string | null; amountMinor: number }, amountMinor: number) {
+    if (!env.MPESA_INITIATOR_NAME || !env.MPESA_SECURITY_CREDENTIAL) throw new Error('M-Pesa reversals require MPESA_INITIATOR_NAME and MPESA_SECURITY_CREDENTIAL');
+    if (!payment.providerReceipt) throw new Error('No M-Pesa receipt number recorded for this payment');
+    if (amountMinor !== payment.amountMinor) throw new Error('M-Pesa reversals must be for the full amount');
+    const secret = encodeURIComponent(env.MPESA_CALLBACK_SECRET ?? '');
+    const raw = await this.post<{ ConversationID: string; ResponseCode: string; ResponseDescription: string }>('/mpesa/reversal/v1/request', {
+      Initiator: env.MPESA_INITIATOR_NAME,
+      SecurityCredential: env.MPESA_SECURITY_CREDENTIAL,
+      CommandID: 'TransactionReversal',
+      TransactionID: payment.providerReceipt,
+      Amount: Math.ceil(amountMinor / 100),
+      ReceiverParty: env.MPESA_SHORTCODE,
+      RecieverIdentifierType: '11',
+      ResultURL: `${env.API_PUBLIC_URL}/api/v1/payments/webhooks/mpesa/reversal-result?secret=${secret}`,
+      QueueTimeOutURL: `${env.API_PUBLIC_URL}/api/v1/payments/webhooks/mpesa/reversal-result?secret=${secret}`,
+      Remarks: 'WalkTogether refund',
+      Occasion: 'Refund',
+    });
+    if (raw.ResponseCode !== '0') throw new Error(`M-Pesa reversal rejected: ${raw.ResponseDescription}`);
+    return { refundRef: raw.ConversationID, status: 'PENDING' as const };
+  }
+
+  /** Parses the asynchronous reversal result callback (authenticated by the callback secret). */
+  parseReversalResult(req: import('express').Request) {
+    const secret = String(req.query.secret ?? '');
+    if (!env.MPESA_CALLBACK_SECRET || !safeEqual(secret, env.MPESA_CALLBACK_SECRET)) throw new WebhookAuthError();
+    const r = (req.body as { Result?: { ResultCode: number; ResultDesc: string; ConversationID: string } })?.Result;
+    if (!r?.ConversationID) throw new WebhookAuthError('Malformed reversal result');
+    return { refundRef: r.ConversationID, succeeded: r.ResultCode === 0, description: r.ResultDesc };
   }
 
   webhookAck() {

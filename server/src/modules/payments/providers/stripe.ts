@@ -80,9 +80,9 @@ export class StripeProvider implements PaymentProvider {
     return { outcome: 'PENDING' as const, raw: s };
   }
 
-  async refund(providerRef: string, amountMinor: number) {
-    const s = await this.call<{ payment_intent: string }>('GET', `/checkout/sessions/${encodeURIComponent(providerRef)}`);
-    const r = await this.call<{ id: string }>('POST', '/refunds', form({ payment_intent: s.payment_intent, amount: amountMinor }));
-    return { refundRef: r.id };
+  async refund(payment: { providerRef: string }, amountMinor: number) {
+    const s = await this.call<{ payment_intent: string }>('GET', `/checkout/sessions/${encodeURIComponent(payment.providerRef)}`);
+    const r = await this.call<{ id: string; status: string }>('POST', '/refunds', form({ payment_intent: s.payment_intent, amount: amountMinor }));
+    return { refundRef: r.id, status: r.status === 'succeeded' ? ('SUCCEEDED' as const) : ('PENDING' as const) };
   }
 }

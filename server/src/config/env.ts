@@ -71,6 +71,8 @@ const envSchema = z.object({
   MALWARE_SCANNER: z.enum(['none', 'clamav']).default('none'),
   CLAMAV_HOST: z.string().default('localhost'),
   CLAMAV_PORT: z.coerce.number().int().default(3310),
+  FFMPEG_PATH: z.string().default('ffmpeg'),
+  FFPROBE_PATH: z.string().default('ffprobe'),
 
   // Payments
   PAYMENT_PROVIDERS: csv.prefault(''),
@@ -80,6 +82,8 @@ const envSchema = z.object({
   MPESA_SHORTCODE: z.string().optional(),
   MPESA_PASSKEY: z.string().optional(),
   MPESA_CALLBACK_SECRET: z.string().optional(),
+  MPESA_INITIATOR_NAME: z.string().optional(),
+  MPESA_SECURITY_CREDENTIAL: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
 

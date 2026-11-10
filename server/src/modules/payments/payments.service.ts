@@ -104,11 +104,11 @@ async function nextInvoiceNumber(tx: Tx) {
  * The single place where money becomes entitlement. Called only after the provider confirmed the
  * payment server-to-server. Idempotent: confirming twice has no further effect.
  */
-export async function confirmPayment(paymentId: string, source: string, raw: unknown) {
+export async function confirmPayment(paymentId: string, source: string, raw: unknown, receipt?: string) {
   const done = await prisma.$transaction(async (tx) => {
     const [locked] = await tx.$queryRaw<{ status: string }[]>`SELECT status FROM payments WHERE id = ${paymentId}::uuid FOR UPDATE`;
     if (!locked || locked.status !== 'PENDING') return null;
-    const p = await tx.payment.update({ where: { id: paymentId }, data: { status: 'SUCCEEDED', confirmedAt: new Date() } });
+    const p = await tx.payment.update({ where: { id: paymentId }, data: { status: 'SUCCEEDED', confirmedAt: new Date(), ...(receipt ? { providerReceipt: receipt } : {}) } });
     await log(tx, p.id, source, 'SUCCEEDED', raw);
     let lines: { description: string; amountMinor: number }[] = [];
     let billedTo: Record<string, unknown> = {};
@@ -173,7 +173,7 @@ export async function handleWebhook(providerId: string, req: Request) {
       if (payment && payment.status === 'PENDING') {
         if (evt.outcome === 'SUCCEEDED') {
           const check = await provider.queryStatus(evt.providerRef);
-          if (check.outcome === 'SUCCEEDED') await confirmPayment(payment.id, 'webhook', { webhook: evt.raw, query: check.raw });
+          if (check.outcome === 'SUCCEEDED') await confirmPayment(payment.id, 'webhook', { webhook: evt.raw, query: check.raw }, evt.receipt);
           else logger.warn({ paymentId: payment.id, check: check.outcome }, 'webhook claimed success but provider status disagrees');
         } else if (evt.outcome === 'FAILED') {
           await failPayment(payment.id, evt.failureReason ?? 'Payment failed', evt.raw);
@@ -262,20 +262,23 @@ export function renderInvoiceHtml(inv: Awaited<ReturnType<typeof getInvoice>>) {
 <p>Paid via ${esc(inv.payment.provider)} · Reference ${esc(inv.payment.providerRef)}</p></body></html>`;
 }
 
-/** Admin refunds. M-Pesa reversals are a separate Daraja product, so they are recorded for manual processing. */
+/** Admin refunds through the provider (Stripe refund, M-Pesa reversal). Asynchronous refunds complete via callback. */
 export async function refundPayment(adminId: string, paymentId: string, amountMinor: number, reason: string, ctx: AuditContext) {
   const p = await prisma.payment.findUnique({ where: { id: paymentId } });
   if (!p) throw notFound('Payment not found');
   if (!['SUCCEEDED', 'PARTIALLY_REFUNDED'].includes(p.status)) throw conflict('Only successful payments can be refunded', 'NOT_REFUNDABLE');
   if (amountMinor <= 0 || p.refundedMinor + amountMinor > p.amountMinor) throw badRequest('Refund amount exceeds what was paid');
+  if (await prisma.refund.count({ where: { paymentId, status: 'PENDING' } })) throw conflict('A refund for this payment is already in progress', 'REFUND_IN_PROGRESS');
   const provider = getProvider(p.provider);
-  let status: 'SUCCEEDED' | 'PENDING_MANUAL' = 'PENDING_MANUAL';
-  let providerRef: string | null = null;
-  if (provider.refund) {
-    const r = await provider.refund(p.providerRef!, amountMinor);
-    status = 'SUCCEEDED';
-    providerRef = r.refundRef;
+  if (!provider.refund) throw new AppError(501, 'REFUND_UNSUPPORTED', `${p.provider} does not support refunds`);
+  let r;
+  try {
+    r = await provider.refund({ providerRef: p.providerRef!, providerReceipt: p.providerReceipt, amountMinor: p.amountMinor, currency: p.currency }, amountMinor);
+  } catch (err) {
+    throw new AppError(502, 'REFUND_FAILED', `Refund could not be started: ${(err as Error).message}`);
   }
+  const status = r.status;
+  const providerRef = r.refundRef;
   await prisma.$transaction(async (tx) => {
     await tx.refund.create({ data: { paymentId, amountMinor, reason, status, providerRef, adminId } });
     if (status === 'SUCCEEDED') {
@@ -306,4 +309,19 @@ export async function campaignCheckout(payerId: string, idempotencyKey: string, 
     data: { purpose: 'SPONSORSHIP', payerUserId: payerId, campaignId, amountMinor: c.budgetMinor, currency: c.currency, provider: provider.id, idempotencyKey, phone: input.phone ?? payer.phone },
   });
   return initiate(payment, `Sponsorship: ${c.name}`, payer.email);
+}
+
+/** Applies an asynchronous refund result (M-Pesa reversal callback). Idempotent. */
+export async function completeRefund(refundRef: string, succeeded: boolean, raw: unknown) {
+  const refund = await prisma.refund.findFirst({ where: { providerRef: refundRef, status: 'PENDING' }, include: { payment: true } });
+  if (!refund) return;
+  await prisma.$transaction(async (tx) => {
+    await tx.refund.update({ where: { id: refund.id }, data: { status: succeeded ? 'SUCCEEDED' : 'FAILED' } });
+    await log(tx, refund.paymentId, 'refund_result', succeeded ? 'SUCCEEDED' : 'FAILED', raw);
+    if (succeeded) {
+      const refunded = refund.payment.refundedMinor + refund.amountMinor;
+      await tx.payment.update({ where: { id: refund.paymentId }, data: { refundedMinor: refunded, status: refunded >= refund.payment.amountMinor ? 'REFUNDED' : 'PARTIALLY_REFUNDED' } });
+    }
+    await audit({ actorType: 'SYSTEM', action: succeeded ? 'payment.refund_succeeded' : 'payment.refund_failed', targetType: 'payment', targetId: refund.paymentId }, {}, tx);
+  });
 }

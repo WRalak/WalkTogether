@@ -228,3 +228,29 @@ describe('messaging', () => {
     await api().get(`/api/v1/conversations/${conv.body.data.id}/messages`).set(bearer(member)).expect(403);
   });
 });
+
+describe('video pipeline', () => {
+  it('transcodes to MP4, strips location metadata and creates a poster', async () => {
+    const { execFileSync } = await import('node:child_process');
+    const { mkdtempSync, readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { tmpdir } = await import('node:os');
+    const dir = mkdtempSync(join(tmpdir(), 'wt-vtest-'));
+    const src = join(dir, 'in.mp4');
+    execFileSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=1920x1080:rate=25', '-t', '2', '-metadata', 'location=-01.2921+036.8219/', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', src]);
+    const buf = readFileSync(src);
+    const u = await registerUser();
+    const req = await api().post('/api/v1/media').set(bearer(u)).send({ purpose: 'POST', mimeType: 'video/mp4', sizeBytes: buf.length }).expect(201);
+    const url = new URL(req.body.data.upload.url);
+    await api().put(url.pathname + url.search).set('Content-Type', 'video/mp4').send(buf).expect(200);
+    const done = await api().post(`/api/v1/media/${req.body.data.mediaId}/complete`).set(bearer(u)).expect(200);
+    expect(done.body.data).toMatchObject({ status: 'READY', width: 1280, height: 720 });
+    const asset = await prisma.mediaAsset.findUniqueOrThrow({ where: { id: req.body.data.mediaId } });
+    const out = await storage.read((asset.variants as Record<string, string>).video!);
+    const outPath = join(dir, 'out.mp4');
+    (await import('node:fs')).writeFileSync(outPath, out!);
+    const tags = execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format_tags', '-of', 'json', outPath]).toString();
+    expect(tags).not.toContain('location');
+    expect(await storage.read(asset.storageKey)).toBeNull();
+  }, 60_000);
+});

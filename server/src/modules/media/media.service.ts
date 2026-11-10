@@ -8,6 +8,7 @@ import { logger } from '../../shared/logger';
 import { scanBuffer } from './scanner';
 import { ALLOWED, sniffMime } from './sniff';
 import { storage } from './storage';
+import { transcodeVideo } from './video';
 
 const VIDEO_PURPOSES: MediaPurpose[] = ['POST'];
 
@@ -56,9 +57,19 @@ export async function processMedia(mediaId: string) {
   if (!scan.clean) return reject(asset.id, asset.storageKey, `malware:${scan.signature ?? 'detected'}`);
 
   if (asset.kind === 'VIDEO') {
-    // Videos are published as uploaded after scanning; server-side transcoding (e.g. AWS
-    // MediaConvert) is the documented next step for adaptive streaming and metadata stripping.
-    await prisma.mediaAsset.update({ where: { id: asset.id }, data: { status: 'READY', variants: { original: asset.storageKey } } });
+    try {
+      const out = await transcodeVideo(buf);
+      const videoKey = `media/${asset.id}/video.mp4`;
+      const posterKey = `media/${asset.id}/poster.webp`;
+      await storage.write(videoKey, out.video, 'video/mp4');
+      await storage.write(posterKey, await sharp(out.poster).resize({ width: 1280, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer(), 'image/webp');
+      // Remove the original: it may carry location metadata.
+      await storage.remove(asset.storageKey);
+      await prisma.mediaAsset.update({ where: { id: asset.id }, data: { status: 'READY', variants: { video: videoKey, poster: posterKey }, width: out.width, height: out.height } });
+    } catch (err) {
+      logger.warn({ err, mediaId }, 'video processing failed');
+      await reject(asset.id, asset.storageKey, (err as Error).message === 'video too long' ? 'too_long' : 'unreadable_video');
+    }
     return;
   }
   try {
@@ -109,7 +120,7 @@ export async function readyAssetUrl(ownerId: string, id: string, purposes: Media
   if (!purposes.includes(a.purpose)) throw badRequest('This media was uploaded for a different purpose');
   if (a.status !== 'READY') throw conflict('Media is still processing', 'MEDIA_NOT_READY');
   const v = a.variants as Record<string, string>;
-  return storage.publicUrl(v.medium ?? v.original!);
+  return storage.publicUrl(v.medium ?? v.poster!);
 }
 
 export async function deleteMedia(ownerId: string, id: string) {

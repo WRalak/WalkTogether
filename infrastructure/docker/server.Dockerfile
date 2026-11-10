@@ -20,7 +20,7 @@ RUN pnpm --filter @walktogether/server deploy --prod --legacy /out && cp -r serv
   && cd /out && npx prisma generate --schema prisma/schema.prisma
 
 FROM node:22-bookworm-slim AS runtime
-RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates tini && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates tini ffmpeg && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production CHECKPOINT_DISABLE=1
 WORKDIR /app
 COPY --from=build --chown=node:node /out /app

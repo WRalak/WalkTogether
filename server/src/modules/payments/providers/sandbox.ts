@@ -37,7 +37,7 @@ export class SandboxProvider implements PaymentProvider {
     return { outcome: outcomes.get(providerRef) ?? ('PENDING' as const), raw: {} };
   }
 
-  async refund(providerRef: string) {
-    return { refundRef: `sbx_refund_${providerRef}` };
+  async refund(payment: { providerRef: string }) {
+    return { refundRef: `sbx_refund_${payment.providerRef}`, status: 'SUCCEEDED' as const };
   }
 }

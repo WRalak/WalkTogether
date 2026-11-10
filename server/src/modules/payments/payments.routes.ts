@@ -4,9 +4,10 @@ import { campaignCheckoutSchema, checkoutSchema } from '@walktogether/validation
 import { authUserId, requireAuth } from '../../middleware/authenticate';
 import { auditCtx } from '../../middleware/request-context';
 import { parse } from '../../middleware/validate';
-import { badRequest } from '../../shared/errors';
+import { badRequest, unauthorized } from '../../shared/errors';
 import * as svc from './payments.service';
-import { enabledProviders } from './providers';
+import { enabledProviders, getProvider } from './providers';
+import type { MpesaProvider } from './providers/mpesa';
 
 const idParam = z.object({ id: z.string().uuid() });
 const idempotencyKey = (h: string | undefined) => {
@@ -23,6 +24,19 @@ checkoutRouter.post('/checkout', requireAuth, async (req, res) => {
 });
 
 export const paymentsRouter = Router();
+/** M-Pesa reversal (refund) results — authenticated by the callback secret. */
+paymentsRouter.post('/webhooks/mpesa/reversal-result', async (req, res) => {
+  const provider = getProvider('mpesa') as MpesaProvider;
+  let r;
+  try {
+    r = provider.parseReversalResult(req);
+  } catch {
+    throw unauthorized('Webhook verification failed', 'INVALID_SIGNATURE');
+  }
+  await svc.completeRefund(r.refundRef, r.succeeded, req.body);
+  res.json({ ResultCode: 0, ResultDesc: 'Accepted' });
+});
+
 /** Provider callbacks: authenticated by signature/secret, never by user tokens. */
 paymentsRouter.post('/webhooks/:provider', async (req, res) => {
   const { provider } = parse(z.object({ provider: z.string().regex(/^[a-z]{2,20}$/) }), req.params);

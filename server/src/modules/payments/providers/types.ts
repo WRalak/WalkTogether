@@ -26,7 +26,14 @@ export interface WebhookResult {
   providerRef: string | null;
   outcome: ProviderOutcome;
   failureReason?: string;
+  receipt?: string;
   raw: unknown;
+}
+
+export interface RefundResult {
+  refundRef: string;
+  /** PENDING when the provider confirms asynchronously (e.g. M-Pesa reversal result callback). */
+  status: 'SUCCEEDED' | 'PENDING';
 }
 
 /**
@@ -40,7 +47,7 @@ export interface PaymentProvider {
   /** Throws if the request is not authentic. */
   parseWebhook(req: Request): Promise<WebhookResult>;
   queryStatus(providerRef: string): Promise<{ outcome: ProviderOutcome; failureReason?: string; raw: unknown }>;
-  refund?(providerRef: string, amountMinor: number): Promise<{ refundRef: string }>;
+  refund?(payment: { providerRef: string; providerReceipt: string | null; amountMinor: number; currency: string }, amountMinor: number): Promise<RefundResult>;
   /** Body to acknowledge a webhook (some providers require a specific reply). */
   webhookAck?(): unknown;
 }
