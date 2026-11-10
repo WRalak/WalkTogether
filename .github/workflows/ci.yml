@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CHECKPOINT_DISABLE: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  typecheck-and-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @walktogether/server exec prisma generate
+      - run: pnpm -r --parallel typecheck
+      - name: Package & web unit tests
+        run: |
+          pnpm --filter @walktogether/validation test
+          pnpm --filter @walktogether/api-client test
+          pnpm --filter @walktogether/web test
+          pnpm --filter @walktogether/club-admin test
+          pnpm --filter @walktogether/platform-admin test
+      - name: Mobile tests
+        run: pnpm --filter @walktogether/mobile test
+
+  server-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: walktogether
+          POSTGRES_PASSWORD: walktogether
+          POSTGRES_DB: walktogether_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U walktogether" --health-interval 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @walktogether/server exec prisma generate
+      - name: API, auth, authorization & tenant-isolation tests
+        run: pnpm --filter @walktogether/server test
+      - name: Migration drift check (schema.prisma vs migrations)
+        working-directory: server
+        run: |
+          PGPASSWORD=walktogether psql -h localhost -U walktogether -d walktogether_test -c 'CREATE DATABASE walktogether_shadow'
+          npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url postgresql://walktogether:walktogether@localhost:5432/walktogether_shadow --exit-code
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [typecheck-and-unit]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @walktogether/server exec prisma generate
+      - run: pnpm --filter @walktogether/server build
+      - run: pnpm --filter @walktogether/web build
+      - run: pnpm --filter @walktogether/club-admin build
+      - run: pnpm --filter @walktogether/platform-admin build
+      - name: Mobile JS bundle compiles (Android)
+        run: pnpm --filter @walktogether/mobile bundle:check
+
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Dependency vulnerability scan (production deps)
+        run: pnpm audit --prod --audit-level high
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

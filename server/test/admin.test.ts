@@ -80,18 +80,21 @@ describe('platform admin permissions & actions', () => {
     await api().post(`/api/v1/platform-admin/clubs/${club.id}/status`).set(adminBearer(admin)).send({ action: 'REACTIVATE', reason: 'Resolved' }).expect(200);
   });
 
-  it('approves clubs when approval is required by platform settings', async () => {
+  it('approves pending clubs and records platform settings changes in the audit log', async () => {
     const admin = await createAdmin();
-    await api().put('/api/v1/platform-admin/settings/clubs.requireApproval').set(adminBearer(admin)).send({ value: true }).expect(200);
-    try {
-      const owner = await registerUser();
-      const club = await createClub(owner);
-      expect((await prisma.club.findUniqueOrThrow({ where: { id: club.id } })).status).toBe('PENDING_APPROVAL');
-      await api().post(`/api/v1/platform-admin/clubs/${club.id}/approve`).set(adminBearer(admin)).send({}).expect(200);
-      expect((await prisma.club.findUniqueOrThrow({ where: { id: club.id } })).status).toBe('ACTIVE');
-    } finally {
-      await api().put('/api/v1/platform-admin/settings/clubs.requireApproval').set(adminBearer(admin)).send({ value: false }).expect(200);
-    }
+    const owner = await registerUser();
+    const club = await createClub(owner);
+    // Simulate a club created while `clubs.requireApproval` is on, without flipping the global
+    // setting (other test files run in parallel against the same database).
+    await prisma.club.update({ where: { id: club.id }, data: { status: 'PENDING_APPROVAL' } });
+    await api().post(`/api/v1/platform-admin/clubs/${club.id}/approve`).set(adminBearer(admin)).send({}).expect(200);
+    expect((await prisma.club.findUniqueOrThrow({ where: { id: club.id } })).status).toBe('ACTIVE');
+    await api().post(`/api/v1/platform-admin/clubs/${club.id}/approve`).set(adminBearer(admin)).send({}).expect(409);
+
+    const key = `test.setting.${Date.now()}`;
+    await api().put(`/api/v1/platform-admin/settings/${key}`).set(adminBearer(admin)).send({ value: { enabled: true } }).expect(200);
+    const logs = await api().get('/api/v1/platform-admin/audit-logs').query({ targetId: key }).set(adminBearer(admin)).expect(200);
+    expect(logs.body.data[0]).toMatchObject({ action: 'admin.setting_updated', metadata: { to: { enabled: true } } });
   });
 
   it('serves overview metrics', async () => {

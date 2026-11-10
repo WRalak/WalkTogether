@@ -1,0 +1,10 @@
+**/node_modules
+**/.next
+**/dist
+**/.expo
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+.git
+apps/mobile

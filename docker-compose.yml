@@ -1,0 +1,66 @@
+# Local development stack: PostgreSQL + PostGIS, Redis, and (optionally) the API and worker.
+#
+#   docker compose up -d postgres redis          # just the dependencies (run apps with pnpm)
+#   docker compose --profile app up --build       # everything in containers
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: walktogether
+      POSTGRES_PASSWORD: walktogether
+      POSTGRES_DB: walktogether
+    ports: ['5432:5432']
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U walktogether']
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    ports: ['6379:6379']
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      retries: 10
+
+  migrate:
+    profiles: [app]
+    build: { context: ., dockerfile: infrastructure/docker/server.Dockerfile }
+    entrypoint: ['npx', 'prisma', 'migrate', 'deploy']
+    env_file: server/.env
+    environment:
+      DATABASE_URL: postgresql://walktogether:walktogether@postgres:5432/walktogether?schema=public
+    depends_on: { postgres: { condition: service_healthy } }
+
+  api:
+    profiles: [app]
+    build: { context: ., dockerfile: infrastructure/docker/server.Dockerfile }
+    env_file: server/.env
+    environment:
+      DATABASE_URL: postgresql://walktogether:walktogether@postgres:5432/walktogether?schema=public
+      REDIS_URL: redis://redis:6379
+    ports: ['4000:4000']
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  worker:
+    profiles: [app]
+    build: { context: ., dockerfile: infrastructure/docker/server.Dockerfile }
+    command: ['node', 'dist/worker.js']
+    env_file: server/.env
+    environment:
+      DATABASE_URL: postgresql://walktogether:walktogether@postgres:5432/walktogether?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  redisdata:

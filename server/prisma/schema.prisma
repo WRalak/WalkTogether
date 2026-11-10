@@ -156,6 +156,7 @@ model User {
 
   @@index([status])
   @@index([createdAt])
+  @@index([username(ops: raw("gin_trgm_ops"))], map: "users_username_trgm", type: Gin)
   @@map("users")
 }
 
@@ -172,6 +173,7 @@ model UserProfile {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([displayName(ops: raw("gin_trgm_ops"))], map: "user_profiles_display_name_trgm", type: Gin)
   @@map("user_profiles")
 }
 
@@ -402,6 +404,8 @@ model Club {
   @@index([status, visibility])
   @@index([countryCode, category])
   @@index([ownerId])
+  @@index([location], map: "clubs_location_gist", type: Gist)
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "clubs_name_trgm", type: Gin)
   @@map("clubs")
 }
 

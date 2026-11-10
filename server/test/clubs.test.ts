@@ -196,3 +196,22 @@ describe('membership lifecycle', () => {
     expect(byId[c2.id]).toBe('MEMBER');
   });
 });
+
+describe('platform approval setting', () => {
+  it('new clubs start as PENDING_APPROVAL when the platform requires approval', async () => {
+    // Exercised through the service with a scoped setting override, to avoid mutating global state
+    // that parallel test files depend on.
+    const settings = await import('../src/modules/platform/settings');
+    const { vi } = await import('vitest');
+    const spy = vi.spyOn(settings, 'getSetting');
+    spy.mockImplementation(async (key) => (key === 'clubs.requireApproval' ? true : settings.PLATFORM_SETTING_DEFAULTS[key]) as never);
+    try {
+      const owner = await registerUser();
+      const { createClub: create } = await import('../src/modules/clubs/clubs.service');
+      const club = await create(owner.id, { name: 'Approval Club', slug: `appr-${uid()}`, category: 'WALKING', visibility: 'PUBLIC' }, {});
+      expect(club.status).toBe('PENDING_APPROVAL');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
