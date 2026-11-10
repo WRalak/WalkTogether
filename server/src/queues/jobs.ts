@@ -21,6 +21,7 @@ export interface JobMap {
   'campaigns.activate': { campaignId: string };
   'campaigns.end': Record<string, never>;
   'payments.reconcile': Record<string, never>;
+  'partitions.maintain': Record<string, never>;
 }
 
 export type JobName = keyof JobMap;
@@ -45,4 +46,5 @@ export const JOB_QUEUES: Record<JobName, 'notifications' | 'maintenance' | 'acti
   'campaigns.activate': 'maintenance',
   'campaigns.end': 'maintenance',
   'payments.reconcile': 'maintenance',
+  'partitions.maintain': 'maintenance',
 };

@@ -849,7 +849,8 @@ model Activity {
   @@map("activities")
 }
 
-/// One row per GPS point (never a JSON blob). Consider monthly range partitioning at scale.
+/// One row per GPS point (never a JSON blob). Range-partitioned by month on recorded_at; partitions
+/// live in the gps_partitions schema and are created ahead of time by the partitions.maintain job.
 model ActivityGpsPoint {
   activityId        String   @map("activity_id") @db.Uuid
   seq               Int
@@ -864,7 +865,7 @@ model ActivityGpsPoint {
 
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
-  @@id([activityId, seq])
+  @@id([activityId, seq, recordedAt])
   @@index([recordedAt], map: "activity_gps_points_recorded_brin", type: Brin)
   @@map("activity_gps_points")
 }

@@ -44,6 +44,7 @@ await maintenance.upsertJobScheduler('account-purge', { pattern: '17 3 * * *' },
 await maintenance.upsertJobScheduler('sessions-cleanup', { pattern: '47 2 * * *' }, { name: 'sessions.cleanup', data: {} });
 await maintenance.upsertJobScheduler('challenges-finalize', { pattern: '3 * * * *' }, { name: 'challenges.finalize', data: {} });
 await maintenance.upsertJobScheduler('leaderboards-compute', { pattern: '*/30 * * * *' }, { name: 'leaderboards.compute', data: {} });
+await maintenance.upsertJobScheduler('partitions-maintain', { pattern: '23 1 * * *' }, { name: 'partitions.maintain', data: {} });
 await maintenance.upsertJobScheduler('payments-reconcile', { pattern: '*/5 * * * *' }, { name: 'payments.reconcile', data: {} });
 await maintenance.upsertJobScheduler('campaigns-end', { pattern: '13 * * * *' }, { name: 'campaigns.end', data: {} });
 await maintenance.upsertJobScheduler('media-cleanup', { pattern: '37 4 * * *' }, { name: 'media.cleanup', data: {} });

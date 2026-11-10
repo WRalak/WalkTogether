@@ -1,0 +1,15 @@
+# Extends gitleaks' default rules. Only known, non-secret development/test placeholders are allowed.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented development placeholders and test fixtures (never used in deployed environments)"
+paths = [
+  '''server/\.env\.example''',
+  '''server/test/env\.ts''',
+  '''server/test/mpesa\.test\.ts''',
+]
+regexes = [
+  '''dev-only-[a-z0-9-]+''',
+  '''test-[a-z-]+-secret-[0-9a-f]+''',
+]

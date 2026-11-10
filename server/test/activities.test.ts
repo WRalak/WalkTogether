@@ -158,3 +158,18 @@ describe('stats, goals and premium features', () => {
     expect(await prisma.activityGpsPoint.count({ where: { activityId: r.id } })).toBe(0);
   });
 });
+
+describe('GPS storage partitioning', () => {
+  it('stores points in monthly partitions and prunes by time', async () => {
+    const { ensureGpsPartitions } = await import('../src/modules/activities/partitions');
+    expect((await ensureGpsPartitions()).created).toBeGreaterThanOrEqual(0);
+    const u = await registerUser();
+    const r = await record(u, walk(20));
+    const [row] = await prisma.$queryRaw<{ part: string }[]>`SELECT tableoid::regclass::text AS part FROM activity_gps_points WHERE activity_id = ${r.id}::uuid LIMIT 1`;
+    expect(row!.part).toMatch(/^gps_partitions\.activity_gps_points_\d{4}_\d{2}$/);
+    const plan = await prisma.$queryRawUnsafe<{ 'QUERY PLAN': string }[]>(`EXPLAIN SELECT * FROM activity_gps_points WHERE recorded_at >= date_trunc('month', now()) AND recorded_at < date_trunc('month', now()) + interval '1 day'`);
+    const text = plan.map((p) => p['QUERY PLAN']).join('\n');
+    expect(text).toContain(`activity_gps_points_${new Date().toISOString().slice(0, 7).replace('-', '_')}`);
+    expect(text).not.toContain('activity_gps_points_default');
+  });
+});
