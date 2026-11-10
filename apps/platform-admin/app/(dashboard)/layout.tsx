@@ -7,11 +7,18 @@ import { useAdminAuth } from '@/lib/auth';
 
 const NAV = [
   { href: '/', label: 'Overview', permission: 'platform.overview.view' },
+  { href: '/revenue', label: 'Revenue', permission: 'billing.view' },
   { href: '/users', label: 'Users', permission: 'users.view' },
   { href: '/clubs', label: 'Clubs', permission: 'clubs.view' },
+  { href: '/billing', label: 'Plans & payments', permission: 'plans.manage' },
+  { href: '/sponsorships', label: 'Sponsorships', permission: 'sponsorships.manage' },
+  { href: '/challenges', label: 'Challenges & badges', permission: 'sponsorships.manage' },
   { href: '/moderation', label: 'Moderation', permission: 'moderation.manage' },
   { href: '/audit-logs', label: 'Audit log', permission: 'audit_logs.view' },
+  { href: '/security', label: 'Security', permission: 'audit_logs.view' },
+  { href: '/system', label: 'System health', permission: 'platform.overview.view' },
   { href: '/settings', label: 'Settings & flags', permission: 'settings.manage' },
+  { href: '/admins', label: 'Administrators', permission: 'admins.manage' },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

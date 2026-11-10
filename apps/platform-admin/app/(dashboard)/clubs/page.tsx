@@ -57,7 +57,9 @@ export default function ClubsPage() {
             {rows.map((c) => (
               <tr key={c.id}>
                 <Td>
-                  <p className="font-medium">{c.name}</p>
+                  <a className="font-medium text-primary hover:underline" href={`/clubs/${c.id}`}>
+                    {c.name}
+                  </a>
                   <p className="text-xs text-muted-foreground">
                     /{c.slug} · {[c.city, c.countryCode].filter(Boolean).join(', ')}
                   </p>

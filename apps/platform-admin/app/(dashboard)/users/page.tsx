@@ -57,7 +57,9 @@ export default function UsersPage() {
             {rows.map((u) => (
               <tr key={u.id}>
                 <Td>
-                  <p className="font-medium">{u.displayName}</p>
+                  <a className="font-medium text-primary hover:underline" href={`/users/${u.id}`}>
+                    {u.displayName}
+                  </a>
                   <p className="text-xs text-muted-foreground">@{u.username}</p>
                 </Td>
                 <Td className="text-xs">

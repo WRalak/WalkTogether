@@ -266,3 +266,45 @@ adminRouter.post('/rewards/:id/fulfil', requireAdminPermission('sponsorships.man
   await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.reward_fulfilled', targetType: 'reward', targetId: row.id }, auditCtx(req));
   res.json({ data: row });
 });
+
+// Phase 8: system health, security monitoring, admin management --------------------------------
+import { securityOverview, systemHealth } from './system.service';
+import { hashPassword } from '../../shared/password';
+import { emailSchema, passwordSchema } from '@walktogether/validation';
+
+adminRouter.get('/system', requireAdminPermission('platform.overview.view'), async (_req, res) => {
+  res.json({ data: await systemHealth() });
+});
+adminRouter.get('/security', requireAdminPermission('audit_logs.view'), async (_req, res) => {
+  res.json({ data: await securityOverview() });
+});
+adminRouter.post('/admin-sessions/:id/revoke', requireAdminPermission('admins.manage'), async (req, res) => {
+  const id = parse(idParam, req.params).id;
+  await prisma.adminSession.updateMany({ where: { id, revokedAt: null }, data: { revokedAt: new Date() } });
+  await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.session_revoked', targetType: 'admin_session', targetId: id }, auditCtx(req));
+  res.status(204).end();
+});
+adminRouter.get('/admins', requireAdminPermission('admins.manage'), async (_req, res) => {
+  res.json({ data: await prisma.adminUser.findMany({ orderBy: { createdAt: 'asc' }, select: { id: true, email: true, displayName: true, status: true, mfaEnabledAt: true, lastLoginAt: true, role: { select: { key: true, name: true } } } }) });
+});
+adminRouter.get('/admin-roles', requireAdminPermission('admins.manage'), async (_req, res) => {
+  res.json({ data: await prisma.adminRole.findMany({ include: { permissions: { select: { permissionKey: true } } } }) });
+});
+adminRouter.post('/admins', requireAdminPermission('admins.manage'), async (req, res) => {
+  const body = parse(z.object({ email: emailSchema, displayName: z.string().trim().min(2).max(80), roleKey: z.enum(['SUPER_ADMIN', 'SUPPORT', 'FINANCE', 'MODERATOR']), password: passwordSchema.refine((p) => p.length >= 14, 'At least 14 characters') }).strict(), req.body);
+  const role = await prisma.adminRole.findUniqueOrThrow({ where: { key: body.roleKey } });
+  const created = await prisma.adminUser.create({ data: { email: body.email, displayName: body.displayName, roleId: role.id, passwordHash: await hashPassword(body.password) }, select: { id: true, email: true } });
+  await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.created', targetType: 'admin', targetId: created.id, metadata: { role: body.roleKey } }, auditCtx(req));
+  res.status(201).json({ data: created });
+});
+adminRouter.post('/admins/:id/status', requireAdminPermission('admins.manage'), async (req, res) => {
+  const id = parse(idParam, req.params).id;
+  const { status } = parse(z.object({ status: z.enum(['ACTIVE', 'SUSPENDED']) }).strict(), req.body);
+  if (id === req.admin!.adminId) throw badRequest('You cannot change your own status');
+  await prisma.$transaction([
+    prisma.adminUser.update({ where: { id }, data: { status } }),
+    ...(status === 'SUSPENDED' ? [prisma.adminSession.updateMany({ where: { adminId: id, revokedAt: null }, data: { revokedAt: new Date() } })] : []),
+  ]);
+  await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.status_changed', targetType: 'admin', targetId: id, metadata: { status } }, auditCtx(req));
+  res.status(204).end();
+});

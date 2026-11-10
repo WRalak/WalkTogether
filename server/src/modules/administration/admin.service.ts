@@ -20,11 +20,33 @@ export async function platformOverview() {
     prisma.club.count({ where: { deletedAt: null, status: 'SUSPENDED' } }),
     prisma.clubMembership.count({ where: { status: 'ACTIVE' } }),
   ]);
+  const liveSubs = await prisma.subscription.findMany({ where: { status: { in: ['TRIALING', 'ACTIVE', 'PAST_DUE', 'GRACE'] }, plan: { amountMinor: { gt: 0 } } }, select: { clubId: true, userId: true } });
+  const paidClubs = new Set(liveSubs.filter((s) => s.clubId).map((s) => s.clubId)).size;
+  const premiumUsers = liveSubs.filter((s) => s.userId).length;
+  const [activityAgg, activities30d, events, eventsUpcoming, challengeParticipants, activeChallenges] = await Promise.all([
+    prisma.activity.aggregate({ where: { status: 'COMPLETED' }, _count: true, _sum: { distanceM: true } }),
+    prisma.activity.count({ where: { status: 'COMPLETED', startedAt: { gte: new Date(now - 30 * DAY) } } }),
+    prisma.event.count({ where: { status: 'SCHEDULED', startsAt: { lte: new Date() } } }),
+    prisma.event.count({ where: { status: 'SCHEDULED', startsAt: { gt: new Date() } } }),
+    prisma.challengeParticipant.count(),
+    prisma.challenge.count({ where: { status: 'ACTIVE' } }),
+  ]);
+  const { revenueOverview } = await import('./revenue.service');
+  const revenue = await revenueOverview();
   return {
-    users: { total: totalUsers, active30d: activeUsers30d, new7d: newUsers7d, suspended: suspendedUsers },
-    clubs: { total: totalClubs, active: activeClubs, pendingApproval: pendingClubs, suspended: suspendedClubs },
+    users: { total: totalUsers, active30d: activeUsers30d, new7d: newUsers7d, suspended: suspendedUsers, premium: premiumUsers },
+    clubs: { total: totalClubs, active: activeClubs, pendingApproval: pendingClubs, suspended: suspendedClubs, paid: paidClubs, free: Math.max(0, activeClubs - paidClubs) },
     memberships: { active: activeMemberships },
-    // Revenue, subscription, activity and challenge metrics are added with their phases (see DEVELOPMENT_STATUS.md).
+    activities: { total: activityAgg._count, last30d: activities30d, totalDistanceM: Math.round(activityAgg._sum.distanceM ?? 0) },
+    events: { held: events, upcoming: eventsUpcoming },
+    challenges: { active: activeChallenges, participants: challengeParticipants },
+    revenue: {
+      mrr: revenue.mrr,
+      arr: revenue.arr,
+      sponsorship30d: revenue.last30d.filter((r) => r.purpose === 'SPONSORSHIP'),
+      subscriptions30d: revenue.last30d.filter((r) => r.purpose === 'SUBSCRIPTION'),
+      cancellations30d: revenue.cancellations30d,
+    },
     generatedAt: new Date().toISOString(),
   };
 }
@@ -79,10 +101,17 @@ export async function getUser(userId: string) {
       memberships: { select: { status: true, joinedAt: true, role: { select: { name: true } }, club: { select: { id: true, name: true, slug: true } } }, take: 100 },
       loginEvents: { orderBy: { createdAt: 'desc' }, take: 20, select: { method: true, success: true, suspicious: true, ipAddress: true, createdAt: true, failureReason: true } },
       oauthAccounts: { select: { provider: true } },
+      subscriptions: { select: { status: true, currentPeriodEnd: true, plan: { select: { name: true } } }, orderBy: { createdAt: 'desc' }, take: 10 },
+      _count: { select: { activities: true, posts: true, reportsFiled: true } },
     },
   });
   if (!user) throw notFound('User not found');
-  return user;
+  // Account history: audited actions by or on this user, plus reports against them.
+  const [history, reportsAgainst] = await Promise.all([
+    prisma.auditLog.findMany({ where: { OR: [{ actorType: 'USER', actorId: userId }, { targetType: 'user', targetId: userId }] }, orderBy: { createdAt: 'desc' }, take: 50 }),
+    prisma.contentReport.count({ where: { targetType: 'USER', targetId: userId } }),
+  ]);
+  return { ...user, history, reportsAgainst };
 }
 
 export async function changeUserStatus(adminId: string, userId: string, action: 'SUSPEND' | 'REACTIVATE', reason: string, ctx: AuditContext) {

@@ -51,11 +51,23 @@ export interface AuditLogRow {
 }
 
 export interface PlatformOverview {
-  users: { total: number; active30d: number; new7d: number; suspended: number };
-  clubs: { total: number; active: number; pendingApproval: number; suspended: number };
+  users: { total: number; active30d: number; new7d: number; suspended: number; premium: number };
+  clubs: { total: number; active: number; pendingApproval: number; suspended: number; paid: number; free: number };
   memberships: { active: number };
+  activities: { total: number; last30d: number; totalDistanceM: number };
+  events: { held: number; upcoming: number };
+  challenges: { active: number; participants: number };
+  revenue: {
+    mrr: Record<string, number>;
+    arr: Record<string, number>;
+    sponsorship30d: { currency: string; grossMinor: number; payments: number }[];
+    subscriptions30d: { currency: string; grossMinor: number; payments: number }[];
+    cancellations30d: number;
+  };
   generatedAt: string;
 }
+
+type Json = Record<string, unknown>;
 
 type Query = Record<string, string | number | undefined>;
 
@@ -99,6 +111,49 @@ export function createAdminApi(options: Omit<HttpClientOptions, 'refreshPath'>) 
     reports: {
       list: (query: Query = {}) => http.page<{ id: string; targetType: string; targetId: string; reason: string; details: string | null; status: string; preview: string | null; createdAt: string; reporter: { username: string } }>('/api/v1/platform-admin/reports', { query }),
       resolve: (id: string, action: 'DISMISS' | 'HIDE_CONTENT' | 'SUSPEND_USER', note: string) => http.request<void>(`/api/v1/platform-admin/reports/${id}/resolve`, { method: 'POST', body: { action, note } }),
+    },
+    revenue: () => http.request<Json>('/api/v1/platform-admin/revenue'),
+    system: () => http.request<Json>('/api/v1/platform-admin/system'),
+    security: () => http.request<Json>('/api/v1/platform-admin/security'),
+    revokeAdminSession: (id: string) => http.request<void>(`/api/v1/platform-admin/admin-sessions/${id}/revoke`, { method: 'POST' }),
+    plans: {
+      list: () => http.request<Json[]>('/api/v1/platform-admin/plans'),
+      create: (body: Json) => http.request<Json>('/api/v1/platform-admin/plans', { method: 'POST', body }),
+      update: (id: string, body: Json) => http.request<Json>(`/api/v1/platform-admin/plans/${id}`, { method: 'PATCH', body }),
+      grant: (body: { planId: string; clubId?: string; userId?: string }) => http.request<Json>('/api/v1/platform-admin/subscriptions/grant', { method: 'POST', body }),
+    },
+    promotions: {
+      list: () => http.request<Json[]>('/api/v1/platform-admin/promotions'),
+      save: (code: string, body: Json) => http.request<Json>(`/api/v1/platform-admin/promotions/${encodeURIComponent(code)}`, { method: 'PUT', body }),
+    },
+    payments: {
+      list: (status?: string) => http.request<Json[]>('/api/v1/platform-admin/payments', { query: { status } }),
+      refund: (id: string, amountMinor: number, reason: string) => http.request<Json>(`/api/v1/platform-admin/payments/${id}/refund`, { method: 'POST', body: { amountMinor, reason } }),
+    },
+    sponsors: {
+      list: () => http.request<Json[]>('/api/v1/platform-admin/sponsors'),
+      setStatus: (id: string, status: 'ACTIVE' | 'SUSPENDED') => http.request<Json>(`/api/v1/platform-admin/sponsors/${id}/status`, { method: 'POST', body: { status } }),
+    },
+    campaigns: {
+      list: () => http.request<Json[]>('/api/v1/platform-admin/campaigns'),
+      review: (id: string, decision: 'APPROVE' | 'REJECT', note: string) => http.request<void>(`/api/v1/platform-admin/campaigns/${id}/review`, { method: 'POST', body: { decision, note } }),
+      report: (id: string) => http.request<Json>(`/api/v1/platform-admin/campaigns/${id}/report`),
+      award: (id: string, topN: number, description: string) => http.request<Json[]>(`/api/v1/platform-admin/campaigns/${id}/rewards`, { method: 'POST', body: { topN, description } }),
+      fulfil: (rewardId: string) => http.request<Json>(`/api/v1/platform-admin/rewards/${rewardId}/fulfil`, { method: 'POST' }),
+    },
+    challenges: {
+      list: () => http.request<Json[]>('/api/v1/platform-admin/challenges'),
+      create: (body: Json) => http.request<Json>('/api/v1/platform-admin/challenges', { method: 'POST', body }),
+      cancel: (id: string) => http.request<void>(`/api/v1/platform-admin/challenges/${id}/cancel`, { method: 'POST' }),
+    },
+    achievements: {
+      list: () => http.request<Json[]>('/api/v1/platform-admin/achievements'),
+      save: (code: string, body: Json) => http.request<Json>(`/api/v1/platform-admin/achievements/${encodeURIComponent(code)}`, { method: 'PUT', body }),
+    },
+    admins: {
+      list: () => http.request<Json[]>('/api/v1/platform-admin/admins'),
+      create: (body: { email: string; displayName: string; roleKey: string; password: string }) => http.request<Json>('/api/v1/platform-admin/admins', { method: 'POST', body }),
+      setStatus: (id: string, status: 'ACTIVE' | 'SUSPENDED') => http.request<void>(`/api/v1/platform-admin/admins/${id}/status`, { method: 'POST', body: { status } }),
     },
     auditLogs: (query: Query = {}) => http.page<AuditLogRow>('/api/v1/platform-admin/audit-logs', { query }),
     settings: {
