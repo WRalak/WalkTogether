@@ -32,6 +32,7 @@ const config: ExpoConfig = {
     permissions: ['android.permission.health.READ_STEPS', 'ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'ACCESS_BACKGROUND_LOCATION', 'FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_LOCATION', 'POST_NOTIFICATIONS'],
   },
   plugins: [
+    '@react-native-community/datetimepicker',
     'expo-router',
     // Health Connect requires Android minSdk 26; HealthKit entitlement for steps (read-only).
     ['expo-build-properties', { android: { minSdkVersion: 26 } }],

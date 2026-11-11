@@ -1,15 +1,46 @@
 import { useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
+import { Link, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { EventCard } from '@/components/event-card';
 import { ClubCard } from '@/components/club-card';
-import { Badge, EmptyState, ErrorState, Loading, TextField } from '@/components/ui';
+import { Badge, Button, EmptyState, ErrorState, Loading, TextField } from '@/components/ui';
+import { canAdminister } from '@/features/admin/use-admin-club';
 import { api } from '@/services/api';
 import { errorMessage } from '@/utils/errors';
 
-export default function Explore() {
+function MyClubs() {
+  const router = useRouter();
+  const mine = useQuery({ queryKey: ['my-clubs'], queryFn: () => api.users.myClubs() });
+  const active = (mine.data ?? []).filter((c) => c.membershipStatus === 'ACTIVE');
+  const manages = active.some((c) => canAdminister(c.permissions));
+  return (
+    <View className="mb-5">
+      {active.length > 0 && (
+        <>
+          <Text accessibilityRole="header" className="mb-2 text-lg font-bold text-ink">
+            My clubs
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2 pb-1">
+            {active.map((c) => (
+              <Link key={c.id} href={{ pathname: '/clubs/[slug]', params: { slug: c.slug } }} asChild>
+                <Pressable accessibilityRole="link" className="rounded-2xl border border-line bg-surface px-4 py-3 active:opacity-80">
+                  <Text className="font-semibold text-ink">{c.name}</Text>
+                  <Text className="text-xs text-ink-muted">{c.role}</Text>
+                </Pressable>
+              </Link>
+            ))}
+          </ScrollView>
+        </>
+      )}
+      {/* Club administration lives in the app: shown to owners, admins, organisers and moderators. */}
+      <Button title={manages ? 'Manage my clubs' : 'Start a club'} variant={manages ? 'primary' : 'secondary'} className="mt-3" onPress={() => router.push(manages ? '/admin' : '/admin/new')} />
+    </View>
+  );
+}
+
+export default function ClubsTab() {
   const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
   const clubs = useInfiniteQuery({
@@ -37,8 +68,9 @@ export default function Explore() {
         ListHeaderComponent={
           <View>
             <Text accessibilityRole="header" className="mb-4 text-3xl font-extrabold text-ink">
-              Explore clubs
+              Clubs
             </Text>
+            <MyClubs />
             {!!sponsored.data?.length && (
               <View className="mb-4">
                 {sponsored.data.map((sp) => (

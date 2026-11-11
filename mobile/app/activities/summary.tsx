@@ -99,7 +99,7 @@ export default function Summary() {
         onPress={() =>
           Alert.alert('Discard this activity?', 'It will be deleted from this phone.', [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Discard', style: 'destructive', onPress: () => void trackingSession.discard().then(() => router.replace('/(tabs)/record')) },
+            { text: 'Discard', style: 'destructive', onPress: () => void trackingSession.discard().then(() => router.replace('/(tabs)/activity')) },
           ])
         }
       />

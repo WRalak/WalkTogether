@@ -115,6 +115,8 @@ export default function Profile() {
         <Row href="/settings/privacy" label="Privacy" detail={user.privacy?.profileVisibility.toLowerCase()} />
         <Row href="/settings/security" label="Security & devices" />
         <Row href="/settings/subscription" label="Subscription" />
+        <Row href="/admin" label="Manage clubs" />
+        <Row href="/sponsor" label="Sponsor portal" />
       </Card>
 
       <Button

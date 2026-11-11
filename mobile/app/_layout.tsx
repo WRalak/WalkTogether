@@ -51,6 +51,8 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#f4f7f5' } }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="admin" />
+          <Stack.Screen name="sponsor" />
           <Stack.Screen name="clubs/[slug]" options={{ headerShown: true, title: '', headerBackTitle: 'Back', headerTintColor: '#127a50' }} />
           <Stack.Screen name="activities/index" options={{ headerShown: true, title: 'Your activities', headerTintColor: '#127a50' }} />
           <Stack.Screen name="activities/[id]" options={{ headerShown: true, title: 'Activity', headerTintColor: '#127a50' }} />

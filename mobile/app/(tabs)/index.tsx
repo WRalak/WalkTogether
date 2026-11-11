@@ -91,7 +91,7 @@ export default function Home() {
 
       <SectionTitle
         action={
-          <Link href="/(tabs)/explore" className="text-sm font-semibold text-primary">
+          <Link href="/(tabs)/clubs" className="text-sm font-semibold text-primary">
             Discover
           </Link>
         }
@@ -107,7 +107,7 @@ export default function Home() {
           title="You haven’t joined a club yet"
           body="Clubs organise group walks and runs near you."
           action={
-            <Link href="/(tabs)/explore" asChild>
+            <Link href="/(tabs)/clubs" asChild>
               <Button title="Find a club" />
             </Link>
           }
