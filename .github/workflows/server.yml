@@ -8,7 +8,7 @@ on:
       - 'packages/shared-types/**'
       - 'packages/validation/**'
       - 'packages/shared-utils/**'
-      - 'pnpm-lock.yaml'
+      - 'package-lock.json'
       - '.github/workflows/server.yml'
   pull_request:
     paths:
@@ -16,7 +16,7 @@ on:
       - 'packages/shared-types/**'
       - 'packages/validation/**'
       - 'packages/shared-utils/**'
-      - 'pnpm-lock.yaml'
+      - 'package-lock.json'
       - '.github/workflows/server.yml'
   workflow_dispatch:
 
@@ -53,15 +53,14 @@ jobs:
           --health-cmd "redis-cli ping" --health-interval 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @walktogether/server exec prisma generate
+        with: { node-version: 22, cache: npm }
+      - run: npm ci -w @walktogether/server
+      - run: npm run db:generate
       - name: Install ffmpeg (video pipeline tests)
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - name: API, auth, authorization & tenant-isolation tests
-        run: pnpm --filter @walktogether/server test
+        run: npm run test -w @walktogether/server
       - name: Migration drift check (schema.prisma vs migrations)
         working-directory: server
         run: |

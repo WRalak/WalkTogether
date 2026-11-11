@@ -34,7 +34,7 @@ cp platform-admin/.env.example platform-admin/.env.local
 ```
 
 ```bash
-pnpm --filter @walktogether/platform-admin dev
+npm run dev -w @walktogether/platform-admin
 ```
 
 Open <http://localhost:3002>.
@@ -59,13 +59,13 @@ docker build -f platform-admin/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https:
 
 The image runs the standalone Next.js server on port 3000 as a non-root user.
 
-**Plain Node:** `pnpm install --frozen-lockfile --filter @walktogether/platform-admin...`, then
-`pnpm --filter @walktogether/platform-admin build` and `pnpm --filter @walktogether/platform-admin start`.
+**Plain Node:** `npm ci -w @walktogether/platform-admin`, then
+`npm run build -w @walktogether/platform-admin` and `npm run start -w @walktogether/platform-admin`.
 
 ## Test
 
 ```bash
-pnpm --filter @walktogether/platform-admin test
+npm run test -w @walktogether/platform-admin
 ```
 
 CI: `.github/workflows/platform-admin.yml` (typecheck, tests, build, Docker image) runs when this folder or

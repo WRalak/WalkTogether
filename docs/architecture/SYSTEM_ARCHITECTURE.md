@@ -69,7 +69,7 @@ selector, never a grant. Platform administrators use a separate identity, JWT se
 their platform-wide access is explicit per admin permission (`platform.overview.view`, `billing.view`,
 `moderation.manage`, …) and audit-logged.
 
-## 3. Repository layout (pnpm monorepo)
+## 3. Repository layout (npm workspaces monorepo)
 
 ```
 # Every top-level folder except packages/, infrastructure/ and docs/ is built and deployed separately.

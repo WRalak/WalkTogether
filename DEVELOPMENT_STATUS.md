@@ -74,7 +74,7 @@ settings & feature flags; audit logs; security monitoring; system health; admini
 
 Also verified: workspace typecheck; per-application GitHub Actions workflows (integration against
 PostGIS/Redis, migration drift check, platform-admin build, Android JS bundle export, Docker image
-builds with an API boot smoke test, `pnpm audit`, gitleaks); a real-browser run of every
+builds with an API boot smoke test, `npm run audit:prod`, gitleaks); a real-browser run of every
 platform-admin section against a live API (MFA sign-in, CSV download); a database backup/restore
 drill; and a load test (`infrastructure/loadtest/README.md`).
 

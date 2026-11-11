@@ -108,5 +108,5 @@ guards, and a dedicated test suite.
 
 ## 10. Dependency and supply-chain security
 
-* Exact version pinning + lockfile; Dependabot; `pnpm audit --prod` and gitleaks in CI.
-* `onlyBuiltDependencies` allow-list in `pnpm-workspace.yaml` restricts install scripts.
+* Exact version pinning + `package-lock.json` (`npm ci` in CI and images); Dependabot; `npm run audit:prod` (audit-ci) and gitleaks in CI.
+* Container images install with `npm ci` from the lockfile, restricted to the workspace being built.

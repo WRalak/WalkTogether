@@ -39,15 +39,15 @@ cp server/.env.example server/.env
 ```
 
 ```bash
-pnpm --filter @walktogether/server exec prisma migrate deploy
+npm exec -w @walktogether/server -- prisma migrate deploy
 ```
 
 ```bash
-pnpm --filter @walktogether/server dev
+npm run dev -w @walktogether/server
 ```
 
 ```bash
-pnpm --filter @walktogether/server dev:worker
+npm run dev:worker -w @walktogether/server
 ```
 
 ## Deploy
@@ -59,9 +59,9 @@ pnpm --filter @walktogether/server dev:worker
 | Migrate | `npx prisma migrate deploy` | one-off per release, before the API | exit code |
 
 Build: `docker build -f server/Dockerfile -t walktogether-api .` (from the repository root).
-Without Docker: `pnpm install --frozen-lockfile --filter @walktogether/server...`, then
-`pnpm --filter @walktogether/server exec prisma generate`, `pnpm --filter @walktogether/server build`,
-and `pnpm --filter @walktogether/server start`.
+Without Docker: `npm ci -w @walktogether/server`, then
+`npm exec -w @walktogether/server -- prisma generate`, `npm run build -w @walktogether/server`,
+and `npm run start -w @walktogether/server`.
 
 Required alongside it: PostgreSQL 16 + PostGIS, Redis 7 (`noeviction`), S3/R2 bucket, ClamAV.
 All variables are documented in [`.env.example`](.env.example); `NODE_ENV=production` refuses to start
@@ -71,5 +71,5 @@ and `API_PUBLIC_URL` to the API's public URL — email, invitation and payment-r
 ## Test
 
 ```bash
-pnpm --filter @walktogether/server test
+npm run test -w @walktogether/server
 ```

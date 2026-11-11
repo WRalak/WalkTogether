@@ -4,18 +4,15 @@
 # Build from the REPOSITORY ROOT (the app imports shared code from packages/):
 #   docker build -f platform-admin/Dockerfile -t walktogether-platform-admin .
 # NEXT_PUBLIC_* values are inlined at build time, so pass them as --build-arg per environment.
-FROM node:22-bookworm-slim AS base
-ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NEXT_TELEMETRY_DISABLED=1
-RUN corepack enable
+FROM node:22-bookworm-slim AS build
+ENV NEXT_TELEMETRY_DISABLED=1 NPM_CONFIG_UPDATE_NOTIFIER=false
 WORKDIR /repo
-
-FROM base AS build
 ARG NEXT_PUBLIC_API_URL
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc tsconfig.base.json ./
+COPY package.json package-lock.json .npmrc tsconfig.base.json ./
 COPY packages packages
 COPY platform-admin platform-admin
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter @walktogether/platform-admin...
-RUN pnpm --filter @walktogether/platform-admin build
+RUN --mount=type=cache,target=/root/.npm npm ci -w @walktogether/platform-admin
+RUN npm run build -w @walktogether/platform-admin
 
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0

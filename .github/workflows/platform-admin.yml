@@ -6,13 +6,13 @@ on:
     paths:
       - 'platform-admin/**'
       - 'packages/**'
-      - 'pnpm-lock.yaml'
+      - 'package-lock.json'
       - '.github/workflows/platform-admin.yml'
   pull_request:
     paths:
       - 'platform-admin/**'
       - 'packages/**'
-      - 'pnpm-lock.yaml'
+      - 'package-lock.json'
       - '.github/workflows/platform-admin.yml'
   workflow_dispatch:
 
@@ -34,13 +34,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile --filter @walktogether/platform-admin...
-      - run: pnpm --filter @walktogether/platform-admin typecheck
-      - run: pnpm --filter @walktogether/platform-admin test
-      - run: pnpm --filter @walktogether/platform-admin build
+        with: { node-version: 22, cache: npm }
+      - run: npm ci -w @walktogether/platform-admin
+      - run: npm run typecheck -w @walktogether/platform-admin
+      - run: npm run test -w @walktogether/platform-admin
+      - run: npm run build -w @walktogether/platform-admin
 
   image:
     runs-on: ubuntu-latest

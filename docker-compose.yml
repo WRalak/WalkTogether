@@ -1,6 +1,6 @@
 # Local development stack: PostgreSQL + PostGIS, Redis, and (optionally) the API and worker.
 #
-#   docker compose up -d postgres redis          # just the dependencies (run apps with pnpm)
+#   docker compose up -d postgres redis          # just the dependencies (run apps with npm)
 #   docker compose --profile app up --build       # everything in containers
 services:
   postgres:

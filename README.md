@@ -29,7 +29,8 @@ the same PostgreSQL database. Full hosting map: [`docs/deployment/HOSTING.md`](d
 
 ## Prerequisites
 
-* Node.js 22 and pnpm 10 (`corepack enable`)
+* Node.js 22 and npm 10 (bundled with Node). The repository uses **npm workspaces** — run every
+  command from the repository root with npm.
 * PostgreSQL 16 with PostGIS 3, and Redis 7. The easiest way is Docker:
 
 ```bash
@@ -39,7 +40,7 @@ docker compose up -d postgres redis
 ## Getting started
 
 ```bash
-pnpm install
+npm install
 ```
 
 ```bash
@@ -47,11 +48,11 @@ cp server/.env.example server/.env
 ```
 
 ```bash
-pnpm --filter @walktogether/server exec prisma migrate deploy
+npm exec -w @walktogether/server -- prisma migrate deploy
 ```
 
 ```bash
-pnpm --filter @walktogether/server exec tsx --env-file=.env prisma/seed.ts --demo
+npm exec -w @walktogether/server -- tsx --env-file=.env prisma/seed.ts --demo
 ```
 
 The `--demo` flag creates two demo users (`owner@demo.walktogether.local`, `member@demo.walktogether.local`,
@@ -60,11 +61,11 @@ password `walktogether-demo-1`) and a demo club. Omit it for a clean database.
 Run the API and the background worker (separate terminals):
 
 ```bash
-pnpm dev:server
+npm run dev:server
 ```
 
 ```bash
-pnpm --filter @walktogether/server dev:worker
+npm run dev:worker -w @walktogether/server
 ```
 
 API docs (development): <http://localhost:4000/api/docs>. Health: <http://localhost:4000/health/ready>.
@@ -73,7 +74,7 @@ In development, emails and SMS codes are printed to the API console.
 Platform admin (copy `platform-admin/.env.example` to `.env.local` if you need a non-default API URL):
 
 ```bash
-pnpm dev:platform-admin
+npm run dev:platform-admin
 ```
 
 It runs on <http://localhost:3002>.
@@ -81,7 +82,7 @@ It runs on <http://localhost:3002>.
 Create the first platform administrator (prompts for a password; MFA enrolment is forced at first sign-in):
 
 ```bash
-pnpm --filter @walktogether/server admin:create -- --email you@example.com --name "Your Name"
+npm run admin:create -w @walktogether/server -- --email you@example.com --name "Your Name"
 ```
 
 ### Mobile app
@@ -91,12 +92,12 @@ cp mobile/.env.example mobile/.env
 ```
 
 ```bash
-pnpm dev:mobile
+npm run dev:mobile
 ```
 
 Use an Android emulator (the default API URL `http://10.0.2.2:4000` reaches your machine) or set
 `EXPO_PUBLIC_API_URL` to your LAN IP for a physical device. Background location, the camera (QR
-check-in) and Health Connect need a development build (`pnpm --filter @walktogether/mobile android`
+check-in) and Health Connect need a development build (`npm run android -w @walktogether/mobile`
 or EAS), not Expo Go. Club owners and admins find club management under **Clubs → Manage my clubs**.
 
 ## Tests
@@ -105,11 +106,11 @@ The server's integration tests need PostgreSQL+PostGIS and Redis; they use a sep
 `walktogether_test` database (created automatically by `docker compose`) and Redis DB 15.
 
 ```bash
-pnpm test
+npm test
 ```
 
 ```bash
-pnpm typecheck
+npm run typecheck
 ```
 
 199 automated tests. Highlights: authentication and session security, platform-admin MFA, an OWASP-oriented

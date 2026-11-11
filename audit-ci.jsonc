@@ -1,0 +1,10 @@
+{
+  // Fails CI on high/critical advisories in production dependencies.
+  // Allow-listed advisories are documented with mitigations in docs/security/DEPENDENCY_RISK_REGISTER.md
+  // (all are in Expo / React Native build tooling, not shipped server or web code).
+  "$schema": "https://github.com/IBM/audit-ci/raw/main/docs/schema.json",
+  "high": true,
+  "skip-dev": true,
+  "report-type": "important",
+  "allowlist": ["GHSA-5p2g-fcmc-qvqq", "GHSA-w3rx-r6r6-pgpr", "GHSA-qr28-fpjm-wq7f"]
+}

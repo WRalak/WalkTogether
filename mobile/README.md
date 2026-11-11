@@ -35,14 +35,14 @@ cp mobile/.env.example mobile/.env
 ```
 
 ```bash
-pnpm --filter @walktogether/mobile start
+npm run start -w @walktogether/mobile
 ```
 
 Background location, Health Connect, the camera and the club-admin native pieces (date picker, QR,
 share sheet) need a development build, not Expo Go:
 
 ```bash
-pnpm --filter @walktogether/mobile build:dev
+npm run build:dev -w @walktogether/mobile
 ```
 
 ## Release
@@ -65,7 +65,7 @@ version, because users update slowly.
 ## Test
 
 ```bash
-pnpm --filter @walktogether/mobile test
+npm run test -w @walktogether/mobile
 ```
 
 CI: `.github/workflows/mobile.yml` (typecheck, Jest, Android JS bundle) runs when this folder or a

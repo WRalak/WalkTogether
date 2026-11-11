@@ -1,7 +1,7 @@
 /**
  * Bootstrap a platform administrator. There is deliberately no HTTP endpoint for this.
  *
- *   pnpm --filter @walktogether/server admin:create -- --email you@example.com --name "Your Name" [--role SUPER_ADMIN]
+ *   npm run admin:create -w @walktogether/server -- --email you@example.com --name "Your Name" [--role SUPER_ADMIN]
  *
  * The password is read from the ADMIN_PASSWORD environment variable or prompted for (not echoed).
  * MFA enrolment is forced at first sign-in.

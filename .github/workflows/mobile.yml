@@ -9,7 +9,7 @@ on:
       - 'packages/validation/**'
       - 'packages/api-client/**'
       - 'packages/shared-utils/**'
-      - 'pnpm-lock.yaml'
+      - 'package-lock.json'
       - '.github/workflows/mobile.yml'
   pull_request:
     paths:
@@ -18,7 +18,7 @@ on:
       - 'packages/validation/**'
       - 'packages/api-client/**'
       - 'packages/shared-utils/**'
-      - 'pnpm-lock.yaml'
+      - 'package-lock.json'
       - '.github/workflows/mobile.yml'
   workflow_dispatch:
 
@@ -40,11 +40,10 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile --filter @walktogether/mobile...
-      - run: pnpm --filter @walktogether/mobile typecheck
-      - run: pnpm --filter @walktogether/mobile test
+        with: { node-version: 22, cache: npm }
+      - run: npm ci -w @walktogether/mobile
+      - run: npm run typecheck -w @walktogether/mobile
+      - run: npm run test -w @walktogether/mobile
       - name: Android JS bundle compiles
-        run: pnpm --filter @walktogether/mobile bundle:check
+        run: npm run bundle:check -w @walktogether/mobile

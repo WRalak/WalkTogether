@@ -4,7 +4,7 @@
 
 | Environment | Purpose | Data | Notes |
 | --- | --- | --- | --- |
-| Local | Development | Seed/demo data | `docker compose up -d postgres redis` + `pnpm dev:*` |
+| Local | Development | Seed/demo data | `docker compose up -d postgres redis` + `npm run dev:*` |
 | Test | Automated tests | Disposable `walktogether_test` DB rebuilt each run | CI services: `postgis/postgis:16-3.4`, `redis:7` |
 | Staging | Pre-release verification, mobile preview builds | Synthetic data only | Same topology as production, smaller sizes |
 | Production | Live | Real data | Multi-AZ, backups, alerting |

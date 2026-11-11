@@ -1,8 +1,8 @@
 # Dependency risk register
 
-`pnpm audit --prod --audit-level high` runs in CI. Advisories that cannot be fixed by an upgrade
-today are listed here with their mitigation and are suppressed via `pnpm.auditConfig.ignoreGhsas`
-in the root `package.json`. Review this register monthly and on every Dependabot run.
+`npm run audit:prod` (audit-ci: high/critical advisories in production dependencies) runs in CI.
+Advisories that cannot be fixed by an upgrade today are listed here with their mitigation and are
+allow-listed in `audit-ci.jsonc` at the repository root. Review this register monthly and on every Dependabot run.
 
 | Advisory | Package (path) | Exposure | Mitigation / plan |
 | --- | --- | --- | --- |
