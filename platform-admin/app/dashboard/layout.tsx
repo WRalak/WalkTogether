@@ -5,21 +5,22 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Button, cn, Spinner } from '@walktogether/ui';
 import { useAdminAuth } from '@/lib/auth';
 
+// Platform-level administration only — club management happens in the mobile app.
 const NAV = [
   { href: '/dashboard/overview', label: 'Overview', permission: 'platform.overview.view' },
-  { href: '/dashboard/users', label: 'Users', permission: 'users.view' },
   { href: '/dashboard/clubs', label: 'Clubs', permission: 'clubs.view' },
+  { href: '/dashboard/users', label: 'Users', permission: 'users.view' },
   { href: '/dashboard/subscriptions', label: 'Subscriptions', permission: 'plans.manage' },
   { href: '/dashboard/payments', label: 'Payments', permission: 'billing.view' },
-  { href: '/dashboard/sponsors', label: 'Sponsors', permission: 'sponsorships.manage' },
-  { href: '/dashboard/campaigns', label: 'Campaigns', permission: 'sponsorships.manage' },
-  { href: '/dashboard/challenges', label: 'Challenges & badges', permission: 'sponsorships.manage' },
+  { href: '/dashboard/sponsorships', label: 'Sponsorships', permission: 'sponsorships.manage' },
+  { href: '/dashboard/events', label: 'Events', permission: 'platform.overview.view' },
+  { href: '/dashboard/analytics', label: 'Analytics', permission: 'platform.overview.view' },
+  { href: '/dashboard/reports', label: 'Reports', permission: 'platform.overview.view' },
   { href: '/dashboard/moderation', label: 'Moderation', permission: 'moderation.manage' },
-  { href: '/dashboard/analytics', label: 'Analytics', permission: 'billing.view' },
+  { href: '/dashboard/settings', label: 'Settings', permission: 'settings.manage' },
   { href: '/dashboard/audit-logs', label: 'Audit logs', permission: 'audit_logs.view' },
   { href: '/dashboard/security', label: 'Security', permission: 'audit_logs.view' },
   { href: '/dashboard/system', label: 'System health', permission: 'platform.overview.view' },
-  { href: '/dashboard/settings', label: 'Settings & flags', permission: 'settings.manage' },
   { href: '/dashboard/admins', label: 'Administrators', permission: 'admins.manage' },
 ];
 

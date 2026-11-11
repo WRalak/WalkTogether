@@ -3,12 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api';
 import { Button, DataTable, Section, StatusBadge, useAction } from '@/features/ui';
 
-export default function SponsorsAdmin() {
+export function SponsorsPanel() {
   const sponsors = useQuery({ queryKey: ['admin-sponsors'], queryFn: () => adminApi.sponsors.list() });
   const { run, ErrorBox } = useAction();
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Sponsors</h1>
+    <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Organisations must be approved before their campaigns can be reviewed.</p>
       <ErrorBox />
       <Section title="Sponsors">

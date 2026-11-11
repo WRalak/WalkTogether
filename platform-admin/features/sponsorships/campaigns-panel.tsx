@@ -5,13 +5,12 @@ import { adminApi } from '@/lib/api';
 import { StatusAction } from '@/features/status-action';
 import { Button, DataTable, JsonBlock, money, Section, StatusBadge, useAction } from '@/features/ui';
 
-export default function CampaignsAdmin() {
+export function CampaignsPanel() {
   const campaigns = useQuery({ queryKey: ['admin-campaigns'], queryFn: () => adminApi.campaigns.list() });
   const [report, setReport] = useState<unknown>(null);
   const { run, ErrorBox } = useAction();
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Campaigns</h1>
+    <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         A campaign goes live only after it is paid and approved. Sponsored content is always labelled and participation needs consent.
       </p>

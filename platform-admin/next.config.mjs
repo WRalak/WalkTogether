@@ -28,11 +28,15 @@ const nextConfig = {
   poweredByHeader: false,
   transpilePackages: ['@walktogether/ui', '@walktogether/api-client', '@walktogether/shared-types', '@walktogether/validation', '@walktogether/shared-utils'],
   // Pre-restructure URLs map onto /dashboard/<section>.
+  // Older URLs map onto the current /dashboard/<section> structure.
   async redirects() {
-    const moved = { revenue: 'analytics', billing: 'subscriptions', sponsorships: 'sponsors' };
-    const same = ['users', 'clubs', 'challenges', 'moderation', 'audit-logs', 'security', 'system', 'settings', 'admins'];
+    const moved = { revenue: 'analytics', billing: 'subscriptions', sponsorships: 'sponsorships', sponsors: 'sponsorships', campaigns: 'sponsorships', challenges: 'sponsorships/competitions' };
+    const same = ['users', 'clubs', 'moderation', 'audit-logs', 'security', 'system', 'settings', 'admins'];
     return [
-      ...Object.entries(moved).map(([from, to]) => ({ source: `/${from}`, destination: `/dashboard/${to}`, permanent: true })),
+      ...Object.entries(moved).flatMap(([from, to]) => [
+        { source: `/${from}`, destination: `/dashboard/${to}`, permanent: true },
+        ...(from === to ? [] : [{ source: `/dashboard/${from}`, destination: `/dashboard/${to}`, permanent: true }]),
+      ]),
       ...same.map((s) => ({ source: `/${s}/:path*`, destination: `/dashboard/${s}/:path*`, permanent: true })),
     ];
   },

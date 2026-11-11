@@ -13,7 +13,8 @@ export default function ChallengesAdmin() {
   const [ach, setAch] = useState({ code: '', name: '', description: '', icon: '🏅', rule: '{"type":"total_distance","minM":250000}' });
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Challenges & achievements</h1>
+      <h1 className="text-2xl font-bold">Competitions & achievements</h1>
+      <p className="text-sm text-muted-foreground">Platform-wide and club-vs-club challenges, plus the achievement badges awarded automatically by the server.</p>
       <ErrorBox />
       <Section title="Create platform challenge">
         <div className="grid gap-3 md:grid-cols-3">
