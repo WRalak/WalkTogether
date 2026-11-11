@@ -12,6 +12,8 @@ import { adminRouter } from './modules/administration/admin.routes';
 import { authRouter } from './modules/auth/auth.routes';
 import { clubsRouter } from './modules/clubs/clubs.routes';
 import { healthRouter } from './modules/health/health.routes';
+import { linksRouter } from './modules/links/links.routes';
+import { clubAnalyticsRouter } from './modules/analytics/analytics.routes';
 import { usersRouter } from './modules/users/users.routes';
 import { activitiesRouter } from './modules/activities/activities.routes';
 import { eventsRouter } from './modules/events/events.routes';
@@ -59,6 +61,7 @@ export function createApp(): Express {
   app.use(cookieParser());
 
   app.use('/health', healthRouter);
+  app.use(linksRouter);
   app.get('/metrics', metricsHandler);
 
   const api = express.Router();
@@ -66,6 +69,7 @@ export function createApp(): Express {
   api.use('/auth', authRouter);
   api.use('/users', followRoutes);
   api.use('/users', usersRouter);
+  api.use('/clubs', clubAnalyticsRouter);
   api.use('/clubs', clubsRouter);
   api.use('/activities', activitiesRouter);
   api.use('/events', eventsRouter);

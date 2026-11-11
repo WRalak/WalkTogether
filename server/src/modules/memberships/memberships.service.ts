@@ -1,4 +1,5 @@
 import type { MembershipStatus, Prisma } from '@prisma/client';
+import { env } from '../../config/env';
 import { prisma } from '../../database/prisma';
 import { hashToken, randomToken } from '../../shared/crypto';
 import { badRequest, conflict, forbidden, notFound } from '../../shared/errors';
@@ -330,7 +331,7 @@ export async function createInvitation(
     return inv;
   });
   // The plain code is returned exactly once; only its hash is stored.
-  return { id: invitation.id, code, expiresAt: invitation.expiresAt, maxUses: invitation.maxUses, clubId };
+  return { id: invitation.id, code, link: `${env.API_PUBLIC_URL}/links/invite/${code}`, expiresAt: invitation.expiresAt, maxUses: invitation.maxUses, clubId };
 }
 
 export async function listInvitations(clubId: string, actorId: string) {

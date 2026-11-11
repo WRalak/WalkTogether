@@ -31,7 +31,8 @@ const envSchema = z.object({
   COOKIE_DOMAIN: z.string().optional(),
   COOKIE_SECURE: bool.optional(),
 
-  PUBLIC_WEB_URL: z.string().url().default('http://localhost:3000'),
+  /** Shown on the legal pages served by the API. */
+  SUPPORT_EMAIL: z.string().email().default('hello@walktogether.app'),
   API_PUBLIC_URL: z.string().url().default('http://localhost:4000'),
 
   // Email

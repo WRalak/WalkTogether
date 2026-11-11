@@ -158,7 +158,6 @@ clubsRouter.delete('/:clubId/announcements/:announcementId', requireAuth, async 
 // Phase 4: events, analytics & reports ----------------------------------------------------------
 import { createEventSchema, listEventsQuerySchema } from '@walktogether/validation';
 import * as events from '../events/events.service';
-import * as analytics from './analytics.service';
 
 clubsRouter.post('/:clubId/events', requireAuth, async (req, res) => {
   const { clubId } = parse(clubParam, req.params);
@@ -169,28 +168,6 @@ clubsRouter.get('/:clubId/events', optionalAuth, async (req, res) => {
   const { items, nextCursor } = await events.listClubEvents(clubId, req.auth?.userId, parse(listEventsQuerySchema, req.query));
   res.json({ data: items, meta: { nextCursor, limit: items.length } });
 });
-clubsRouter.get('/:clubId/analytics', requireAuth, async (req, res) => {
-  res.json({ data: await analytics.clubOverview(parse(clubParam, req.params).clubId, authUserId(req)) });
-});
-clubsRouter.get('/:clubId/analytics/growth', requireAuth, async (req, res) => {
-  res.json({ data: await analytics.clubGrowth(parse(clubParam, req.params).clubId, authUserId(req)) });
-});
-clubsRouter.get('/:clubId/activities', requireAuth, async (req, res) => {
-  const q = parse(z.object({ cursor: z.string().max(200).optional(), limit: z.coerce.number().int().min(1).max(100).default(25) }), req.query);
-  const { items, nextCursor, lastSevenDays } = await analytics.clubActivities(parse(clubParam, req.params).clubId, authUserId(req), q);
-  res.json({ data: items, meta: { nextCursor, limit: items.length, lastSevenDays } });
-});
-clubsRouter.get('/:clubId/reports/attendance', requireAuth, async (req, res) => {
-  const { from, to } = parse(z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional() }), req.query);
-  res.json({ data: await analytics.attendanceReport(parse(clubParam, req.params).clubId, authUserId(req), from, to) });
-});
-clubsRouter.get('/:clubId/reports/members.csv', requireAuth, async (req, res) => {
-  const csv = await analytics.membersCsv(parse(clubParam, req.params).clubId, authUserId(req));
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename="members.csv"');
-  res.send(csv);
-});
-
 // Phase 5: club community moderation & branding ------------------------------------------------
 import { clubBrandingSchema, clubReportResolveSchema, moderateContentSchema, reportListQuerySchema } from '@walktogether/validation';
 import * as reportsSvc from '../moderation/reports.service';

@@ -122,6 +122,39 @@ export function createAdminApi(options: Omit<HttpClientOptions, 'refreshPath'>) 
       update: (id: string, body: Json) => http.request<Json>(`/api/v1/platform-admin/plans/${id}`, { method: 'PATCH', body }),
       grant: (body: { planId: string; clubId?: string; userId?: string }) => http.request<Json>('/api/v1/platform-admin/subscriptions/grant', { method: 'POST', body }),
     },
+    analytics: {
+      activity: (days = 30) =>
+        http.request<{
+          days: number;
+          activeUsers: number;
+          clubShares: number;
+          stepSyncDays: number;
+          byType: { type: string; activities: number; distanceM: number }[];
+          daily: { day: string; activities: number; distanceM: number; activeUsers: number; flagged: number }[];
+        }>('/api/v1/platform-admin/analytics/activity', { query: { days } }),
+    },
+    events: {
+      list: (query: { cursor?: string; status?: 'SCHEDULED' | 'CANCELLED'; when?: 'upcoming' | 'past'; q?: string } = {}) =>
+        http.page<{
+          id: string;
+          title: string;
+          type: string;
+          status: string;
+          visibility: string;
+          startsAt: string;
+          goingCount: number;
+          maxParticipants: number | null;
+          attended: number;
+          cancelReason: string | null;
+          sponsor: string | null;
+          club: { id: string; name: string; slug: string };
+        }>('/api/v1/platform-admin/events', { query }),
+      cancel: (id: string, reason: string) => http.request<void>(`/api/v1/platform-admin/events/${id}/cancel`, { method: 'POST', body: { reason } }),
+    },
+    /** CSV report downloads (moderation cases are under `reports`). */
+    exports: {
+      csv: (kind: 'users' | 'clubs' | 'payments' | 'activity', range: { from?: string; to?: string } = {}) => http.text(`/api/v1/platform-admin/reports/${kind}.csv`, { query: range }),
+    },
     subscriptions: {
       list: (query: { status?: string; audience?: 'CLUB' | 'INDIVIDUAL' } = {}) =>
         http.request<

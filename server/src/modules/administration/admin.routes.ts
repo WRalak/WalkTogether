@@ -292,6 +292,46 @@ import { securityOverview, systemHealth } from './system.service';
 import { hashPassword } from '../../shared/password';
 import { emailSchema, passwordSchema } from '@walktogether/validation';
 
+// Platform analytics, events & reports --------------------------------------------------------
+import * as platformAnalytics from '../analytics/platform-analytics.service';
+import type { AdminPermissionKey } from '@walktogether/shared-types';
+
+adminRouter.get('/analytics/activity', requireAdminPermission('platform.overview.view'), async (req, res) => {
+  const { days } = parse(z.object({ days: z.coerce.number().int().min(7).max(365).default(30) }), req.query);
+  res.json({ data: await platformAnalytics.platformActivity(days) });
+});
+adminRouter.get('/events', requireAdminPermission('platform.overview.view'), async (req, res) => {
+  const q = parse(
+    z.object({
+      cursor: z.string().max(200).optional(),
+      limit: z.coerce.number().int().min(1).max(100).default(50),
+      status: z.enum(['SCHEDULED', 'CANCELLED']).optional(),
+      when: z.enum(['upcoming', 'past']).optional(),
+      q: z.string().trim().max(80).optional(),
+    }),
+    req.query,
+  );
+  const { items, nextCursor } = await platformAnalytics.platformEvents(q);
+  res.json({ data: items, meta: { nextCursor, limit: items.length } });
+});
+adminRouter.post('/events/:id/cancel', requireAdminPermission('moderation.manage'), async (req, res) => {
+  const { reason } = parse(z.object({ reason: z.string().trim().min(3).max(300) }).strict(), req.body);
+  await platformAnalytics.adminCancelEvent(req.admin!.adminId, parse(idParam, req.params).id, reason, auditCtx(req));
+  res.status(204).end();
+});
+const REPORT_PERMISSION: Record<platformAnalytics.ReportKind, AdminPermissionKey> = { users: 'users.view', clubs: 'clubs.view', payments: 'billing.view', activity: 'platform.overview.view' };
+adminRouter.get('/reports/:kind.csv', async (req, res, next) => {
+  const kind = z.enum(platformAnalytics.REPORT_KINDS).safeParse(req.params.kind);
+  if (!kind.success) return next();
+  await new Promise<void>((resolve, reject) => requireAdminPermission(REPORT_PERMISSION[kind.data])(req, res, (err?: unknown) => (err ? reject(err) : resolve())));
+  const { from, to } = parse(z.object({ from: z.coerce.date().default(() => new Date(Date.now() - 30 * 86_400_000)), to: z.coerce.date().default(() => new Date()) }), req.query);
+  const csv = await platformAnalytics.platformReportCsv(kind.data, from, to);
+  await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.report_exported', targetType: 'report', targetId: kind.data, metadata: { from, to } }, auditCtx(req));
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${kind.data}-report.csv"`);
+  res.send(csv);
+});
+
 adminRouter.get('/system', requireAdminPermission('platform.overview.view'), async (_req, res) => {
   res.json({ data: await systemHealth() });
 });

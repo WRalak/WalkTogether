@@ -5,7 +5,7 @@ const footer = '\n\n— The WalkTogether team\nIf you did not request this, you 
 
 export const templates = {
   verifyEmail(to: string, name: string, token: string): EmailMessage {
-    const link = `${env.PUBLIC_WEB_URL}/verify-email?token=${encodeURIComponent(token)}`;
+    const link = `${env.API_PUBLIC_URL}/links/verify-email?token=${encodeURIComponent(token)}`;
     return {
       to,
       subject: 'Verify your WalkTogether email',
@@ -13,7 +13,7 @@ export const templates = {
     };
   },
   passwordReset(to: string, token: string): EmailMessage {
-    const link = `${env.PUBLIC_WEB_URL}/reset-password?token=${encodeURIComponent(token)}`;
+    const link = `${env.API_PUBLIC_URL}/links/reset-password?token=${encodeURIComponent(token)}`;
     return {
       to,
       subject: 'Reset your WalkTogether password',

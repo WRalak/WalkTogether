@@ -43,8 +43,8 @@ export class StripeProvider implements PaymentProvider {
         client_reference_id: input.paymentId,
         'metadata[paymentId]': input.paymentId,
         customer_email: input.email ?? undefined,
-        success_url: input.successUrl ?? `${env.PUBLIC_WEB_URL}/billing/success?payment=${input.paymentId}`,
-        cancel_url: input.cancelUrl ?? `${env.PUBLIC_WEB_URL}/billing/cancelled?payment=${input.paymentId}`,
+        success_url: input.successUrl ?? `${env.API_PUBLIC_URL}/links/payment?result=success`,
+        cancel_url: input.cancelUrl ?? `${env.API_PUBLIC_URL}/links/payment?result=cancelled`,
       }),
       input.idempotencyKey,
     );

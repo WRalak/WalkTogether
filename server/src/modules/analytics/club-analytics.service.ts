@@ -1,7 +1,7 @@
 import { prisma } from '../../database/prisma';
 import { toCsv } from '../events/events.service';
 import { decodeCursor, encodeCursor } from '../../shared/pagination';
-import { requireClubPermission } from './club-access';
+import { requireClubPermission } from '../clubs/club-access';
 import { requireFeature, resolveEntitlements } from '../subscriptions/entitlements.service';
 
 const DAY = 86_400_000;
