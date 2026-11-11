@@ -1,6 +1,11 @@
+# Workspace members (mirrors "workspaces" in package.json; pnpm reads this file).
+# Every application lives at the repository root — there is no apps/ directory.
 packages:
-  - "apps/*"
   - "server"
+  - "website"
+  - "club-admin"
+  - "platform-admin"
+  - "mobile"
   - "packages/*"
 
 onlyBuiltDependencies:

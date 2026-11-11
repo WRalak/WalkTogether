@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/mobile/**'
+      - 'mobile/**'
       - 'packages/shared-types/**'
       - 'packages/validation/**'
       - 'packages/api-client/**'
@@ -14,7 +14,7 @@ on:
       - '.github/workflows/mobile.yml'
   pull_request:
     paths:
-      - 'apps/mobile/**'
+      - 'mobile/**'
       - 'packages/shared-types/**'
       - 'packages/validation/**'
       - 'packages/api-client/**'
@@ -35,7 +35,7 @@ env:
   CHECKPOINT_DISABLE: '1'
   NEXT_TELEMETRY_DISABLED: '1'
 
-# Ships through EAS (apps/mobile/eas.json), not a server.
+# Ships through EAS (mobile/eas.json), not a server.
 jobs:
   test-and-bundle:
     runs-on: ubuntu-latest

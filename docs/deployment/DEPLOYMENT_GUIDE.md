@@ -36,10 +36,10 @@ docker build -f server/Dockerfile -t walktogether-api .
 ```
 
 ```bash
-docker build -f apps/website/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app --build-arg NEXT_PUBLIC_SITE_URL=https://walktogether.app --build-arg NEXT_PUBLIC_CLUB_ADMIN_URL=https://clubs.walktogether.app -t walktogether-website .
+docker build -f website/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app --build-arg NEXT_PUBLIC_SITE_URL=https://walktogether.app --build-arg NEXT_PUBLIC_CLUB_ADMIN_URL=https://clubs.walktogether.app -t walktogether-website .
 ```
 
-`apps/club-admin/Dockerfile` and `apps/platform-admin/Dockerfile` work the same way. The API image
+`club-admin/Dockerfile` and `platform-admin/Dockerfile` work the same way. The API image
 runs `node dist/main.js` by default; the worker uses `node dist/worker.js`; migrations use
 `npx prisma migrate deploy`. The web apps can alternatively be deployed to Vercel using the
 `vercel.json` in each app folder.

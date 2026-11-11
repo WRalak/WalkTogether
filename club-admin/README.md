@@ -1,9 +1,9 @@
-# WalkTogether Club dashboard (`apps/club-admin/`)
+# WalkTogether Club dashboard (`club-admin/`)
 
 Where club owners, admins and organisers manage their club: members, events and attendance, shared activities, challenges, announcements, analytics, subscription and settings — plus the sponsor portal.
 
 Next.js 15 (App Router), Tailwind, `@walktogether/ui`. **Hosted on its own** (`clubs.walktogether.app`).
-See [`../../docs/deployment/HOSTING.md`](../../docs/deployment/HOSTING.md).
+See [`../docs/deployment/HOSTING.md`](../docs/deployment/HOSTING.md).
 
 ## Layout
 
@@ -25,7 +25,7 @@ lib/                  api client, auth, errors, download
 Start the API first (see `server/README.md`), then:
 
 ```bash
-cp apps/club-admin/.env.example apps/club-admin/.env.local
+cp club-admin/.env.example club-admin/.env.local
 ```
 
 ```bash
@@ -42,14 +42,14 @@ The managed club is part of the URL (`/dashboard/members?club=<id>`); the API ch
 
 ## Deploy
 
-**Vercel:** create a project with *Root Directory* `apps/club-admin`. [`vercel.json`](vercel.json) installs
+**Vercel:** create a project with *Root Directory* `club-admin`. [`vercel.json`](vercel.json) installs
 only this app's dependencies and skips builds when neither this folder nor `packages/` changed.
 Attach a custom domain on the same parent domain as the API.
 
 **Container:** from the repository root —
 
 ```bash
-docker build -f apps/club-admin/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app -t walktogether-club-admin .
+docker build -f club-admin/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app -t walktogether-club-admin .
 ```
 
 The image runs the standalone Next.js server on port 3000 as a non-root user.

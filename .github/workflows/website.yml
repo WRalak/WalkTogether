@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/website/**'
+      - 'website/**'
       - 'packages/**'
       - '!packages/gps/**'
       - 'pnpm-lock.yaml'
@@ -12,7 +12,7 @@ on:
       - '.github/workflows/next-app.yml'
   pull_request:
     paths:
-      - 'apps/website/**'
+      - 'website/**'
       - 'packages/**'
       - '!packages/gps/**'
       - 'pnpm-lock.yaml'

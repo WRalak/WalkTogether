@@ -1,7 +1,7 @@
 /**
  * Shared WalkTogether design tokens (web). Colours are CSS variables (shadcn/ui convention)
  * defined in globals.css so light/dark themes switch without rebuilding.
- * The mobile app mirrors these values in apps/mobile/theme.ts.
+ * The mobile app mirrors these values in mobile/theme.ts.
  */
 /** @type {import('tailwindcss').Config} */
 module.exports = {

@@ -37,7 +37,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: apps/${{ inputs.app }}/Dockerfile
+          file: ${{ inputs.app }}/Dockerfile
           push: false
           tags: walktogether-${{ inputs.app }}:ci
           cache-from: type=gha,scope=${{ inputs.app }}

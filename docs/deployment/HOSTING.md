@@ -7,10 +7,10 @@ it can live on a different host and ship on its own schedule.
 | Folder | What it is | Recommended host | Domain (example) | Deploy artifact | CI workflow |
 | --- | --- | --- | --- | --- | --- |
 | `server/` | REST + Socket.IO API, background worker, migrations | Container platform (ECS Fargate, Fly.io, Render, Railway, a VM) | `api.walktogether.app` | `server/Dockerfile` (one image, three roles) | `server.yml` |
-| `apps/website/` | Public marketing site, club & event SEO pages | Vercel (`apps/website/vercel.json`) or any container host | `walktogether.app` | `apps/website/Dockerfile` | `website.yml` |
-| `apps/club-admin/` | Club management dashboard | Vercel or container host | `clubs.walktogether.app` | `apps/club-admin/Dockerfile` | `club-admin.yml` |
-| `apps/platform-admin/` | Platform super-admin (MFA) | Vercel or container host, **behind an IP allow-list / VPN** | `admin.walktogether.app` | `apps/platform-admin/Dockerfile` | `platform-admin.yml` |
-| `apps/mobile/` | Android & iOS app | EAS Build → Google Play / App Store | — | `apps/mobile/eas.json` | `mobile.yml` |
+| `website/` | Public marketing site, club & event SEO pages | Vercel (`website/vercel.json`) or any container host | `walktogether.app` | `website/Dockerfile` | `website.yml` |
+| `club-admin/` | Club management dashboard | Vercel or container host | `clubs.walktogether.app` | `club-admin/Dockerfile` | `club-admin.yml` |
+| `platform-admin/` | Platform super-admin (MFA) | Vercel or container host, **behind an IP allow-list / VPN** | `admin.walktogether.app` | `platform-admin/Dockerfile` | `platform-admin.yml` |
+| `mobile/` | Android & iOS app | EAS Build → Google Play / App Store | — | `mobile/eas.json` | `mobile.yml` |
 
 Shared, non-deployed code lives in `packages/` and is compiled into each unit at build time:
 
@@ -48,14 +48,14 @@ docker build -f server/Dockerfile -t walktogether-api .
 ```
 
 ```bash
-docker build -f apps/website/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app --build-arg NEXT_PUBLIC_SITE_URL=https://walktogether.app --build-arg NEXT_PUBLIC_CLUB_ADMIN_URL=https://clubs.walktogether.app -t walktogether-website .
+docker build -f website/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app --build-arg NEXT_PUBLIC_SITE_URL=https://walktogether.app --build-arg NEXT_PUBLIC_CLUB_ADMIN_URL=https://clubs.walktogether.app -t walktogether-website .
 ```
 
 On a host that asks for a "root directory" and a "Dockerfile path", use root directory `/` (repository
-root) and Dockerfile path `server/Dockerfile`, `apps/website/Dockerfile`, etc.
+root) and Dockerfile path `server/Dockerfile`, `website/Dockerfile`, etc.
 
-On **Vercel**, create one project per web app with *Root Directory* set to `apps/website`,
-`apps/club-admin` or `apps/platform-admin`; the `vercel.json` in each folder installs only that app's
+On **Vercel**, create one project per web app with *Root Directory* set to `website`,
+`club-admin` or `platform-admin`; the `vercel.json` in each folder installs only that app's
 dependencies and skips the build when neither the app nor `packages/` changed.
 
 ## Wiring the units together

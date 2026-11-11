@@ -1,6 +1,14 @@
 {
   "name": "walktogether",
   "private": true,
+  "workspaces": [
+    "server",
+    "website",
+    "club-admin",
+    "platform-admin",
+    "mobile",
+    "packages/*"
+  ],
   "version": "0.1.0",
   "description": "WalkTogether \u2014 multi-club fitness social network and SaaS platform",
   "packageManager": "pnpm@10.28.0",

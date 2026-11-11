@@ -21,9 +21,9 @@ platform owner. The architecture optimises for:
   Android / iOS ───▶│  Mobile app (Expo/RN)    │──┐
                     └──────────────────────────┘  │  HTTPS (JSON, Bearer access token)
                     ┌──────────────────────────┐  │
-  Browsers ────────▶│  apps/website (Next.js)  │──┤  SSR fetches public endpoints only
-                    │  apps/club-admin         │──┤  httpOnly refresh cookie + in-memory access token
-                    │  apps/platform-admin     │──┤  separate admin identity + TOTP MFA
+  Browsers ────────▶│  website (Next.js)  │──┤  SSR fetches public endpoints only
+                    │  club-admin         │──┤  httpOnly refresh cookie + in-memory access token
+                    │  platform-admin     │──┤  separate admin identity + TOTP MFA
                     └──────────────────────────┘  ▼
                                          ┌───────────────────────────┐
                                          │ Nginx / managed ingress   │ TLS, rate limits, HSTS
@@ -53,17 +53,17 @@ platform owner. The architecture optimises for:
 ## 3. Repository layout (pnpm monorepo)
 
 ```
-apps/
-  mobile/           Expo SDK 54, Expo Router, NativeWind, TanStack Query, Zustand, SecureStore
-                    app/(auth), app/(tabs)/{index,explore,record,community,profile}, clubs/, activities/,
-                    challenges/, events/, messages/, settings/ + components/ features/ hooks/ services/ store/ utils/
-  club-admin/       Club dashboard (Next.js): app/(auth)/{login,signup}, app/dashboard/{overview, members,
-                    events, activities, challenges, attendance, announcements, analytics, subscription,
-                    settings, moderation, sponsorships}. The managed club is selected by `?club=<id>`.
-  platform-admin/   Platform super-admin (Next.js), separate hostname: app/(auth)/login,
-                    app/dashboard/{overview, users, clubs, subscriptions, payments, sponsors, campaigns,
-                    challenges, moderation, analytics, audit-logs, settings, security, system, admins}
-  website/          Public site (Next.js): home, pricing, clubs, events, about, contact, legal pages
+# Every top-level folder below except packages/, infrastructure/ and docs/ is hosted separately.
+mobile/           Expo SDK 54, Expo Router, NativeWind, TanStack Query, Zustand, SecureStore
+                  app/(auth), app/(tabs)/{index,explore,record,community,profile}, clubs/, activities/,
+                  challenges/, events/, messages/, settings/ + components/ features/ hooks/ services/ store/ utils/
+club-admin/       Club dashboard (Next.js): app/(auth)/{login,signup}, app/dashboard/{overview, members,
+                  events, activities, challenges, attendance, announcements, analytics, subscription,
+                  settings, moderation, sponsorships}. The managed club is selected by `?club=<id>`.
+platform-admin/   Platform super-admin (Next.js), separate hostname: app/(auth)/login,
+                  app/dashboard/{overview, users, clubs, subscriptions, payments, sponsors, campaigns,
+                  challenges, moderation, analytics, audit-logs, settings, security, system, admins}
+website/          Public site (Next.js): home, pricing, clubs, events, about, contact, legal pages
 server/
   prisma/           schema.prisma, SQL migrations, idempotent seed
   src/

@@ -7,4 +7,4 @@
 **/.env.*
 !**/.env.example
 .git
-apps/mobile
+mobile

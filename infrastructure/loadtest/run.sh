@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Load test for core read/write paths. Usage: API=http://localhost:4000 TOKEN=<member access token> ./loadtest/run.sh
-# Run against an environment with production-like data (see loadtest/README.md). Never against production.
+# Load test for core read/write paths. Usage: API=http://localhost:4000 TOKEN=<member access token> ./infrastructure/loadtest/run.sh
+# Run against an environment with production-like data (see infrastructure/loadtest/README.md). Never against production.
 set -euo pipefail
 API=${API:-http://localhost:4000}
 C=${CONNECTIONS:-50}
@@ -12,5 +12,5 @@ run "nearby clubs (PostGIS)"          "$API/api/v1/clubs?near=-1.29,36.82&radius
 run "personalised feed"               -H "Authorization: Bearer $TOKEN" "$API/api/v1/feed?limit=20"
 run "public profile"                  "$API/api/v1/users/lt_100"
 if [[ -n "${ACTIVITY_ID:-}" ]]; then
-  run "GPS batch ingestion (100 points/request, idempotent retries)" -m POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -i "${POINTS_FILE:-loadtest/points.json}" "$API/api/v1/activities/$ACTIVITY_ID/gps-points"
+  run "GPS batch ingestion (100 points/request, idempotent retries)" -m POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -i "${POINTS_FILE:-infrastructure/loadtest/points.json}" "$API/api/v1/activities/$ACTIVITY_ID/gps-points"
 fi

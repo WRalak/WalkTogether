@@ -3,5 +3,5 @@
   "framework": "nextjs",
   "installCommand": "pnpm install --frozen-lockfile --filter @walktogether/platform-admin...",
   "buildCommand": "pnpm --filter @walktogether/platform-admin build",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ../../packages ../../pnpm-lock.yaml"
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ../packages ../pnpm-lock.yaml"
 }

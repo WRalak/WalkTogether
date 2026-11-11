@@ -28,24 +28,24 @@ challenges/leaderboards/achievements, payments, sponsorships, administration, no
 **Shared packages** — `shared-types`, `validation` (Zod), `api-client`, `shared-utils` (formatting/labels), `gps` (filtering, statistics,
 `TrackingEngine`, polyline, privacy trimming), `ui`, `configuration`.
 
-**Mobile (`apps/mobile`)** — auth (email, phone OTP), Record (background location task with
+**Mobile (`mobile`)** — auth (email, phone OTP), Record (background location task with
 foreground fallback, SQLite offline store, crash recovery, resumable batched sync), activity
 history/detail with maps, home/profile stats, explore (clubs, events, sponsored), club detail/chat,
 events with RSVP + QR scanner check-in, community feed (photos and video posters), composer with photo upload, comments,
 messaging, user profiles/follows, notifications + push registration, challenges & leaderboards,
 achievements, step counts from Health Connect/HealthKit, Premium subscription (M-Pesa/card), privacy & security settings.
 
-**Club admin (`apps/club-admin`, `/dashboard/<section>?club=<id>`)** — overview, shared member activities, attendance reports, members, invitations, roles & ownership transfer,
+**Club admin (`club-admin`, `/dashboard/<section>?club=<id>`)** — overview, shared member activities, attendance reports, members, invitations, roles & ownership transfer,
 announcements, events + live QR + attendance + CSV, challenges, analytics & reports, community
 moderation, sponsorship offers, billing (plans, checkout, invoices), settings with logo/cover upload,
 and a sponsor portal (apply, campaigns, pay, reports).
 
-**Platform admin (`apps/platform-admin`, `/dashboard/<section>`)** — MFA sign-in, subscriptions list and plan grants, payments & refunds, sponsors, campaigns, overview KPIs (incl. MRR/ARR,
+**Platform admin (`platform-admin`, `/dashboard/<section>`)** — MFA sign-in, subscriptions list and plan grants, payments & refunds, sponsors, campaigns, overview KPIs (incl. MRR/ARR,
 sponsorship revenue), revenue, users (detail + history), clubs, plans/promotions/payments/refunds,
 sponsors & campaigns (review, reports, rewards), challenges & achievement rules, moderation queue,
 audit log, security monitoring, system health, settings/flags, administrators.
 
-**Public website (`apps/website`)** — marketing pages, club discovery/SEO pages, public events with schema.org markup, live pricing from the plans
+**Public website (`website`)** — marketing pages, club discovery/SEO pages, public events with schema.org markup, live pricing from the plans
 API, sponsor portal entry, email-link pages.
 
 ## Tests (all passing)
@@ -65,7 +65,7 @@ Also verified: workspace typecheck; GitHub Actions CI (typecheck, unit, integrat
 PostGIS/Redis service containers, migration drift check, production builds of all Next.js apps,
 Android JS bundle export, Docker image builds for API/web/club-admin/platform-admin with an API
 boot smoke test, `pnpm audit`, gitleaks); real-browser runs of club-admin and platform-admin; a
-database backup/restore drill; and a load test (`loadtest/README.md`).
+database backup/restore drill; and a load test (`infrastructure/loadtest/README.md`).
 
 ## Phase 9 — done
 

@@ -13,6 +13,7 @@ and keep ownership of their personal fitness data. The first pilot walking club 
 
 ## Repository
 
+Every application lives directly in the repository root (there is deliberately no `apps/` directory).
 Five units, **each hosted separately** (own README, `.env.example`, Dockerfile or EAS config, CI
 workflow). Shared code in `packages/` is compiled into each unit at build time. Full hosting map,
 domains and wiring: [`docs/deployment/HOSTING.md`](docs/deployment/HOSTING.md).
@@ -20,13 +21,12 @@ domains and wiring: [`docs/deployment/HOSTING.md`](docs/deployment/HOSTING.md).
 | Folder | What it is | Hosted as | Docs |
 | --- | --- | --- | --- |
 | `server/` | Express 5 API + Socket.IO + BullMQ worker, Prisma/PostgreSQL+PostGIS, Redis | Container (`api.`) | [README](server/README.md) |
-| `apps/website/` | Public website, club & event SEO pages (Next.js 15) | Vercel or container (apex `www`) | [README](apps/website/README.md) |
-| `apps/club-admin/` | Club dashboard, `/dashboard/<section>?club=<id>` (Next.js 15) | Vercel or container (`clubs.`) | [README](apps/club-admin/README.md) |
-| `apps/platform-admin/` | Platform super-admin with mandatory MFA (Next.js 15) | Vercel or container (`admin.`, IP-restricted) | [README](apps/platform-admin/README.md) |
-| `apps/mobile/` | Expo SDK 54 / React Native member app | EAS → app stores | [README](apps/mobile/README.md) |
+| `website/` | Public website, club & event SEO pages (Next.js 15) | Vercel or container (apex `www`) | [README](website/README.md) |
+| `club-admin/` | Club dashboard, `/dashboard/<section>?club=<id>` (Next.js 15) | Vercel or container (`clubs.`) | [README](club-admin/README.md) |
+| `platform-admin/` | Platform super-admin with mandatory MFA (Next.js 15) | Vercel or container (`admin.`, IP-restricted) | [README](platform-admin/README.md) |
+| `mobile/` | Expo SDK 54 / React Native member app | EAS → app stores | [README](mobile/README.md) |
 | `packages/` | `shared-types`, `validation`, `api-client`, `shared-utils`, `ui`, `gps`, `configuration` | not deployed | — |
-| `infrastructure/` | local Postgres init, Nginx for self-hosting, backup/restore scripts | — | [README](infrastructure/README.md) |
-| `loadtest/` | autocannon scenarios and baseline results | — | [README](loadtest/README.md) |
+| `infrastructure/` | local Postgres init, Nginx for self-hosting, backup/restore scripts, load tests | — | [README](infrastructure/README.md) |
 | `docs/` | Architecture, database, security, API, multi-tenancy, GPS, monetization, deployment | — | below |
 
 ## Prerequisites
@@ -72,7 +72,7 @@ pnpm --filter @walktogether/server dev:worker
 API docs (development): <http://localhost:4000/api/docs>. Health: <http://localhost:4000/health/ready>.
 In development, emails and SMS codes are printed to the API console.
 
-Web apps (copy each `apps/*/.env.example` to `.env.local` first if you need non-default URLs):
+Web apps (copy each `<app>/.env.example` to `.env.local` first if you need non-default URLs):
 
 ```bash
 pnpm dev:website
@@ -98,7 +98,7 @@ pnpm --filter @walktogether/server admin:create -- --email you@example.com --nam
 ### Mobile app
 
 ```bash
-cp apps/mobile/.env.example apps/mobile/.env
+cp mobile/.env.example mobile/.env
 ```
 
 ```bash
@@ -138,4 +138,4 @@ other clubs' data.
 * [Hosting map](docs/deployment/HOSTING.md)
 * [Deployment guide](docs/deployment/DEPLOYMENT_GUIDE.md)
 * [Dependency risk register](docs/security/DEPENDENCY_RISK_REGISTER.md)
-* [Load-test baseline](loadtest/README.md)
+* [Load-test baseline](infrastructure/loadtest/README.md)

@@ -11,8 +11,8 @@ coverage/
 !.env.example
 !**/.env.example
 .expo/
-apps/mobile/android/
-apps/mobile/ios/
+mobile/android/
+mobile/ios/
 *.log
 .DS_Store
 next-env.d.ts

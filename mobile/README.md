@@ -1,9 +1,9 @@
-# WalkTogether mobile app (`apps/mobile/`)
+# WalkTogether mobile app (`mobile/`)
 
 Android-first Expo (SDK 54) / React Native app for members: GPS recording (background + offline),
 activity history, clubs, events with QR check-in, community feed, messaging, challenges,
 achievements, step counts (Health Connect / HealthKit) and Premium. **Shipped through app stores**
-via EAS, not hosted. See [`../../docs/deployment/HOSTING.md`](../../docs/deployment/HOSTING.md).
+via EAS, not hosted. See [`../docs/deployment/HOSTING.md`](../docs/deployment/HOSTING.md).
 
 ## Layout
 
@@ -22,7 +22,7 @@ assets/               icons and splash
 ## Run locally
 
 ```bash
-cp apps/mobile/.env.example apps/mobile/.env
+cp mobile/.env.example mobile/.env
 ```
 
 ```bash

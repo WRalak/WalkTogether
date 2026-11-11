@@ -1,9 +1,9 @@
-# WalkTogether Public website (`apps/website/`)
+# WalkTogether Public website (`website/`)
 
 Marketing pages, pricing (live from the plans API), club discovery and club pages, public events, legal pages and email-link landing pages (verify email, reset password). Server-rendered for SEO; it only calls public API endpoints.
 
 Next.js 15 (App Router), Tailwind, `@walktogether/ui`. **Hosted on its own** (`walktogether.app`).
-See [`../../docs/deployment/HOSTING.md`](../../docs/deployment/HOSTING.md).
+See [`../docs/deployment/HOSTING.md`](../docs/deployment/HOSTING.md).
 
 ## Layout
 
@@ -25,7 +25,7 @@ lib/                  api (server-side fetches), config, format
 Start the API first (see `server/README.md`), then:
 
 ```bash
-cp apps/website/.env.example apps/website/.env.local
+cp website/.env.example website/.env.local
 ```
 
 ```bash
@@ -42,14 +42,14 @@ Variables (see [`.env.example`](.env.example)): `NEXT_PUBLIC_API_URL`, `API_INTE
 
 ## Deploy
 
-**Vercel:** create a project with *Root Directory* `apps/website`. [`vercel.json`](vercel.json) installs
+**Vercel:** create a project with *Root Directory* `website`. [`vercel.json`](vercel.json) installs
 only this app's dependencies and skips builds when neither this folder nor `packages/` changed.
 Attach a custom domain on the same parent domain as the API.
 
 **Container:** from the repository root —
 
 ```bash
-docker build -f apps/website/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app -t walktogether-website .
+docker build -f website/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app -t walktogether-website .
 ```
 
 The image runs the standalone Next.js server on port 3000 as a non-root user.

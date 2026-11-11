@@ -1,10 +1,10 @@
 # Load testing
 
-`loadtest/run.sh` drives the API with [autocannon](https://github.com/mcollina/autocannon) for the core
+`infrastructure/loadtest/run.sh` drives the API with [autocannon](https://github.com/mcollina/autocannon) for the core
 read and write paths. Run it against **staging** with production-like data, never production.
 
 ```bash
-API=https://api.staging.walktogether.app TOKEN=<member access token> ACTIVITY_ID=<recording activity> ./loadtest/run.sh
+API=https://api.staging.walktogether.app TOKEN=<member access token> ACTIVITY_ID=<recording activity> ./infrastructure/loadtest/run.sh
 ```
 
 ## Baseline results (2026-11-10)

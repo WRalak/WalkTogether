@@ -12,7 +12,7 @@ importers:
 
   .: {}
 
-  apps/club-admin:
+  club-admin:
     dependencies:
       '@hookform/resolvers':
         specifier: 5.2.2
@@ -22,19 +22,19 @@ importers:
         version: 5.90.21(react@19.1.0)
       '@walktogether/api-client':
         specifier: workspace:*
-        version: link:../../packages/api-client
+        version: link:../packages/api-client
       '@walktogether/shared-types':
         specifier: workspace:*
-        version: link:../../packages/shared-types
+        version: link:../packages/shared-types
       '@walktogether/shared-utils':
         specifier: workspace:*
-        version: link:../../packages/shared-utils
+        version: link:../packages/shared-utils
       '@walktogether/ui':
         specifier: workspace:*
-        version: link:../../packages/ui
+        version: link:../packages/ui
       '@walktogether/validation':
         specifier: workspace:*
-        version: link:../../packages/validation
+        version: link:../packages/validation
       next:
         specifier: 15.5.29
         version: 15.5.29(@babel/core@7.29.13)(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -68,10 +68,10 @@ importers:
         version: 19.1.11(@types/react@19.1.17)
       '@vitejs/plugin-react':
         specifier: 4.7.0
-        version: 4.7.0(vite@7.3.8(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
+        version: 4.7.0(vite@7.3.8(@types/node@22.20.5)(jiti@1.21.7)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
       '@walktogether/configuration':
         specifier: workspace:*
-        version: link:../../packages/configuration
+        version: link:../packages/configuration
       autoprefixer:
         specifier: 10.4.21
         version: 10.4.21(postcss@8.5.32)
@@ -89,9 +89,9 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 3.2.7
-        version: 3.2.7(@types/node@22.20.5)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
+        version: 3.2.7(@types/node@22.20.5)(jiti@1.21.7)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
 
-  apps/mobile:
+  mobile:
     dependencies:
       '@hookform/resolvers':
         specifier: 5.2.2
@@ -107,19 +107,19 @@ importers:
         version: 5.90.21(react@19.1.0)
       '@walktogether/api-client':
         specifier: workspace:*
-        version: link:../../packages/api-client
+        version: link:../packages/api-client
       '@walktogether/gps':
         specifier: workspace:*
-        version: link:../../packages/gps
+        version: link:../packages/gps
       '@walktogether/shared-types':
         specifier: workspace:*
-        version: link:../../packages/shared-types
+        version: link:../packages/shared-types
       '@walktogether/shared-utils':
         specifier: workspace:*
-        version: link:../../packages/shared-utils
+        version: link:../packages/shared-utils
       '@walktogether/validation':
         specifier: workspace:*
-        version: link:../../packages/validation
+        version: link:../packages/validation
       expo:
         specifier: 54.0.38
         version: 54.0.38(@babel/core@7.29.13)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.13)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
@@ -251,158 +251,6 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
-  apps/platform-admin:
-    dependencies:
-      '@hookform/resolvers':
-        specifier: 5.2.2
-        version: 5.2.2(react-hook-form@7.91.0(@types/react@19.1.17)(react@19.1.0))
-      '@tanstack/react-query':
-        specifier: 5.90.21
-        version: 5.90.21(react@19.1.0)
-      '@walktogether/api-client':
-        specifier: workspace:*
-        version: link:../../packages/api-client
-      '@walktogether/shared-types':
-        specifier: workspace:*
-        version: link:../../packages/shared-types
-      '@walktogether/shared-utils':
-        specifier: workspace:*
-        version: link:../../packages/shared-utils
-      '@walktogether/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      '@walktogether/validation':
-        specifier: workspace:*
-        version: link:../../packages/validation
-      next:
-        specifier: 15.5.29
-        version: 15.5.29(@babel/core@7.29.13)(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      qrcode.react:
-        specifier: 4.2.0
-        version: 4.2.0(react@19.1.0)
-      react:
-        specifier: 19.1.0
-        version: 19.1.0
-      react-dom:
-        specifier: 19.1.0
-        version: 19.1.0(react@19.1.0)
-      react-hook-form:
-        specifier: 7.91.0
-        version: 7.91.0(@types/react@19.1.17)(react@19.1.0)
-      zod:
-        specifier: 4.6.7
-        version: 4.6.7
-    devDependencies:
-      '@testing-library/react':
-        specifier: 16.3.3
-        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.1.11(@types/react@19.1.17))(@types/react@19.1.17)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@types/node':
-        specifier: 22.20.5
-        version: 22.20.5
-      '@types/react':
-        specifier: 19.1.17
-        version: 19.1.17
-      '@types/react-dom':
-        specifier: 19.1.11
-        version: 19.1.11(@types/react@19.1.17)
-      '@vitejs/plugin-react':
-        specifier: 4.7.0
-        version: 4.7.0(vite@7.3.8(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
-      '@walktogether/configuration':
-        specifier: workspace:*
-        version: link:../../packages/configuration
-      autoprefixer:
-        specifier: 10.4.21
-        version: 10.4.21(postcss@8.5.32)
-      jsdom:
-        specifier: 26.1.0
-        version: 26.1.0
-      postcss:
-        specifier: 8.5.32
-        version: 8.5.32
-      tailwindcss:
-        specifier: 3.4.19
-        version: 3.4.19(tsx@4.23.15)(yaml@2.9.1)
-      typescript:
-        specifier: 5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: 3.2.7
-        version: 3.2.7(@types/node@22.20.5)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
-
-  apps/website:
-    dependencies:
-      '@hookform/resolvers':
-        specifier: 5.2.2
-        version: 5.2.2(react-hook-form@7.91.0(@types/react@19.1.17)(react@19.1.0))
-      '@walktogether/api-client':
-        specifier: workspace:*
-        version: link:../../packages/api-client
-      '@walktogether/shared-types':
-        specifier: workspace:*
-        version: link:../../packages/shared-types
-      '@walktogether/shared-utils':
-        specifier: workspace:*
-        version: link:../../packages/shared-utils
-      '@walktogether/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      '@walktogether/validation':
-        specifier: workspace:*
-        version: link:../../packages/validation
-      next:
-        specifier: 15.5.29
-        version: 15.5.29(@babel/core@7.29.13)(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      react:
-        specifier: 19.1.0
-        version: 19.1.0
-      react-dom:
-        specifier: 19.1.0
-        version: 19.1.0(react@19.1.0)
-      react-hook-form:
-        specifier: 7.91.0
-        version: 7.91.0(@types/react@19.1.17)(react@19.1.0)
-      zod:
-        specifier: 4.6.7
-        version: 4.6.7
-    devDependencies:
-      '@testing-library/react':
-        specifier: 16.3.3
-        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.1.11(@types/react@19.1.17))(@types/react@19.1.17)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@types/node':
-        specifier: 22.20.5
-        version: 22.20.5
-      '@types/react':
-        specifier: 19.1.17
-        version: 19.1.17
-      '@types/react-dom':
-        specifier: 19.1.11
-        version: 19.1.11(@types/react@19.1.17)
-      '@vitejs/plugin-react':
-        specifier: 4.7.0
-        version: 4.7.0(vite@7.3.8(@types/node@22.20.5)(jiti@1.21.7)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
-      '@walktogether/configuration':
-        specifier: workspace:*
-        version: link:../../packages/configuration
-      autoprefixer:
-        specifier: 10.4.21
-        version: 10.4.21(postcss@8.5.32)
-      jsdom:
-        specifier: 26.1.0
-        version: 26.1.0
-      postcss:
-        specifier: 8.5.32
-        version: 8.5.32
-      tailwindcss:
-        specifier: 3.4.19
-        version: 3.4.19(tsx@4.23.15)(yaml@2.9.1)
-      typescript:
-        specifier: 5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: 3.2.7
-        version: 3.2.7(@types/node@22.20.5)(jiti@1.21.7)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
-
   packages/api-client:
     dependencies:
       '@walktogether/shared-types':
@@ -486,6 +334,85 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 3.2.7
+        version: 3.2.7(@types/node@22.20.5)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
+
+  platform-admin:
+    dependencies:
+      '@hookform/resolvers':
+        specifier: 5.2.2
+        version: 5.2.2(react-hook-form@7.91.0(@types/react@19.1.17)(react@19.1.0))
+      '@tanstack/react-query':
+        specifier: 5.90.21
+        version: 5.90.21(react@19.1.0)
+      '@walktogether/api-client':
+        specifier: workspace:*
+        version: link:../packages/api-client
+      '@walktogether/shared-types':
+        specifier: workspace:*
+        version: link:../packages/shared-types
+      '@walktogether/shared-utils':
+        specifier: workspace:*
+        version: link:../packages/shared-utils
+      '@walktogether/ui':
+        specifier: workspace:*
+        version: link:../packages/ui
+      '@walktogether/validation':
+        specifier: workspace:*
+        version: link:../packages/validation
+      next:
+        specifier: 15.5.29
+        version: 15.5.29(@babel/core@7.29.13)(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      qrcode.react:
+        specifier: 4.2.0
+        version: 4.2.0(react@19.1.0)
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+      react-hook-form:
+        specifier: 7.91.0
+        version: 7.91.0(@types/react@19.1.17)(react@19.1.0)
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@testing-library/react':
+        specifier: 16.3.3
+        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.1.11(@types/react@19.1.17))(@types/react@19.1.17)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@types/node':
+        specifier: 22.20.5
+        version: 22.20.5
+      '@types/react':
+        specifier: 19.1.17
+        version: 19.1.17
+      '@types/react-dom':
+        specifier: 19.1.11
+        version: 19.1.11(@types/react@19.1.17)
+      '@vitejs/plugin-react':
+        specifier: 4.7.0
+        version: 4.7.0(vite@7.3.8(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
+      '@walktogether/configuration':
+        specifier: workspace:*
+        version: link:../packages/configuration
+      autoprefixer:
+        specifier: 10.4.21
+        version: 10.4.21(postcss@8.5.32)
+      jsdom:
+        specifier: 26.1.0
+        version: 26.1.0
+      postcss:
+        specifier: 8.5.32
+        version: 8.5.32
+      tailwindcss:
+        specifier: 3.4.19
+        version: 3.4.19(tsx@4.23.15)(yaml@2.9.1)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -619,6 +546,79 @@ importers:
       tsx:
         specifier: 4.23.15
         version: 4.23.15
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 3.2.7
+        version: 3.2.7(@types/node@22.20.5)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
+
+  website:
+    dependencies:
+      '@hookform/resolvers':
+        specifier: 5.2.2
+        version: 5.2.2(react-hook-form@7.91.0(@types/react@19.1.17)(react@19.1.0))
+      '@walktogether/api-client':
+        specifier: workspace:*
+        version: link:../packages/api-client
+      '@walktogether/shared-types':
+        specifier: workspace:*
+        version: link:../packages/shared-types
+      '@walktogether/shared-utils':
+        specifier: workspace:*
+        version: link:../packages/shared-utils
+      '@walktogether/ui':
+        specifier: workspace:*
+        version: link:../packages/ui
+      '@walktogether/validation':
+        specifier: workspace:*
+        version: link:../packages/validation
+      next:
+        specifier: 15.5.29
+        version: 15.5.29(@babel/core@7.29.13)(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+      react-hook-form:
+        specifier: 7.91.0
+        version: 7.91.0(@types/react@19.1.17)(react@19.1.0)
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@testing-library/react':
+        specifier: 16.3.3
+        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.1.11(@types/react@19.1.17))(@types/react@19.1.17)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@types/node':
+        specifier: 22.20.5
+        version: 22.20.5
+      '@types/react':
+        specifier: 19.1.17
+        version: 19.1.17
+      '@types/react-dom':
+        specifier: 19.1.11
+        version: 19.1.11(@types/react@19.1.17)
+      '@vitejs/plugin-react':
+        specifier: 4.7.0
+        version: 4.7.0(vite@7.3.8(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
+      '@walktogether/configuration':
+        specifier: workspace:*
+        version: link:../packages/configuration
+      autoprefixer:
+        specifier: 10.4.21
+        version: 10.4.21(postcss@8.5.32)
+      jsdom:
+        specifier: 26.1.0
+        version: 26.1.0
+      postcss:
+        specifier: 8.5.32
+        version: 8.5.32
+      tailwindcss:
+        specifier: 3.4.19
+        version: 3.4.19(tsx@4.23.15)(yaml@2.9.1)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
