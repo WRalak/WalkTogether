@@ -20,7 +20,6 @@
     "@react-native-community/netinfo": "11.4.1",
     "@tanstack/react-query": "5.90.21",
     "@walktogether/api-client": "workspace:*",
-    "@walktogether/gps": "workspace:*",
     "@walktogether/shared-types": "workspace:*",
     "@walktogether/shared-utils": "workspace:*",
     "@walktogether/validation": "workspace:*",

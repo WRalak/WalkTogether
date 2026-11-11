@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { Prisma, type EventType } from '@prisma/client';
-import { haversine } from '@walktogether/gps';
+import { haversine } from '@walktogether/shared-utils';
 import { prisma, type Tx } from '../../database/prisma';
 import { randomToken, safeEqual } from '../../shared/crypto';
 import { enqueue } from '../../queues';

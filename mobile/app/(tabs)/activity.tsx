@@ -3,7 +3,7 @@ import { Alert, Linking, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import type { ActivityKind } from '@walktogether/gps';
+import type { ActivityKind } from '@walktogether/shared-utils';
 import { RouteMap } from '@/components/map/route-map';
 import { Button, Card } from '@/components/ui';
 import { Screen } from '@/components/screen';

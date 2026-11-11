@@ -27,7 +27,7 @@ const envSchema = z.object({
   ADMIN_ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(1800).default(600),
   ADMIN_SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(24).default(8),
 
-  CORS_ORIGINS: csv.prefault('http://localhost:3000,http://localhost:3001,http://localhost:3002'),
+  CORS_ORIGINS: csv.prefault('http://localhost:3002'),
   COOKIE_DOMAIN: z.string().optional(),
   COOKIE_SECURE: bool.optional(),
 

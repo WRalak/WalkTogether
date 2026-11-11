@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
-import type { ActivityKind } from '@walktogether/gps';
+import type { ActivityKind } from '@walktogether/shared-utils';
 import type { LocationFix, LocationSource } from './session';
 
 export const LOCATION_TASK = 'walktogether-location-tracking';

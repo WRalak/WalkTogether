@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Button, Input } from '@walktogether/ui';
+import { Button, Input } from '@/components/ui';
 
 /** Inline "action with mandatory reason" control. Reasons are recorded in the audit log. */
 export function StatusAction({ label, variant = 'outline', onConfirm }: { label: string; variant?: 'outline' | 'destructive' | 'default'; onConfirm: (reason: string) => Promise<unknown> }) {

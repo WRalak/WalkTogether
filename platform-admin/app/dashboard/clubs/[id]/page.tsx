@@ -1,7 +1,7 @@
 'use client';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Spinner } from '@walktogether/ui';
+import { Spinner } from '@/components/ui';
 import { adminApi } from '@/lib/api';
 import { JsonBlock, Section, StatusBadge } from '@/features/ui';
 

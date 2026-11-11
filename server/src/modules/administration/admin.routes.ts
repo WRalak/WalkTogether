@@ -13,7 +13,7 @@ import { cookieSecure, env } from '../../config/env';
 import { prisma } from '../../database/prisma';
 import { requireAdmin, requireAdminPermission } from '../../middleware/admin-auth';
 import { auditCtx } from '../../middleware/request-context';
-import { adminAuthLimiter } from '../../middleware/rate-limit';
+import { adminAuthLimiter, adminRefreshLimiter } from '../../middleware/rate-limit';
 import { parse } from '../../middleware/validate';
 import { badRequest, unauthorized } from '../../shared/errors';
 import * as adminAuth from './admin-auth.service';
@@ -63,7 +63,7 @@ adminRouter.post('/auth/mfa/verify', adminAuthLimiter, async (req, res) => {
   sendAdminTokens(req, res, await adminAuth.adminMfaVerify(mfaToken, code, auditCtx(req)));
 });
 
-adminRouter.post('/auth/refresh', adminAuthLimiter, async (req, res) => {
+adminRouter.post('/auth/refresh', adminRefreshLimiter, async (req, res) => {
   const body = parse(z.object({ refreshToken: z.string().min(20).max(512).optional() }).strict(), req.body);
   const token = body.refreshToken ?? (isWeb(req) ? req.cookies?.[ADMIN_REFRESH_COOKIE] : undefined);
   if (!token) throw unauthorized('Refresh token required', 'INVALID_REFRESH_TOKEN');

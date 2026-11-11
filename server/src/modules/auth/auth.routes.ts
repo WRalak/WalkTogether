@@ -16,7 +16,7 @@ import { z } from 'zod';
 import { cookieSecure, env } from '../../config/env';
 import { authUserId, optionalAuth, requireAuth } from '../../middleware/authenticate';
 import { auditCtx } from '../../middleware/request-context';
-import { authLimiter, otpLimiter } from '../../middleware/rate-limit';
+import { authLimiter, otpLimiter, refreshLimiter } from '../../middleware/rate-limit';
 import { parse } from '../../middleware/validate';
 import { unauthorized } from '../../shared/errors';
 import * as auth from './auth.service';
@@ -62,7 +62,7 @@ authRouter.post('/login', authLimiter, async (req, res) => {
   sendTokens(req, res, await auth.login(input, clientCtx(req, input.device)));
 });
 
-authRouter.post('/refresh', authLimiter, async (req, res) => {
+authRouter.post('/refresh', refreshLimiter, async (req, res) => {
   const body = parse(refreshSchema, req.body);
   let token = body.refreshToken;
   if (!token && isWebClient(req)) token = req.cookies?.[REFRESH_COOKIE];

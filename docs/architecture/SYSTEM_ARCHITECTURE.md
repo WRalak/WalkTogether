@@ -16,79 +16,91 @@ platform owner. The architecture optimises for:
 
 ## 2. High-level view
 
+Two frontends, one backend, one database:
+
+* **Mobile app** (`mobile/`) — the only app for members, club owners, club administrators, event
+  organisers and moderators. The interface adapts to the user's role in each club; club
+  administration (members, events, attendance, challenges, subscriptions, analytics…) is a section of
+  the app (`mobile/app/admin`).
+* **Platform admin** (`platform-admin/`) — the only web application, used exclusively by the
+  WalkTogether operator with a separate admin identity and mandatory TOTP MFA.
+* **API** (`server/`) — the single entry point to PostgreSQL. It enforces role-based access control and
+  tenant isolation on every request. It also serves the few pages opened outside the app: email
+  verification, password reset, invitation links, payment returns and the privacy/terms pages.
+
 ```
-                    ┌──────────────────────────┐
-  Android / iOS ───▶│  Mobile app (Expo/RN)    │──┐
-                    └──────────────────────────┘  │  HTTPS (JSON, Bearer access token)
-                    ┌──────────────────────────┐  │
-  Browsers ────────▶│  website (Next.js)  │──┤  SSR fetches public endpoints only
-                    │  club-admin         │──┤  httpOnly refresh cookie + in-memory access token
-                    │  platform-admin     │──┤  separate admin identity + TOTP MFA
-                    └──────────────────────────┘  ▼
+  Members, club owners, admins,     ┌─────────────────────────────┐
+  organisers, moderators ──────────▶│ Mobile app (Expo/RN)        │──┐ HTTPS, Bearer access token
+  (Android / iOS)                   │ role-aware; club admin tab  │  │ (refresh token in SecureStore)
+                                    └─────────────────────────────┘  │
+  Platform operator ───────────────▶┌─────────────────────────────┐  │ httpOnly refresh cookie +
+  (browser, VPN/IP-restricted)      │ Platform admin (Next.js)    │──┤ in-memory access token,
+                                    └─────────────────────────────┘  │ separate admin JWT + MFA
+  Email / Stripe / invite links ───────────────────────────────────▶ │ /links/*, /legal/*
+                                                                     ▼
                                          ┌───────────────────────────┐
                                          │ Nginx / managed ingress   │ TLS, rate limits, HSTS
                                          └─────────────┬─────────────┘
                                                        ▼
                          ┌──────────────────────────────────────────────────┐
                          │ API (Express 5, TypeScript) — modular monolith    │
-                         │  auth · users · clubs · memberships · platform    │
-                         │  administration · notifications · audit · health  │
-                         │  (Phase 3+: activities/gps · events · social ·    │
-                         │   messaging · challenges · subscriptions ·        │
-                         │   payments · sponsorships)                        │
+                         │  auth · users · clubs · memberships · activities │
+                         │  gps · events · social · messaging · challenges  │
+                         │  subscriptions · payments · sponsorships ·       │
+                         │  notifications · analytics · administration ·    │
+                         │  links · media · moderation · audit · health     │
                          └───────┬─────────────────┬────────────────┬───────┘
                                  │                 │                │
                      ┌───────────▼───┐   ┌─────────▼──────┐  ┌──────▼─────────┐
                      │ PostgreSQL 16 │   │ Redis 7        │  │ Object storage │
                      │ + PostGIS 3   │   │ cache, rate    │  │ (S3 / R2) +CDN │
-                     │ (Prisma)      │   │ limits, queues │  │ (Phase 5 media)│
+                     │ (Prisma)      │   │ limits, queues │  │ media          │
                      └───────────────┘   └───────┬────────┘  └────────────────┘
                                                  │ BullMQ
                                          ┌───────▼────────┐
-                                         │ Worker process │ email, SMS, purges,
-                                         │ (same codebase)│ cleanup; later: push,
-                                         └────────────────┘ leaderboards, media
+                                         │ Worker process │ email, SMS, push, reminders,
+                                         │ (same codebase)│ challenges, partitions, purges
+                                         └────────────────┘
 ```
+
+Access control: club administrators reach club data only through `requireClubPermission(clubId, …)`,
+which loads their membership and role in **that** club on the server — a club id from the client is a
+selector, never a grant. Platform administrators use a separate identity, JWT secret and audience, and
+their platform-wide access is explicit per admin permission (`platform.overview.view`, `billing.view`,
+`moderation.manage`, …) and audit-logged.
 
 ## 3. Repository layout (pnpm monorepo)
 
 ```
-# Every top-level folder below except packages/, infrastructure/ and docs/ is hosted separately.
+# Every top-level folder except packages/, infrastructure/ and docs/ is built and deployed separately.
 mobile/           Expo SDK 54, Expo Router, NativeWind, TanStack Query, Zustand, SecureStore
-                  app/(auth), app/(tabs)/{index,explore,record,community,profile}, clubs/, activities/,
-                  challenges/, events/, messages/, settings/ + components/ features/ hooks/ services/ store/ utils/
-club-admin/       Club dashboard (Next.js): app/(auth)/{login,signup}, app/dashboard/{overview, members,
-                  events, activities, challenges, attendance, announcements, analytics, subscription,
-                  settings, moderation, sponsorships}. The managed club is selected by `?club=<id>`.
+                  app/(auth), app/(tabs)/{index, activity, clubs, community, profile}, clubs/,
+                  activities/, events/, challenges/, messages/, admin/ (club administration),
+                  sponsor/ (sponsor portal), settings/ + components/ features/ hooks/ services/ store/ utils/
 platform-admin/   Platform super-admin (Next.js), separate hostname: app/(auth)/login,
-                  app/dashboard/{overview, users, clubs, subscriptions, payments, sponsors, campaigns,
-                  challenges, moderation, analytics, audit-logs, settings, security, system, admins}
-website/          Public site (Next.js): home, pricing, clubs, events, about, contact, legal pages
+                  app/dashboard/{overview, clubs, users, subscriptions, payments, sponsorships,
+                  events, analytics, reports, moderation, settings, audit-logs, security, system,
+                  admins} + components/ (incl. ui/) features/ lib/
 server/
-  prisma/           schema.prisma, SQL migrations, idempotent seed
+  prisma/         schema.prisma, SQL migrations, idempotent seed
   src/
-    config/         zod-validated environment (refuses unsafe prod config)
-    database/       Prisma + Redis clients
-    middleware/     request context, auth, admin auth, validation, rate limits, errors
-    modules/        feature modules (routes → services → Prisma): auth, users, clubs, memberships,
-                    activities, gps, events, social, messaging, challenges, subscriptions, payments,
-                    sponsorships, notifications, administration (+ announcements, media, moderation,
-                    audit, platform, health)
-    queues/         typed job catalogue, processors, BullMQ wiring
-    shared/         crypto, password hashing, pagination, logger, errors
-    app.ts          HTTP composition root; main.ts / worker.ts entry points
-  test/             integration + tenant-isolation + security suites (real Postgres + Redis)
+    config/       zod-validated environment (refuses unsafe prod config), hosting checks
+    database/     Prisma + Redis clients
+    middleware/   request context, auth, admin auth, validation, rate limits, errors
+    modules/      auth, users, clubs, memberships, activities, gps, events, social, messaging,
+                  challenges, subscriptions, payments, sponsorships, notifications, analytics,
+                  administration, links, announcements, media, moderation, audit, platform, health
+    queues/       typed job catalogue, processors, BullMQ wiring
+    shared/       crypto, password hashing, pagination, logger, metrics, errors
+    app.ts        HTTP composition root; main.ts / worker.ts entry points
+  test/           integration, tenant-isolation and security suites (real Postgres + Redis)
 packages/
-  shared-types/     permission catalogues, enums, API envelope types
-  validation/       Zod schemas shared by server and clients
-  api-client/       typed fetch client (single-flight refresh, web/native token modes)
-  shared-utils/     framework-free helpers (money, distance, duration, pace, labels, relative time)
-  ui/               shadcn-style React components for the web apps
-  gps/              GPS filtering, statistics, tracking engine, polyline, privacy trimming
-  configuration/    shared Tailwind preset/tokens and tsconfig
-infrastructure/     docker/ (local Postgres init), nginx/ (self-hosting), deployment/ (backup + restore drill)
-                    Each deployable unit keeps its own Dockerfile / vercel.json / eas.json and README.
-docs/               this documentation
+  shared-types/   permission catalogues, enums, API envelope types
+  validation/     Zod schemas shared by server and clients
+  api-client/     typed fetch client (single-flight refresh, web/native token modes)
+  shared-utils/   formatting helpers and the GPS engine (filtering, stats, tracking, polylines)
+infrastructure/   docker/ (local Postgres init), nginx/, deployment/ (backup + restore drill), loadtest/
+docs/             this documentation
 ```
 
 Workspace packages are consumed as TypeScript source. The server bundles them with `tsup`; Next.js uses

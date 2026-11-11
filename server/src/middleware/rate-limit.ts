@@ -31,3 +31,10 @@ export const authLimiter = limiter('auth', { windowMs: 15 * 60_000, limit: 30 })
 /** Very sensitive endpoints such as OTP sending (cost + abuse). */
 export const otpLimiter = limiter('otp', { windowMs: 60 * 60_000, limit: 10 });
 export const adminAuthLimiter = limiter('admin-auth', { windowMs: 15 * 60_000, limit: 10 });
+/**
+ * Session refresh. Refresh tokens are 256-bit, single-use (rotation with reuse detection), so they
+ * cannot be brute-forced; a separate, roomier per-IP limit keeps page reloads, several tabs and many
+ * users behind one carrier-grade NAT (common on Kenyan mobile networks) from being signed out.
+ */
+export const refreshLimiter = limiter('refresh', { windowMs: 15 * 60_000, limit: 600 });
+export const adminRefreshLimiter = limiter('admin-refresh', { windowMs: 15 * 60_000, limit: 120 });

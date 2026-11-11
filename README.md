@@ -1,8 +1,8 @@
 # WalkTogether
 
 **WalkTogether** is a multi-club fitness social network and SaaS platform for walking and running
-communities: GPS tracking for individuals, a management dashboard for clubs, sponsored challenges for
-organisations, and a control centre for the platform owner. It targets Kenya first, then East Africa and
+communities: GPS tracking for individuals, club management for club owners and admins (inside the
+mobile app), sponsored challenges for organisations, and a web control centre for the platform owner. It targets Kenya first, then East Africa and
 international markets.
 
 It is multi-tenant from day one: any user can create a club, belong to several clubs with different roles,
@@ -14,18 +14,16 @@ and keep ownership of their personal fitness data. The first pilot walking club 
 ## Repository
 
 Every application lives directly in the repository root (there is deliberately no `apps/` directory).
-Five units, **each hosted separately** (own README, `.env.example`, Dockerfile or EAS config, CI
-workflow). Shared code in `packages/` is compiled into each unit at build time. Full hosting map,
-domains and wiring: [`docs/deployment/HOSTING.md`](docs/deployment/HOSTING.md).
+There are **two frontends and one backend**, each built and hosted separately (own README,
+`.env.example`, Dockerfile or EAS config, CI workflow), all talking to the same API and — through it —
+the same PostgreSQL database. Full hosting map: [`docs/deployment/HOSTING.md`](docs/deployment/HOSTING.md).
 
 | Folder | What it is | Hosted as | Docs |
 | --- | --- | --- | --- |
-| `server/` | Express 5 API + Socket.IO + BullMQ worker, Prisma/PostgreSQL+PostGIS, Redis | Container (`api.`) | [README](server/README.md) |
-| `website/` | Public website, club & event SEO pages (Next.js 15) | Vercel or container (apex `www`) | [README](website/README.md) |
-| `club-admin/` | Club dashboard, `/dashboard/<section>?club=<id>` (Next.js 15) | Vercel or container (`clubs.`) | [README](club-admin/README.md) |
-| `platform-admin/` | Platform super-admin with mandatory MFA (Next.js 15) | Vercel or container (`admin.`, IP-restricted) | [README](platform-admin/README.md) |
-| `mobile/` | Expo SDK 54 / React Native member app | EAS → app stores | [README](mobile/README.md) |
-| `packages/` | `shared-types`, `validation`, `api-client`, `shared-utils`, `ui`, `gps`, `configuration` | not deployed | — |
+| `mobile/` | Expo / React Native app for **everyone in a club**: members, owners, administrators, organisers, moderators. Club administration is a role-aware section of the app. | EAS → app stores | [README](mobile/README.md) |
+| `platform-admin/` | The **only web app**: platform-level administration for WalkTogether staff, with mandatory MFA | Vercel or container (`admin.`, IP-restricted) | [README](platform-admin/README.md) |
+| `server/` | Express 5 API + Socket.IO + BullMQ worker, Prisma/PostgreSQL+PostGIS, Redis; also email-link and legal pages | Container (`api.`) | [README](server/README.md) |
+| `packages/` | `shared-types`, `validation`, `api-client`, `shared-utils` | not deployed | — |
 | `infrastructure/` | local Postgres init, Nginx for self-hosting, backup/restore scripts, load tests | — | [README](infrastructure/README.md) |
 | `docs/` | Architecture, database, security, API, multi-tenancy, GPS, monetization, deployment | — | below |
 
@@ -72,22 +70,13 @@ pnpm --filter @walktogether/server dev:worker
 API docs (development): <http://localhost:4000/api/docs>. Health: <http://localhost:4000/health/ready>.
 In development, emails and SMS codes are printed to the API console.
 
-Web apps (copy each `<app>/.env.example` to `.env.local` first if you need non-default URLs):
-
-```bash
-pnpm dev:website
-```
-
-```bash
-pnpm dev:club-admin
-```
+Platform admin (copy `platform-admin/.env.example` to `.env.local` if you need a non-default API URL):
 
 ```bash
 pnpm dev:platform-admin
 ```
 
-They run on <http://localhost:3000> (public site), <http://localhost:3001> (club dashboard) and
-<http://localhost:3002> (platform admin).
+It runs on <http://localhost:3002>.
 
 Create the first platform administrator (prompts for a password; MFA enrolment is forced at first sign-in):
 
@@ -106,8 +95,9 @@ pnpm dev:mobile
 ```
 
 Use an Android emulator (the default API URL `http://10.0.2.2:4000` reaches your machine) or set
-`EXPO_PUBLIC_API_URL` to your LAN IP for a physical device. Background location (Phase 3) requires a
-development build (`pnpm --filter @walktogether/mobile android` or EAS), not Expo Go.
+`EXPO_PUBLIC_API_URL` to your LAN IP for a physical device. Background location, the camera (QR
+check-in) and Health Connect need a development build (`pnpm --filter @walktogether/mobile android`
+or EAS), not Expo Go. Club owners and admins find club management under **Clubs → Manage my clubs**.
 
 ## Tests
 
@@ -122,7 +112,7 @@ pnpm test
 pnpm typecheck
 ```
 
-192 automated tests. Highlights: authentication and session security, platform-admin MFA, an OWASP-oriented
+199 automated tests. Highlights: authentication and session security, platform-admin MFA, an OWASP-oriented
 **security suite** (`server/test/security.test.ts`), and a dedicated **tenant-isolation suite** (`server/test/tenant-isolation.test.ts`) proving users cannot read or modify
 other clubs' data.
 

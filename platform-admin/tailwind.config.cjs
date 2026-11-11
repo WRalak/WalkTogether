@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  presets: [require('@walktogether/configuration/tailwind')],
-  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './features/**/*.{ts,tsx}', '../packages/ui/src/**/*.{ts,tsx}'],
+  presets: [require('./tailwind.preset.cjs')],
+  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './features/**/*.{ts,tsx}'],
 };

@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { Alert, Button, EmptyState, Input, Select, Spinner, Table, Td, Th } from '@walktogether/ui';
+import { Alert, Button, EmptyState, Input, Select, Spinner, Table, Td, Th } from '@/components/ui';
 import { adminApi } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
 

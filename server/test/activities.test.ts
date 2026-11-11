@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
-import { decodePolyline, haversine } from '@walktogether/gps';
+import { decodePolyline, haversine } from '@walktogether/shared-utils';
 import { prisma } from '../src/database/prisma';
 import { addMember, api, bearer, createClub, registerUser, teardown, type TestUser } from './helpers';
 

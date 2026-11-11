@@ -1,4 +1,4 @@
-import type { ActivityKind, EngineSnapshot } from '@walktogether/gps';
+import type { ActivityKind, EngineSnapshot } from '@walktogether/shared-utils';
 
 export type LocalStatus = 'recording' | 'paused' | 'finished' | 'synced' | 'discarded';
 

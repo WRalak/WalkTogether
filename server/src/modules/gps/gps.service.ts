@@ -5,7 +5,7 @@
  * statistics are never trusted — distance, pace and route are recomputed here from stored points.
  */
 import { Prisma, type ActivityType } from '@prisma/client';
-import { computeStats, encodePolyline, simplify, type RawPoint } from '@walktogether/gps';
+import { computeStats, encodePolyline, simplify, type RawPoint } from '@walktogether/shared-utils';
 import { prisma } from '../../database/prisma';
 import { badRequest } from '../../shared/errors';
 

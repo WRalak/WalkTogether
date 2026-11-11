@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activityTypeLabel, categoryLabel, formatDuration, formatKm, formatMoney, formatMoneyMap, formatPace, initials, timeAgo } from '../index';
+import { activityTypeLabel, categoryLabel, formatDuration, formatKm, formatMoney, formatMoneyMap, formatPace, initials, timeAgo } from '../format';
 
 describe('shared-utils', () => {
   it('formats money from minor units', () => {

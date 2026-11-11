@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Button, cn, Spinner } from '@walktogether/ui';
+import { Button, cn, Spinner } from '@/components/ui';
 import { useAdminAuth } from '@/lib/auth';
 
 // Platform-level administration only — club management happens in the mobile app.

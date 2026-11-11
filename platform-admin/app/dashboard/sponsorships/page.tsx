@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { buttonVariants } from '@walktogether/ui';
+import { buttonVariants } from '@/components/ui';
 import { CampaignsPanel } from '@/features/sponsorships/campaigns-panel';
 import { SponsorsPanel } from '@/features/sponsorships/sponsors-panel';
 

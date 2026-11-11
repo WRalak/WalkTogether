@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { Button } from '@walktogether/ui';
+import { Button } from '@/components/ui';
 import { adminApi } from '@/lib/api';
 import { useAdminAuth } from '@/lib/auth';
 import { SearchBar } from '@/features/search-list';

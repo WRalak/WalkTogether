@@ -1,6 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import { Spinner, Stat } from '@walktogether/ui';
+import { Spinner, Stat } from '@/components/ui';
 import { adminApi } from '@/lib/api';
 import { Button, DataTable, Section, useAction } from '@/features/ui';
 

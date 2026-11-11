@@ -26,7 +26,7 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   poweredByHeader: false,
-  transpilePackages: ['@walktogether/ui', '@walktogether/api-client', '@walktogether/shared-types', '@walktogether/validation', '@walktogether/shared-utils'],
+  transpilePackages: ['@walktogether/api-client', '@walktogether/shared-types', '@walktogether/validation', '@walktogether/shared-utils'],
   // Pre-restructure URLs map onto /dashboard/<section>.
   // Older URLs map onto the current /dashboard/<section> structure.
   async redirects() {

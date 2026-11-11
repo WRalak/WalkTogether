@@ -92,8 +92,8 @@
 | `POST|GET /:clubId/invitations`, `DELETE /:clubId/invitations/:invitationId` | `members.invite` |
 | `GET /invitations/:code` | public preview of a valid invitation |
 
-The club admin dashboard uses these club-scoped routes directly. Dashboard-specific aggregate views
-(analytics, reports, exports) will live under `/api/v1/club-admin/:clubId/...` from Phase 2 and use the
+Club administration in the mobile app uses these club-scoped routes directly. Aggregate views
+(analytics, attendance and member reports, shared activities) live under `/api/v1/clubs/:clubId/...` (the analytics module) and use the
 same `requireClubPermission` guard.
 
 ### Platform admin — `/api/v1/platform-admin`
@@ -107,7 +107,7 @@ same `requireClubPermission` guard.
 
 | Phase | Endpoints |
 | --- | --- |
-| 2 | `GET /subscriptions/plans`, club announcements, custom roles CRUD (`roles.manage`), ownership transfer, `/club-admin/:clubId/overview|reports` |
+| 2 | `GET /subscriptions/plans`, club announcements, custom roles CRUD (`roles.manage`), ownership transfer, `/clubs/:clubId/analytics|reports/*` |
 | 3 | `POST /activities` (client UUID, idempotent), `POST /activities/:id/gps-points` (batched, ordered `seq`), `POST /activities/:id/complete`, `GET /activities`, `GET /activities/:id`, `DELETE /activities/:id`, `GET /users/:id/activities`, `GET /me/stats` |
 | 4 | `POST|GET /clubs/:clubId/events`, `POST /events/:id/rsvp`, `POST /events/:id/check-in` (QR token / organizer / proximity) |
 | 5 | `GET /feed`, `POST /posts`, comments, likes, follows, reports, conversations/messages (+ Socket.IO namespace `/rt`) |

@@ -17,55 +17,66 @@ physical devices, live provider credentials or third parties is done; those item
 | 8 Platform administration | KPIs, revenue, plans, sponsors, moderation, security, system health, admins | ✅ |
 | 9 Production hardening | Audit, metrics, OpenAPI, Zod 4, partitioning, security suite, load test, Docker/CI, backup drill | ✅ |
 
+## Architecture in one paragraph
+
+Two frontends and one backend. The **mobile app** serves every club role — members, owners,
+administrators, organisers and moderators — and the interface adapts to each user's permissions in
+each club; club management needs no separate website. The **platform admin** is the only web
+application, for WalkTogether staff. Both talk to one **API**, the only component with database
+access, which enforces RBAC and tenant isolation on every request. There is no public marketing
+website: email-link, invitation, payment-return and legal pages are served by the API.
+
 ## What exists (by area)
 
 **Backend (`server/`)** — Express 5 modular monolith, Prisma/PostgreSQL+PostGIS, Redis, BullMQ worker,
 Socket.IO. Modules: auth, users, clubs, memberships, announcements, subscriptions/entitlements,
-activities, gps (point storage, validation, partitions), events, social (follows, posts, comments, feed), media, messaging, moderation,
-challenges/leaderboards/achievements, payments, sponsorships, administration, notifications, audit.
-11 migrations (`init` … `phase9_daily_steps`), no schema drift.
+activities, gps (point storage, validation, partitions), events, social (follows, posts, comments,
+feed), media, messaging, moderation, challenges/leaderboards/achievements, payments, sponsorships,
+notifications, analytics (club analytics, platform activity, CSV reports), administration, links
+(email/invite/payment/legal pages), audit. 11 migrations, no schema drift.
 
-**Shared packages** — `shared-types`, `validation` (Zod), `api-client`, `shared-utils` (formatting/labels), `gps` (filtering, statistics,
-`TrackingEngine`, polyline, privacy trimming), `ui`, `configuration`.
+**Shared packages** — `shared-types`, `validation` (Zod), `api-client`, `shared-utils` (formatting
+helpers and the GPS engine: filtering, statistics, `TrackingEngine`, polyline, privacy trimming).
 
-**Mobile (`mobile`)** — auth (email, phone OTP), Record (background location task with
-foreground fallback, SQLite offline store, crash recovery, resumable batched sync), activity
-history/detail with maps, home/profile stats, explore (clubs, events, sponsored), club detail/chat,
-events with RSVP + QR scanner check-in, community feed (photos and video posters), composer with photo upload, comments,
-messaging, user profiles/follows, notifications + push registration, challenges & leaderboards,
-achievements, step counts from Health Connect/HealthKit, Premium subscription (M-Pesa/card), privacy & security settings.
+**Mobile (`mobile/`)** — auth (email, phone OTP), Activity tab (background location with foreground
+fallback, SQLite offline store, crash recovery, resumable batched sync), activity history/detail with
+maps, home/profile stats, Clubs tab (my clubs, discovery, events, sponsored), club detail/chat, events
+with RSVP + QR scanner check-in, community feed (photos and video posters), composer, comments,
+messaging, profiles/follows, notifications + push, challenges & leaderboards, achievements, step
+counts from Health Connect/HealthKit, Premium (M-Pesa/card), privacy & security settings.
+**Club administration (`mobile/app/admin`)**, shown only to users with an administrative club
+permission: create club; overview KPIs; members (requests, roles, suspend/remove, CSV share);
+invitations (share link, copy code, revoke); roles & ownership transfer; events (create with date
+pickers, GPS-pinned meeting point, recurrence; manage with rotating check-in QR, attendance marking,
+CSV share, cancel); attendance report; shared activities; challenges; announcements; analytics with
+charts; subscription (plans, M-Pesa/card checkout, invoices); settings with logo/cover upload;
+moderation; sponsorship offers. **Sponsor portal (`mobile/app/sponsor`)**: apply, create and submit
+campaigns, pay, aggregated reports.
 
-**Club admin (`club-admin`, `/dashboard/<section>?club=<id>`)** — overview, shared member activities, attendance reports, members, invitations, roles & ownership transfer,
-announcements, events + live QR + attendance + CSV, challenges, analytics & reports, community
-moderation, sponsorship offers, billing (plans, checkout, invoices), settings with logo/cover upload,
-and a sponsor portal (apply, campaigns, pay, reports).
-
-**Platform admin (`platform-admin`, `/dashboard/<section>`)** — MFA sign-in, subscriptions list and plan grants, payments & refunds, sponsors, campaigns, overview KPIs (incl. MRR/ARR,
-sponsorship revenue), revenue, users (detail + history), clubs, plans/promotions/payments/refunds,
-sponsors & campaigns (review, reports, rewards), challenges & achievement rules, moderation queue,
-audit log, security monitoring, system health, settings/flags, administrators.
-
-**Public website (`website`)** — marketing pages, club discovery/SEO pages, public events with schema.org markup, live pricing from the plans
-API, sponsor portal entry, email-link pages.
+**Platform admin (`platform-admin/`, `/dashboard/<section>`)** — MFA sign-in; overview KPIs (MRR/ARR,
+sponsorship revenue); clubs (approve, suspend); users (detail, suspend); subscriptions (plans,
+promotions, subscriptions list, grants); payments & refunds; sponsorships (sponsors, campaigns,
+competitions & badges); events across all clubs (moderator cancel); analytics (platform activity,
+flagged activities, revenue); reports (CSV: users, clubs, payments, daily activity); moderation queue;
+settings & feature flags; audit logs; security monitoring; system health; administrators.
 
 ## Tests (all passing)
 
 | Suite | Tests |
 | --- | --- |
-| Server integration/unit (16 files: auth, users, clubs, tenant isolation, security, phase 2, activities, events, social/media/video/messaging, challenges, payments/sponsorships, M-Pesa (mocked Daraja), platform admin, admin, journey, unit) | 156 |
-| `packages/gps` | 8 |
+| Server integration/unit (18 files: auth, users, clubs, tenant isolation, security, links, platform analytics, phase 2, activities, events, social/media/video/messaging, challenges, payments/sponsorships, M-Pesa (mocked Daraja), platform admin, admin, journey, unit) | 164 |
+| `packages/shared-utils` (formatting + GPS engine) | 12 |
 | `packages/validation` | 6 |
 | `packages/api-client` | 4 |
-| `packages/shared-utils` | 4 |
-| Web apps (website, club-admin, platform-admin) | 5 |
-| Mobile (Jest: schemas, token store, tracking session, offline sync, QR parsing, component) | 9 |
-| **Total** | **192** |
+| `platform-admin` | 1 |
+| Mobile (Jest: schemas, token store, tracking session, offline sync, QR parsing, component, club-admin access) | 12 |
+| **Total** | **199** |
 
-Also verified: workspace typecheck; GitHub Actions CI (typecheck, unit, integration against
-PostGIS/Redis service containers, migration drift check, production builds of all Next.js apps,
-Android JS bundle export, Docker image builds for API/web/club-admin/platform-admin with an API
-boot smoke test, `pnpm audit`, gitleaks); real-browser runs of club-admin and platform-admin; a
-database backup/restore drill; and a load test (`infrastructure/loadtest/README.md`).
+Also verified: workspace typecheck; per-application GitHub Actions workflows (integration against
+PostGIS/Redis, migration drift check, platform-admin build, Android JS bundle export, Docker image
+builds with an API boot smoke test, `pnpm audit`, gitleaks); a real-browser run of every
+platform-admin section against a live API (MFA sign-in, CSV download); a database backup/restore
+drill; and a load test (`infrastructure/loadtest/README.md`).
 
 ## Phase 9 — done
 
@@ -95,8 +106,10 @@ These need hardware, accounts or people that a code repository cannot provide. E
 (code, configuration, scripts, tests with mocked providers) is in place.
 
 * **Physical-device testing.** Background GPS accuracy and battery use, camera QR scanning, maps,
-  push notifications and Health Connect/HealthKit permissions must be exercised on real Android/iOS
-  devices with an EAS development build (no emulator acceleration is available here).
+  push notifications, Health Connect/HealthKit permissions, and the club-admin screens' native pieces
+  (date pickers, QR display, CSV/invoice share sheet, logo upload) must be exercised on real
+  Android/iOS devices with an EAS development build. The app type-checks, passes its Jest suite and
+  bundles for Android, but no emulator acceleration is available here to run it.
 * **Live payment-provider runs.** M-Pesa (STK push, callbacks, reversals) and Stripe are implemented
   to the providers' documented APIs and tested against mocked responses; an end-to-end run needs your
   Daraja sandbox and Stripe test credentials.

@@ -1,6 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Spinner, Stat } from '@walktogether/ui';
+import { Alert, Spinner, Stat } from '@/components/ui';
 import { adminApi } from '@/lib/api';
 import { useAdminAuth } from '@/lib/auth';
 import { errorMessage } from '@/lib/errors';

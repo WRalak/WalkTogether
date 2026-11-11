@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Button, Field, Input } from '@walktogether/ui';
+import { Button, Field, Input } from '@/components/ui';
 import { adminApi } from '@/lib/api';
 import { useAdminAuth } from '@/lib/auth';
 import { Section, useAction } from '@/features/ui';

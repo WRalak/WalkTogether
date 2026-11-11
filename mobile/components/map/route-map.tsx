@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import Constants from 'expo-constants';
-import type { LatLng } from '@walktogether/gps';
+import type { LatLng } from '@walktogether/shared-utils';
 
 export interface RouteMapProps {
   points: LatLng[];

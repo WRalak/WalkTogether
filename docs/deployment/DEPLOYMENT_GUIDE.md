@@ -15,8 +15,8 @@ member/admin JWT secrets.
 
 ## 2. Reference AWS topology
 
-* **Compute:** ECS Fargate services — `api` (≥2 tasks), `worker` (≥1), `web`, `club-admin`,
-  `platform-admin`; one-off `migrate` task per release.
+* **Compute:** ECS Fargate services — `api` (≥2 tasks), `worker` (≥1), `platform-admin`; one-off
+  `migrate` task per release. The mobile app ships through EAS and the app stores.
 * **Ingress:** ALB with ACM certificates (or Nginx per `infrastructure/nginx/walktogether.conf`);
   AWS WAF managed rules; platform admin hostname restricted by IP/VPN.
 * **Data:** RDS PostgreSQL 16 Multi-AZ with the PostGIS extension; RDS Proxy for pooling;
@@ -36,15 +36,15 @@ docker build -f server/Dockerfile -t walktogether-api .
 ```
 
 ```bash
-docker build -f website/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app --build-arg NEXT_PUBLIC_SITE_URL=https://walktogether.app --build-arg NEXT_PUBLIC_CLUB_ADMIN_URL=https://clubs.walktogether.app -t walktogether-website .
+docker build -f platform-admin/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app -t walktogether-platform-admin .
 ```
 
-`club-admin/Dockerfile` and `platform-admin/Dockerfile` work the same way. The API image
+The API image
 runs `node dist/main.js` by default; the worker uses `node dist/worker.js`; migrations use
-`npx prisma migrate deploy`. The web apps can alternatively be deployed to Vercel using the
-`vercel.json` in each app folder.
+`npx prisma migrate deploy`. The platform admin can alternatively be deployed to Vercel using
+`platform-admin/vercel.json`.
 
-Each unit's CI workflow (`server.yml`, `website.yml`, `club-admin.yml`, `platform-admin.yml`) builds
+Each application's CI workflow (`server.yml`, `platform-admin.yml`) builds
 its image when that unit or a shared package changes; the API image is additionally smoke-tested to
 confirm it refuses to start with an unsafe production configuration. The API image includes `ffmpeg`
 for video transcoding.
@@ -58,7 +58,7 @@ for video transcoding.
 4. Run the `migrate` task (`prisma migrate deploy`). Migrations must be backwards-compatible with the
    running version (expand → migrate → contract). Destructive steps (dropping columns/tables) ship in a
    later release after code no longer uses them, and only after a verified backup.
-5. Deploy `worker`, then `api` (rolling, health-checked on `/health/ready`), then web apps.
+5. Deploy `worker`, then `api` (rolling, health-checked on `/health/ready`), then the platform admin. Mobile releases follow store review.
 6. The API syncs the permission catalogue at start-up; run `node dist/create-admin.js` only to
    bootstrap the first platform admin.
 7. Smoke test: `/health/ready`, sign-in, club discovery; watch Sentry and error-rate alarms.

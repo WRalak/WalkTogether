@@ -1,7 +1,7 @@
 import { Alert, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { decodePolyline } from '@walktogether/gps';
+import { decodePolyline } from '@walktogether/shared-utils';
 import { RouteMap } from '@/components/map/route-map';
 import { Button, Card, ErrorState, Loading } from '@/components/ui';
 import { Screen } from '@/components/screen';

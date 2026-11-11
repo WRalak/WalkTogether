@@ -17,12 +17,10 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc tsconfig.base.json .
 COPY server/package.json server/
 COPY packages/shared-types/package.json packages/shared-types/
 COPY packages/validation/package.json packages/validation/
-COPY packages/gps/package.json packages/gps/
 COPY packages/shared-utils/package.json packages/shared-utils/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter @walktogether/server...
 COPY packages/shared-types packages/shared-types
 COPY packages/validation packages/validation
-COPY packages/gps packages/gps
 COPY packages/shared-utils packages/shared-utils
 COPY server server
 RUN pnpm --filter @walktogether/server exec prisma generate && pnpm --filter @walktogether/server build

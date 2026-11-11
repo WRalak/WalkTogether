@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ENTITLEMENTS, type EntitlementKey } from '@walktogether/shared-types';
-import { Field, Input, Select } from '@walktogether/ui';
+import { Field, Input, Select } from '@/components/ui';
 import { adminApi } from '@/lib/api';
 import { Button, DataTable, money, Section, StatusBadge, useAction } from '@/features/ui';
 

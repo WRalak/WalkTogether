@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Alert, Badge, Button, Card, CardContent, Spinner, Table, Td, Th } from '@walktogether/ui';
+import { Alert, Badge, Button, Card, CardContent, Spinner, Table, Td, Th } from '@/components/ui';
 import { errorMessage } from '@/lib/errors';
 
 export { formatMoney as money, formatMoneyMap as fmtMoneyMap } from '@walktogether/shared-utils';

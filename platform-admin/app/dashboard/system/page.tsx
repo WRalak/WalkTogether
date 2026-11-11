@@ -1,6 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import { Spinner, Stat } from '@walktogether/ui';
+import { Spinner, Stat } from '@/components/ui';
 import { adminApi } from '@/lib/api';
 import { JsonBlock, Section, StatusBadge } from '@/features/ui';
 

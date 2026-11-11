@@ -1,8 +1,13 @@
 # WalkTogether Platform admin (`platform-admin/`)
 
-The WalkTogether operator console: users, clubs, subscriptions, payments and refunds, sponsors and campaigns, challenges and badges, moderation, analytics, audit logs, security monitoring, system health, settings and administrators. Separate identity (admin accounts) with mandatory TOTP MFA.
+The **only web application** of WalkTogether, used exclusively by the platform owner's staff for
+platform-level administration: approve, suspend and manage clubs; manage users; monitor subscriptions
+and revenue; payments and refunds; sponsorships and competitions; platform-wide activity and events;
+reports; moderation cases; settings, feature flags and administrator permissions. Club administration
+is not here — it lives in the mobile app. Separate identity (admin accounts), separate JWT secret and
+mandatory TOTP MFA; every action is audit-logged.
 
-Next.js 15 (App Router), Tailwind, `@walktogether/ui`. **Hosted on its own** (`admin.walktogether.app`).
+Next.js 15 (App Router), Tailwind, shadcn-style components in `components/ui`. **Hosted on its own** (`admin.walktogether.app`).
 See [`../docs/deployment/HOSTING.md`](../docs/deployment/HOSTING.md).
 
 ## Layout
@@ -11,9 +16,11 @@ See [`../docs/deployment/HOSTING.md`](../docs/deployment/HOSTING.md).
 app/
   (auth)/login        password + TOTP MFA (enrolment forced on first sign-in)
   dashboard/
-    overview/ users/ clubs/ subscriptions/ payments/ sponsors/ campaigns/ challenges/
-    moderation/ analytics/ audit-logs/ settings/ security/ system/ admins/
-components/
+    overview/ clubs/ users/ subscriptions/ payments/ sponsorships/ (+ competitions/) events/
+    analytics/ reports/ moderation/ settings/ audit-logs/ security/ system/ admins/
+components/ui/        Button, Field, Input, Table, Badge… (Tailwind + Radix Slot)
+styles/base.css       design tokens (CSS variables, light/dark)
+tailwind.preset.cjs   Tailwind theme
 features/             admin login, tables, status actions
 lib/                  admin api client, auth, errors
 ```

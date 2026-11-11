@@ -1,7 +1,7 @@
 name: Shared checks
 
 # Repository-wide checks. Each deployable folder also has its own workflow
-# (server.yml, website.yml, club-admin.yml, platform-admin.yml, mobile.yml) that runs
+# (server.yml, platform-admin.yml, mobile.yml) that runs
 # only when that folder or a shared package it uses changes.
 on:
   push:
@@ -37,7 +37,6 @@ jobs:
         run: |
           pnpm --filter @walktogether/validation test
           pnpm --filter @walktogether/shared-utils test
-          pnpm --filter @walktogether/gps test
           pnpm --filter @walktogether/api-client test
 
   security:

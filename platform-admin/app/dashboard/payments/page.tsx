@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Field, Select } from '@walktogether/ui';
+import { Field, Select } from '@/components/ui';
 import { adminApi } from '@/lib/api';
 import { Button, DataTable, money, Section, StatusBadge, useAction } from '@/features/ui';
 

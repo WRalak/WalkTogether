@@ -2,8 +2,6 @@
 # Every application lives at the repository root — there is no apps/ directory.
 packages:
   - "server"
-  - "website"
-  - "club-admin"
   - "platform-admin"
   - "mobile"
   - "packages/*"

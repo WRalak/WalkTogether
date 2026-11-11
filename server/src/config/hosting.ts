@@ -1,8 +1,8 @@
 /**
- * Split-hosting helpers. The website, club dashboard and platform admin are deployed separately from
- * the API. Web sign-in relies on a SameSite=Strict, httpOnly refresh cookie set by the API, which
- * browsers only send when the dashboard and the API are on the same *site* (same registrable domain),
- * e.g. clubs.walktogether.app → api.walktogether.app. Platform default domains such as *.vercel.app
+ * Split-hosting helpers. The platform admin web app is deployed separately from the API. Its sign-in
+ * relies on a SameSite=Strict, httpOnly refresh cookie set by the API, which browsers only send when
+ * the web app and the API are on the same *site* (same registrable domain),
+ * e.g. admin.walktogether.app → api.walktogether.app. Platform default domains such as *.vercel.app
  * and *.onrender.com are different sites, so sign-in from them silently fails.
  */
 

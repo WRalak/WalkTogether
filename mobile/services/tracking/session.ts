@@ -1,4 +1,4 @@
-import { TrackingEngine, type ActivityKind, type EngineSnapshot } from '@walktogether/gps';
+import { TrackingEngine, type ActivityKind, type EngineSnapshot } from '@walktogether/shared-utils';
 import type { LocalActivity, LocalPoint, TrackingRepository } from './types';
 
 export interface LocationFix {

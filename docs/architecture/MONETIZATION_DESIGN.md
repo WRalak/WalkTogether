@@ -16,7 +16,7 @@ build on.
   A club subscription never grants members individual premium entitlements.
 * **Basic personal GPS tracking is always free** and never depends on any club's plan.
 * Prices, intervals, trials, limits and entitlements are **data, not code** — managed in the platform
-  admin. The marketing site does not hardcode prices.
+  admin. No app hardcodes prices: the mobile app and platform admin read the live catalogue.
 * A subscription is activated **only** after a verified provider confirmation (webhook with valid
   signature or a server-side status query). Client "success" screens are informational only.
 * When a subscription lapses: grace period → downgrade entitlements; **no data is deleted**; history is

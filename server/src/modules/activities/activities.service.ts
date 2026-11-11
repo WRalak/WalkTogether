@@ -1,5 +1,5 @@
 import { Prisma, type ActivityType } from '@prisma/client';
-import { decodePolyline, encodePolyline, privateDisplayRoute } from '@walktogether/gps';
+import { decodePolyline, encodePolyline, privateDisplayRoute } from '@walktogether/shared-utils';
 import { prisma } from '../../database/prisma';
 import { enqueue } from '../../queues';
 import { badRequest, conflict, forbidden, notFound } from '../../shared/errors';

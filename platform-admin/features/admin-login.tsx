@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
-import { Alert, Button, Field, Input } from '@walktogether/ui';
+import { Alert, Button, Field, Input } from '@/components/ui';
 import { adminApi } from '@/lib/api';
 import { useAdminAuth } from '@/lib/auth';
 import { errorMessage } from '@/lib/errors';

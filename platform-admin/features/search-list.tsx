@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Button, Input, Select } from '@walktogether/ui';
+import { Button, Input, Select } from '@/components/ui';
 
 export function SearchBar({ statuses, onSearch }: { statuses: string[]; onSearch: (q: string, status: string) => void }) {
   const [q, setQ] = useState('');

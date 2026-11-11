@@ -37,8 +37,8 @@ describe('HTTP hardening', () => {
   it('does not grant CORS to unknown origins', async () => {
     const evil = await api().get('/health/live').set('Origin', 'https://evil.example');
     expect(evil.headers['access-control-allow-origin']).toBeUndefined();
-    const good = await api().get('/health/live').set('Origin', 'http://localhost:3001');
-    expect(good.headers['access-control-allow-origin']).toBe('http://localhost:3001');
+    const good = await api().get('/health/live').set('Origin', 'http://localhost:3002');
+    expect(good.headers['access-control-allow-origin']).toBe('http://localhost:3002');
   });
 
   it('rejects oversized and malformed JSON bodies without leaking internals', async () => {
