@@ -12,6 +12,16 @@ const { logger } = await import('./shared/logger');
 const { syncPermissionCatalog } = await import('./modules/platform/catalog');
 
 await syncPermissionCatalog();
+
+if (env.NODE_ENV === 'production' || env.NODE_ENV === 'staging') {
+  const { crossSiteOrigins } = await import('./config/hosting');
+  const crossSite = crossSiteOrigins(env.API_PUBLIC_URL, env.CORS_ORIGINS);
+  if (crossSite.length)
+    logger.warn(
+      { origins: crossSite, api: env.API_PUBLIC_URL },
+      'These web origins are not on the same site as the API: browser sign-in (SameSite=Strict refresh cookie) will fail there. Host every app on subdomains of one domain.',
+    );
+}
 const app = createApp();
 const server = app.listen(env.PORT, () => logger.info({ port: env.PORT }, 'WalkTogether API listening'));
 server.requestTimeout = 30_000;

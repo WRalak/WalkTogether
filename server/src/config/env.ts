@@ -128,6 +128,9 @@ function loadEnv(): Env {
       if (/change[-_]?me|dev|example/i.test(env[k])) problems.push(`${k} looks like a placeholder`);
     }
     if (env.JWT_ACCESS_SECRET === env.JWT_ADMIN_SECRET) problems.push('JWT_ACCESS_SECRET and JWT_ADMIN_SECRET must differ');
+    const insecure = env.CORS_ORIGINS.filter((o) => !o.startsWith('https://'));
+    if (insecure.length) problems.push(`CORS_ORIGINS must all be https:// (got ${insecure.join(', ')})`);
+    if (!env.API_PUBLIC_URL.startsWith('https://')) problems.push('API_PUBLIC_URL must be https://');
     if (problems.length) throw new Error(`Unsafe ${env.NODE_ENV} configuration:\n  ${problems.join('\n  ')}`);
   }
   return env;

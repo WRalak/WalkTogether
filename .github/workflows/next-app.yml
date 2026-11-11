@@ -1,0 +1,44 @@
+name: Next.js app (reusable)
+
+# Called by website.yml, club-admin.yml and platform-admin.yml.
+on:
+  workflow_call:
+    inputs:
+      app:
+        required: true
+        type: string
+
+env:
+  CHECKPOINT_DISABLE: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile --filter @walktogether/${{ inputs.app }}...
+      - run: pnpm --filter @walktogether/${{ inputs.app }} typecheck
+      - run: pnpm --filter @walktogether/${{ inputs.app }} test
+      - run: pnpm --filter @walktogether/${{ inputs.app }} build
+
+  image:
+    runs-on: ubuntu-latest
+    needs: [test-and-build]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build ${{ inputs.app }} image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ inputs.app }}/Dockerfile
+          push: false
+          tags: walktogether-${{ inputs.app }}:ci
+          cache-from: type=gha,scope=${{ inputs.app }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.app }}

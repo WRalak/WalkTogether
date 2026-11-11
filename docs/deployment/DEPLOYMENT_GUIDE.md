@@ -28,20 +28,26 @@ member/admin JWT secrets.
 
 ## 3. Images
 
+Each deployable folder owns its Dockerfile; all are built from the repository root (they compile
+shared code from `packages/`). See [`HOSTING.md`](HOSTING.md) for the full hosting map.
+
 ```bash
-docker build -f infrastructure/docker/server.Dockerfile -t walktogether-api .
+docker build -f server/Dockerfile -t walktogether-api .
 ```
 
 ```bash
-docker build -f infrastructure/docker/next-app.Dockerfile --build-arg APP=website --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app --build-arg NEXT_PUBLIC_SITE_URL=https://walktogether.app --build-arg NEXT_PUBLIC_CLUB_ADMIN_URL=https://clubs.walktogether.app -t walktogether-website .
+docker build -f apps/website/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app --build-arg NEXT_PUBLIC_SITE_URL=https://walktogether.app --build-arg NEXT_PUBLIC_CLUB_ADMIN_URL=https://clubs.walktogether.app -t walktogether-website .
 ```
 
-Repeat with `APP=club-admin` and `APP=platform-admin`. The API image runs `node dist/main.js` by
-default; the worker uses `node dist/worker.js`; migrations use `npx prisma migrate deploy`.
+`apps/club-admin/Dockerfile` and `apps/platform-admin/Dockerfile` work the same way. The API image
+runs `node dist/main.js` by default; the worker uses `node dist/worker.js`; migrations use
+`npx prisma migrate deploy`. The web apps can alternatively be deployed to Vercel using the
+`vercel.json` in each app folder.
 
-All four images are built on every CI run (`docker-images` job); the API image is additionally
-smoke-tested to confirm it refuses to start with an unsafe production configuration. The API image
-includes `ffmpeg` for video transcoding.
+Each unit's CI workflow (`server.yml`, `website.yml`, `club-admin.yml`, `platform-admin.yml`) builds
+its image when that unit or a shared package changes; the API image is additionally smoke-tested to
+confirm it refuses to start with an unsafe production configuration. The API image includes `ffmpeg`
+for video transcoding.
 
 ## 4. Release procedure
 

@@ -39,3 +39,15 @@ describe('cursor pagination', () => {
     expect(() => decodeCursor('garbage')).toThrow();
   });
 });
+
+describe('split hosting', () => {
+  it('detects web origins that cannot share the API refresh cookie', async () => {
+    const { crossSiteOrigins, registrableDomain } = await import('../src/config/hosting');
+    expect(registrableDomain('api.walktogether.app')).toBe('walktogether.app');
+    expect(registrableDomain('clubs.walktogether.co.ke')).toBe('walktogether.co.ke');
+    expect(
+      crossSiteOrigins('https://api.walktogether.app', ['https://walktogether.app', 'https://clubs.walktogether.app', 'https://admin.walktogether.app', 'https://wt-clubs.vercel.app']),
+    ).toEqual(['https://wt-clubs.vercel.app']);
+    expect(crossSiteOrigins('https://api.walktogether.co.ke', ['https://clubs.walktogether.co.ke', 'https://other.co.ke'])).toEqual(['https://other.co.ke']);
+  });
+});

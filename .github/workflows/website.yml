@@ -1,0 +1,38 @@
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/website/**'
+      - 'packages/**'
+      - '!packages/gps/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/website.yml'
+      - '.github/workflows/next-app.yml'
+  pull_request:
+    paths:
+      - 'apps/website/**'
+      - 'packages/**'
+      - '!packages/gps/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/website.yml'
+      - '.github/workflows/next-app.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: website-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CHECKPOINT_DISABLE: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  app:
+    uses: ./.github/workflows/next-app.yml
+    with:
+      app: website

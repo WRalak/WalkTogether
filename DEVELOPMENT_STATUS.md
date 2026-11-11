@@ -52,14 +52,14 @@ API, sponsor portal entry, email-link pages.
 
 | Suite | Tests |
 | --- | --- |
-| Server integration/unit (16 files: auth, users, clubs, tenant isolation, security, phase 2, activities, events, social/media/video/messaging, challenges, payments/sponsorships, M-Pesa (mocked Daraja), platform admin, admin, journey, unit) | 155 |
+| Server integration/unit (16 files: auth, users, clubs, tenant isolation, security, phase 2, activities, events, social/media/video/messaging, challenges, payments/sponsorships, M-Pesa (mocked Daraja), platform admin, admin, journey, unit) | 156 |
 | `packages/gps` | 8 |
 | `packages/validation` | 6 |
 | `packages/api-client` | 4 |
 | `packages/shared-utils` | 4 |
 | Web apps (website, club-admin, platform-admin) | 5 |
 | Mobile (Jest: schemas, token store, tracking session, offline sync, QR parsing, component) | 9 |
-| **Total** | **191** |
+| **Total** | **192** |
 
 Also verified: workspace typecheck; GitHub Actions CI (typecheck, unit, integration against
 PostGIS/Redis service containers, migration drift check, production builds of all Next.js apps,

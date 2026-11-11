@@ -30,7 +30,7 @@ services:
 
   migrate:
     profiles: [app]
-    build: { context: ., dockerfile: infrastructure/docker/server.Dockerfile }
+    build: { context: ., dockerfile: server/Dockerfile }
     entrypoint: ['npx', 'prisma', 'migrate', 'deploy']
     env_file: server/.env
     environment:
@@ -39,7 +39,7 @@ services:
 
   api:
     profiles: [app]
-    build: { context: ., dockerfile: infrastructure/docker/server.Dockerfile }
+    build: { context: ., dockerfile: server/Dockerfile }
     env_file: server/.env
     environment:
       DATABASE_URL: postgresql://walktogether:walktogether@postgres:5432/walktogether?schema=public
@@ -51,7 +51,7 @@ services:
 
   worker:
     profiles: [app]
-    build: { context: ., dockerfile: infrastructure/docker/server.Dockerfile }
+    build: { context: ., dockerfile: server/Dockerfile }
     command: ['node', 'dist/worker.js']
     env_file: server/.env
     environment:

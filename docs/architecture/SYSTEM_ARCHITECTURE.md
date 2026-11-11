@@ -86,7 +86,8 @@ packages/
   ui/               shadcn-style React components for the web apps
   gps/              GPS filtering, statistics, tracking engine, polyline, privacy trimming
   configuration/    shared Tailwind preset/tokens and tsconfig
-infrastructure/     docker/, nginx/, deployment/ (backup + restore drill)
+infrastructure/     docker/ (local Postgres init), nginx/ (self-hosting), deployment/ (backup + restore drill)
+                    Each deployable unit keeps its own Dockerfile / vercel.json / eas.json and README.
 docs/               this documentation
 ```
 

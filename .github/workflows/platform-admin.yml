@@ -1,0 +1,38 @@
+name: Platform admin
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/platform-admin/**'
+      - 'packages/**'
+      - '!packages/gps/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/platform-admin.yml'
+      - '.github/workflows/next-app.yml'
+  pull_request:
+    paths:
+      - 'apps/platform-admin/**'
+      - 'packages/**'
+      - '!packages/gps/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/platform-admin.yml'
+      - '.github/workflows/next-app.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: platform-admin-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CHECKPOINT_DISABLE: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  app:
+    uses: ./.github/workflows/next-app.yml
+    with:
+      app: platform-admin

@@ -1,12 +1,16 @@
-name: CI
+name: Shared checks
 
+# Repository-wide checks. Each deployable folder also has its own workflow
+# (server.yml, website.yml, club-admin.yml, platform-admin.yml, mobile.yml) that runs
+# only when that folder or a shared package it uses changes.
 on:
   push:
-    branches: [main, 'claude/**']
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: shared-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -17,7 +21,7 @@ env:
   NEXT_TELEMETRY_DISABLED: '1'
 
 jobs:
-  typecheck-and-unit:
+  typecheck-and-packages:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -27,72 +31,14 @@ jobs:
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @walktogether/server exec prisma generate
-      - run: pnpm -r --parallel typecheck
-      - name: Package & web unit tests
+      - name: Typecheck every workspace
+        run: pnpm -r --parallel typecheck
+      - name: Shared package tests
         run: |
           pnpm --filter @walktogether/validation test
           pnpm --filter @walktogether/shared-utils test
           pnpm --filter @walktogether/gps test
           pnpm --filter @walktogether/api-client test
-          pnpm --filter @walktogether/website test
-          pnpm --filter @walktogether/club-admin test
-          pnpm --filter @walktogether/platform-admin test
-      - name: Mobile tests
-        run: pnpm --filter @walktogether/mobile test
-
-  server-integration:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    services:
-      postgres:
-        image: postgis/postgis:16-3.4
-        env:
-          POSTGRES_USER: walktogether
-          POSTGRES_PASSWORD: walktogether
-          POSTGRES_DB: walktogether_test
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U walktogether" --health-interval 5s --health-retries 10
-      redis:
-        image: redis:7-alpine
-        ports: ['6379:6379']
-        options: >-
-          --health-cmd "redis-cli ping" --health-interval 5s --health-retries 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @walktogether/server exec prisma generate
-      - name: Install ffmpeg (video pipeline tests)
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
-      - name: API, auth, authorization & tenant-isolation tests
-        run: pnpm --filter @walktogether/server test
-      - name: Migration drift check (schema.prisma vs migrations)
-        working-directory: server
-        run: |
-          PGPASSWORD=walktogether psql -h localhost -U walktogether -d walktogether_test -c 'CREATE DATABASE walktogether_shadow'
-          npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma \
-            --shadow-database-url postgresql://walktogether:walktogether@localhost:5432/walktogether_shadow --exit-code
-
-  build:
-    runs-on: ubuntu-latest
-    needs: [typecheck-and-unit]
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @walktogether/server exec prisma generate
-      - run: pnpm --filter @walktogether/server build
-      - run: pnpm --filter @walktogether/website build
-      - run: pnpm --filter @walktogether/club-admin build
-      - run: pnpm --filter @walktogether/platform-admin build
-      - name: Mobile JS bundle compiles (Android)
-        run: pnpm --filter @walktogether/mobile bundle:check
 
   security:
     runs-on: ubuntu-latest
@@ -111,38 +57,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
 
-  docker-images:
-    runs-on: ubuntu-latest
-    needs: [typecheck-and-unit]
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { name: api, file: infrastructure/docker/server.Dockerfile, args: '' }
-          - { name: website, file: infrastructure/docker/next-app.Dockerfile, args: 'APP=website' }
-          - { name: club-admin, file: infrastructure/docker/next-app.Dockerfile, args: 'APP=club-admin' }
-          - { name: platform-admin, file: infrastructure/docker/next-app.Dockerfile, args: 'APP=platform-admin' }
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - name: Build ${{ matrix.name }} image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ matrix.file }}
-          build-args: ${{ matrix.args }}
-          push: false
-          load: ${{ matrix.name == 'api' }}
-          tags: walktogether-${{ matrix.name }}:ci
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
-      - name: Smoke-test API image (boots and refuses unsafe production config)
-        if: matrix.name == 'api'
-        run: |
-          set +e
-          out=$(docker run --rm -e NODE_ENV=production -e DATABASE_URL=postgresql://x:y@localhost/db \
-            -e JWT_ACCESS_SECRET=$(openssl rand -hex 32) -e JWT_ADMIN_SECRET=$(openssl rand -hex 32) \
-            -e TOKEN_HASH_SECRET=$(openssl rand -hex 32) -e ENCRYPTION_KEY=$(openssl rand -base64 32) walktogether-api:ci 2>&1)
-          echo "$out" | tail -20
-          echo "$out" | grep -q "Unsafe production configuration" || { echo "expected the configuration guard to refuse start"; exit 1; }

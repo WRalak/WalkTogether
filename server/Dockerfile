@@ -1,6 +1,12 @@
 # syntax=docker/dockerfile:1.7
-# WalkTogether API + worker image. Build from the repository root:
-#   docker build -f infrastructure/docker/server.Dockerfile -t walktogether-api .
+# WalkTogether API + background worker (one image, three roles).
+#
+# Build from the REPOSITORY ROOT (the server bundles shared code from packages/):
+#   docker build -f server/Dockerfile -t walktogether-api .
+# Run as:
+#   API     (default)  node dist/main.js
+#   Worker             node dist/worker.js
+#   Migrate (release)  npx prisma migrate deploy
 FROM node:22-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CHECKPOINT_DISABLE=1 NEXT_TELEMETRY_DISABLED=1
 RUN corepack enable && apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
