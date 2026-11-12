@@ -14,6 +14,7 @@ export const usernameSchema = z
   .toLowerCase()
   .min(3)
   .max(30)
+  // eslint-disable-next-line security/detect-unsafe-regex -- linear: anchored, alternatives cannot overlap (≈1 ms on 100 KB input, see security/GAP_ANALYSIS.md)
   .regex(/^[a-z0-9](?:[a-z0-9_.]*[a-z0-9])?$/, 'Use letters, numbers, dots and underscores; no leading/trailing symbols');
 
 /** Passwords: length is the dominant factor; we also block trivially weak choices. */

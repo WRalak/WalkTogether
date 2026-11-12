@@ -10,7 +10,6 @@ export function notFoundHandler(req: Request, res: Response) {
   res.status(404).json({ error: { code: 'ROUTE_NOT_FOUND', message: 'Route not found', requestId: req.requestId } });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   const requestId = req.requestId;
 

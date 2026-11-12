@@ -46,6 +46,7 @@ export const listEventsQuerySchema = cursorPaginationSchema
   .strict();
 
 export const discoverEventsQuerySchema = cursorPaginationSchema
+  // eslint-disable-next-line security/detect-unsafe-regex -- linear: anchored, alternatives cannot overlap (≈1 ms on 100 KB input, see security/GAP_ANALYSIS.md)
   .extend({ near: z.string().regex(/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/).optional(), radiusKm: z.coerce.number().min(1).max(500).default(50), type: z.enum(EVENT_TYPES).optional() })
   .strict();
 

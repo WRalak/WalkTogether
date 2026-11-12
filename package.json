@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "version": "0.1.0",
-  "description": "WalkTogether \u2014 multi-club fitness social network and SaaS platform",
+  "description": "WalkTogether — multi-club fitness social network and SaaS platform",
   "packageManager": "npm@10.9.2",
   "engines": {
     "node": ">=22.0.0",
@@ -35,6 +35,13 @@
     "deepmerge-ts@<8": "8.0.0"
   },
   "devDependencies": {
-    "audit-ci": "7.1.0"
+    "@eslint/js": "9.39.5",
+    "audit-ci": "7.1.0",
+    "eslint": "9.39.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-security": "4.2.1",
+    "globals": "17.14.0",
+    "prettier": "3.10.1",
+    "typescript-eslint": "8.72.2"
   }
 }

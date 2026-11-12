@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-import type { LocalActivity, LocalPoint, TrackingRepository } from './types';
+import type { LocalActivity, TrackingRepository } from './types';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 

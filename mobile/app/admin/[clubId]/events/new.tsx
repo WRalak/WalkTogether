@@ -47,7 +47,7 @@ export default function NewEvent() {
   const [locating, setLocating] = useState(false);
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
 
-  const useHere = async () => {
+  const pinCurrentLocation = async () => {
     setLocating(true);
     setError(null);
     try {
@@ -110,7 +110,7 @@ export default function NewEvent() {
           title={f.lat != null ? `Pinned at ${f.lat}, ${f.lng} — update` : 'Pin meeting point to my location'}
           variant="secondary"
           loading={locating}
-          onPress={() => void useHere()}
+          onPress={() => void pinCurrentLocation()}
         />
         {f.lat != null && <Button title="Remove pin" variant="ghost" onPress={() => setF((p) => ({ ...p, lat: null, lng: null }))} />}
       </View>

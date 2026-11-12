@@ -13,6 +13,7 @@ export const clubSlugSchema = z
   .toLowerCase()
   .min(3)
   .max(50)
+  // eslint-disable-next-line security/detect-unsafe-regex -- linear: anchored, alternatives cannot overlap (≈1 ms on 100 KB input, see security/GAP_ANALYSIS.md)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug may contain lowercase letters, numbers and single hyphens')
   .refine((s) => !RESERVED_CLUB_SLUGS.includes(s), 'This slug is reserved');
 
@@ -86,6 +87,7 @@ export const listClubsQuerySchema = cursorPaginationSchema
     countryCode: countryCodeSchema.optional(),
     near: z
       .string()
+      // eslint-disable-next-line security/detect-unsafe-regex -- linear: anchored, alternatives cannot overlap (≈1 ms on 100 KB input, see security/GAP_ANALYSIS.md)
       .regex(/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/, 'near must be "lat,lng"')
       .optional(),
     radiusKm: z.coerce.number().min(1).max(500).default(25),

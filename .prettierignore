@@ -1,0 +1,11 @@
+node_modules
+dist
+.next
+.expo
+coverage
+package-lock.json
+server/prisma/migrations
+mobile/android
+mobile/ios
+*.md
+infrastructure/monitoring/grafana/dashboards

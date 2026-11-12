@@ -23,6 +23,7 @@ class ConsoleEmailProvider implements EmailProvider {
     // Development only: the body may contain one-time links, so it is printed only outside deployed envs
     // (env validation forbids the console provider in staging/production).
     logger.info({ to: message.to, subject: message.subject }, 'email (console provider)');
+    // eslint-disable-next-line no-console -- development-only console provider; refused in staging/production
     if (env.NODE_ENV === 'development') console.log(`\n--- EMAIL to ${message.to}: ${message.subject}\n${message.text}\n---\n`);
   }
 }

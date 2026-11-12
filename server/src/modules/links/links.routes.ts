@@ -59,6 +59,7 @@ linksRouter.post('/links/reset-password', authLimiter, form, async (req, res) =>
   const body = z.object({ token, password: z.string(), confirm: z.string() }).safeParse(req.body);
   if (!body.success) return send(res, page('Link invalid', '<h1>This reset link is invalid</h1><p>Request a new one from the app.</p>', { status: 'error' }), 400);
   const { token: t, password, confirm } = body.data;
+  // eslint-disable-next-line security/detect-possible-timing-attacks -- both values are the user's own input, not a secret
   if (password !== confirm) return send(res, resetForm(t, 'The passwords don’t match.'), 400);
   const strength = passwordSchema.safeParse(password);
   if (!strength.success) return send(res, resetForm(t, strength.error.issues[0]?.message ?? 'Choose a stronger password.'), 400);

@@ -13,6 +13,7 @@ export const campaignCheckoutSchema = z.object({ provider: z.string().min(2).max
 export const sponsorSchema = z
   .object({
     name: z.string().trim().min(2).max(120),
+    // eslint-disable-next-line security/detect-unsafe-regex -- linear: anchored, alternatives cannot overlap (≈1 ms on 100 KB input, see security/GAP_ANALYSIS.md)
     slug: z.string().trim().toLowerCase().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).min(3).max(60),
     description: z.string().trim().max(2000).nullable().optional(),
     websiteUrl: urlSchema.nullable().optional(),
