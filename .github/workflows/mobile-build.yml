@@ -1,0 +1,89 @@
+name: Mobile build
+
+# The Expo app ships through EAS, not a server. Every change is typechecked, unit-tested and
+# bundled; the release configuration is checked for mobile security settings (MASVS-NETWORK /
+# MASVS-STORAGE). Store builds run on version tags when EXPO_TOKEN is configured.
+on:
+  push:
+    branches: [main]
+    tags: ['mobile-v*']
+    paths:
+      - 'mobile/**'
+      - 'packages/**'
+      - 'package-lock.json'
+      - '.github/workflows/mobile-build.yml'
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'packages/**'
+      - 'package-lock.json'
+      - '.github/workflows/mobile-build.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - name: Install from lockfile
+        run: npm ci -w @walktogether/mobile
+      - run: npm run typecheck -w @walktogether/mobile
+      - run: npm run test -w @walktogether/mobile
+      - name: Release configuration is hardened
+        working-directory: mobile
+        env:
+          EAS_BUILD_PROFILE: production
+          EXPO_PUBLIC_API_URL: https://api.walktogether.app
+        run: |
+          npx expo config --type public --json > "$RUNNER_TEMP/expo.json"
+          node -e '
+            const c = require(process.argv[1]);
+            const fail = (m) => { console.error("::error::" + m); process.exit(1); };
+            if (c.android?.allowBackup !== false) fail("android.allowBackup must be false");
+            const props = (c.plugins || []).find((p) => Array.isArray(p) && p[0] === "expo-build-properties");
+            if (props?.[1]?.android?.usesCleartextTraffic !== false) fail("cleartext traffic must be disabled in release builds");
+            if (!String(c.extra?.apiUrl).startsWith("https://")) fail("release API URL must be https");
+            console.log("release configuration OK");
+          ' "$RUNNER_TEMP/expo.json"
+      - name: Release builds refuse a non-HTTPS API URL
+        working-directory: mobile
+        env:
+          EAS_BUILD_PROFILE: production
+          EXPO_PUBLIC_API_URL: http://api.walktogether.app
+        run: |
+          if npx expo config --type public > /dev/null 2>&1; then echo "::error::an http API URL was accepted for a release build"; exit 1; fi
+          echo "http API URL correctly rejected"
+      - name: Android JS bundle compiles
+        run: npm run bundle:check -w @walktogether/mobile
+
+  eas-build:
+    needs: [test-and-bundle]
+    if: startsWith(github.ref, 'refs/tags/mobile-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: mobile-release
+    steps:
+      - name: Require EXPO_TOKEN
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then echo "::error::EXPO_TOKEN is not configured for the mobile-release environment"; exit 1; fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci -w @walktogether/mobile
+      - name: Production store build (Android + iOS) on EAS
+        working-directory: mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx eas-cli@16.32.0 build --profile production --platform all --non-interactive --no-wait

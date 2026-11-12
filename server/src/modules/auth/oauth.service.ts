@@ -35,7 +35,8 @@ export async function verifyIdToken(provider: Provider, idToken: string): Promis
   if (!audiences.length) throw new AppError(503, 'PROVIDER_NOT_CONFIGURED', `${provider} sign-in is not configured on this server`);
   let payload: JWTPayload & { email?: string; email_verified?: boolean | string; name?: string };
   try {
-    ({ payload } = await jwtVerify(idToken, cfg.jwks, { issuer: cfg.issuers, audience: audiences }));
+    // Google and Apple sign ID tokens with RS256; pinning it rules out algorithm-confusion attacks.
+    ({ payload } = await jwtVerify(idToken, cfg.jwks, { issuer: cfg.issuers, audience: audiences, algorithms: ['RS256'] }));
   } catch {
     throw unauthorized('Could not verify sign-in with provider', 'INVALID_ID_TOKEN');
   }

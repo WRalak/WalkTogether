@@ -1,0 +1,137 @@
+name: Deploy production
+
+# Stages 16–18: approval, production deploy, health verification.
+# Only image digests that deploy-staging.yml built, scanned and signed from main can be deployed:
+# the Cosign signature identity is checked here and again on the host. The images are re-scanned
+# against today's vulnerability data; a CRITICAL finding blocks the release unless it has a
+# documented, approved, unexpired exception in security/vulnerability-management/exceptions.yaml.
+# The `production` environment must be configured with required reviewers (GitHub settings).
+on:
+  workflow_dispatch:
+    inputs:
+      api_image:
+        description: 'API image by digest (ghcr.io/…/walktogether-api@sha256:…) from the Deploy staging summary'
+        required: true
+      platform_admin_image:
+        description: 'Platform admin image by digest (ghcr.io/…/walktogether-platform-admin@sha256:…)'
+        required: true
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  TRIVY_IMAGE: aquasec/trivy:0.57.1
+  API: ${{ inputs.api_image }}
+  ADMIN: ${{ inputs.platform_admin_image }}
+
+jobs:
+  verify:
+    name: Verify signatures and re-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inputs are immutable digests from this repository's registry
+        run: |
+          prefix="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/walktogether"
+          [[ "$API" =~ ^${prefix}-api@sha256:[a-f0-9]{64}$ ]] || { echo "::error::api_image must be ${prefix}-api@sha256:…"; exit 1; }
+          [[ "$ADMIN" =~ ^${prefix}-platform-admin@sha256:[a-f0-9]{64}$ ]] || { echo "::error::platform_admin_image must be ${prefix}-platform-admin@sha256:…"; exit 1; }
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: sigstore/cosign-installer@v3
+      - name: Cosign — signed by deploy-staging.yml on main
+        run: |
+          for ref in "$API" "$ADMIN"; do
+            cosign verify "$ref" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/deploy-staging.yml@refs/heads/main" \
+              > /dev/null
+            cosign verify-attestation "$ref" --type spdxjson \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/deploy-staging.yml@refs/heads/main" \
+              > /dev/null
+            echo "verified $ref"
+          done
+      - name: Source commit
+        id: sha
+        run: |
+          sha=$(docker buildx imagetools inspect "$API" --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}')
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::image has no source revision label"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Re-scan with current vulnerability data; exceptions must be valid and unexpired
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip install --quiet pyyaml==6.0.2
+          mkdir -p reports
+          docker run --rm -e TRIVY_USERNAME -e TRIVY_PASSWORD -v "$PWD/reports:/out" "$TRIVY_IMAGE" image --scanners vuln --severity CRITICAL --format json --output /out/api.json "$API"
+          docker run --rm -e TRIVY_USERNAME -e TRIVY_PASSWORD -v "$PWD/reports:/out" "$TRIVY_IMAGE" image --scanners vuln --severity CRITICAL --format json --output /out/admin.json "$ADMIN"
+          python3 security/vulnerability-management/check_exceptions.py reports/api.json reports/admin.json
+
+  deploy:
+    name: Deploy to production (requires approval)
+    needs: [verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_API_URL }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Production host is configured
+        run: |
+          if [ -z "${{ vars.PRODUCTION_INSTANCE_ID }}" ] || [ -z "${{ vars.PRODUCTION_API_URL }}" ]; then
+            echo "::error::Set PRODUCTION_INSTANCE_ID, PRODUCTION_API_URL and AWS_DEPLOY_ROLE_ARN on the production environment"; exit 1
+          fi
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'af-south-1' }}
+      - name: Run deploy.sh on the host through SSM (verifies signatures again, migrates, rolls back on failure)
+        env:
+          INSTANCE: ${{ vars.PRODUCTION_INSTANCE_ID }}
+          SHA: ${{ needs.verify.outputs.sha }}
+        run: |
+          cmd="cd /opt/walktogether && git fetch --depth 1 origin $SHA && git checkout --detach $SHA && infrastructure/deployment/deploy.sh production $API $ADMIN"
+          id=$(aws ssm send-command --instance-ids "$INSTANCE" --document-name AWS-RunShellScript \
+            --comment "walktogether production $SHA" --parameters "commands=[\"$cmd\"],executionTimeout=[\"1200\"]" \
+            --query Command.CommandId --output text)
+          aws ssm wait command-executed --command-id "$id" --instance-id "$INSTANCE" || true
+          aws ssm get-command-invocation --command-id "$id" --instance-id "$INSTANCE" --query '[Status,StandardOutputContent,StandardErrorContent]' --output text
+          [ "$(aws ssm get-command-invocation --command-id "$id" --instance-id "$INSTANCE" --query Status --output text)" = Success ]
+
+  verify-health:
+    name: Post-deploy health verification
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      API_URL: ${{ vars.PRODUCTION_API_URL }}
+    steps:
+      - name: Healthy for five consecutive minutes; edge controls in place
+        run: |
+          for i in $(seq 1 10); do curl -fsS --proto '=https' --tlsv1.2 "$API_URL/health/ready" > /dev/null; sleep 30; done
+          h=$(curl -fsSI "$API_URL/health/live")
+          for header in strict-transport-security x-content-type-options x-frame-options; do
+            echo "$h" | grep -qi "^$header:" || { echo "::error::missing $header"; exit 1; }
+          done
+          for path in /metrics /api/docs /api/v1/openapi.json; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$API_URL$path")
+            [ "$code" = 404 ] || { echo "::error::$path is exposed in production ($code)"; exit 1; }
+          done
+          echo "production healthy"

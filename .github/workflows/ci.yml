@@ -1,8 +1,10 @@
-name: Shared checks
+name: CI
 
-# Repository-wide checks. Each deployable folder also has its own workflow
-# (server.yml, platform-admin.yml, mobile.yml) that runs
-# only when that folder or a shared package it uses changes.
+# Pipeline stages 1–12 (see security/policies/DEPLOYMENT_SECURITY.md): checkout, lockfile install,
+# lint + format, typecheck, unit tests, integration tests (as the least-privilege DB role), API
+# security tests, migration drift, builds, container images, image scan gate and SBOM.
+# Security scanners that do not need a build (SAST, secrets, dependencies, IaC, DAST) live in
+# security-scan.yml. Nothing here is allowed to be skipped or soft-failed to get a green build.
 on:
   push:
     branches: [main]
@@ -10,7 +12,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: shared-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -19,9 +21,103 @@ permissions:
 env:
   CHECKPOINT_DISABLE: '1'
   NEXT_TELEMETRY_DISABLED: '1'
+  TRIVY_IMAGE: aquasec/trivy:0.57.1
+  SYFT_IMAGE: anchore/syft:v1.18.1
 
 jobs:
-  typecheck-and-packages:
+  lint-format:
+    name: Lint & format
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - name: Install from lockfile
+        run: npm ci
+      - run: npm run db:generate
+      - name: ESLint (incl. eslint-plugin-security, zero warnings)
+        run: npm run lint
+      - name: Prettier
+        run: npm run format:check
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run typecheck
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Shared packages
+        run: |
+          npm run test -w @walktogether/validation
+          npm run test -w @walktogether/shared-utils
+          npm run test -w @walktogether/api-client
+      - name: Platform admin
+        run: npm run test -w @walktogether/platform-admin
+
+  integration:
+    name: Integration & API security tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: walktogether
+          POSTGRES_PASSWORD: walktogether
+          POSTGRES_DB: walktogether_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U walktogether" --health-interval 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci -w @walktogether/server
+      - run: npm run db:generate
+      - name: Install ffmpeg and psql
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg postgresql-client
+      - name: Create the least-privilege application role (random, per-run password)
+        run: |
+          PW=$(openssl rand -hex 24)
+          echo "::add-mask::$PW"
+          PGPASSWORD=walktogether psql -h localhost -U walktogether -d walktogether_test -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE wt_app LOGIN NOINHERIT PASSWORD '$PW'"
+          echo "TEST_APP_DATABASE_URL=postgresql://wt_app:$PW@localhost:5432/walktogether_test?schema=public" >> "$GITHUB_ENV"
+      - name: API security tests (authentication, MFA, authorization, tenant isolation, abuse controls)
+        working-directory: server
+        run: npx vitest run test/security.test.ts test/tenant-isolation.test.ts test/mfa.test.ts test/auth.test.ts test/admin.test.ts
+      - name: Integration tests (whole API, as wt_app — no DDL, append-only audit and financial records)
+        run: npm run test -w @walktogether/server
+      - name: Migration drift check (schema.prisma vs migrations)
+        working-directory: server
+        run: |
+          PGPASSWORD=walktogether psql -h localhost -U walktogether -d walktogether_test -c 'CREATE DATABASE walktogether_shadow'
+          npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url postgresql://walktogether:walktogether@localhost:5432/walktogether_shadow --exit-code
+
+  build:
+    name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -30,30 +126,68 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run db:generate
-      - name: Typecheck every workspace
-        run: npm run typecheck
-      - name: Shared package tests
-        run: |
-          npm run test -w @walktogether/validation
-          npm run test -w @walktogether/shared-utils
-          npm run test -w @walktogether/api-client
+      - name: API
+        run: npm run build -w @walktogether/server
+      - name: Platform admin
+        run: npm run build -w @walktogether/platform-admin
 
-  security:
+  images:
+    name: Container images (build, smoke test, Trivy gate, SBOM)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    needs: [lint-format, typecheck, unit, integration, build]
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            dockerfile: infrastructure/docker/Dockerfile.api
+          - name: platform-admin
+            dockerfile: infrastructure/docker/Dockerfile.platform-admin
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
         with:
-          # gitleaks scans every commit in the push, so it needs the history, not just the tip.
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
-      - run: npm ci
-      - name: Dependency vulnerability scan (production deps)
-        run: npm run audit:prod
-      - name: Secret scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_CONFIG: .gitleaks.toml
-
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: walktogether-${{ matrix.name }}:ci
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+      - name: Image runs as a non-root user
+        run: |
+          user=$(docker image inspect walktogether-${{ matrix.name }}:ci --format '{{.Config.User}}')
+          echo "image user: '$user'"
+          case "$user" in ''|root|0|0:0) echo "::error::image must not run as root"; exit 1;; esac
+      - name: Smoke test (API refuses unsafe production configuration)
+        if: matrix.name == 'api'
+        run: |
+          set +e
+          out=$(docker run --rm -e NODE_ENV=production -e DATABASE_URL=postgresql://x:y@localhost/db \
+            -e JWT_ACCESS_SECRET=$(openssl rand -hex 32) -e JWT_ADMIN_SECRET=$(openssl rand -hex 32) \
+            -e TOKEN_HASH_SECRET=$(openssl rand -hex 32) -e ENCRYPTION_KEY=$(openssl rand -base64 32) walktogether-api:ci 2>&1)
+          echo "$out" | tail -20
+          echo "$out" | grep -q "Unsafe production configuration" || { echo "expected the configuration guard to refuse start"; exit 1; }
+      - name: Trivy image scan
+        run: |
+          mkdir -p reports
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/work" -w /work "$TRIVY_IMAGE" image \
+            --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed=false --format table walktogether-${{ matrix.name }}:ci
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/work" -w /work "$TRIVY_IMAGE" image \
+            --scanners vuln --severity CRITICAL --format json --output reports/trivy-${{ matrix.name }}.json walktogether-${{ matrix.name }}:ci
+      - name: Gate — no CRITICAL vulnerability without a documented, unexpired exception
+        run: |
+          pip install --quiet pyyaml==6.0.2
+          python3 security/vulnerability-management/check_exceptions.py reports/trivy-${{ matrix.name }}.json
+      - name: SBOM (Syft — SPDX and CycloneDX)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/reports:/out" "$SYFT_IMAGE" \
+            walktogether-${{ matrix.name }}:ci -o spdx-json=/out/sbom-${{ matrix.name }}.spdx.json -o cyclonedx-json=/out/sbom-${{ matrix.name }}.cdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-reports-${{ matrix.name }}
+          path: reports/
+          retention-days: 30

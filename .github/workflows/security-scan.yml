@@ -1,0 +1,220 @@
+name: Security scan
+
+# SAST (Semgrep), secret scanning (Gitleaks), dependency audit (npm audit via audit-ci),
+# filesystem/IaC scanning (Trivy, Checkov), configuration validation (Prometheus, Alertmanager,
+# nginx, Docker Compose, Terraform) and DAST (OWASP ZAP against a running API).
+# Runs on every push/PR and weekly, so newly published CVEs surface even without code changes.
+# Findings fail the job; exceptions are only possible through
+# security/vulnerability-management/exceptions.yaml (documented, owned, expiring).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CHECKPOINT_DISABLE: '1'
+  TRIVY_IMAGE: aquasec/trivy:0.57.1
+  SEMGREP_VERSION: '1.95.0'
+  CHECKOV_VERSION: '3.2.334'
+  ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:2.15.0
+
+jobs:
+  sast:
+    name: SAST (Semgrep)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install --quiet "semgrep==${SEMGREP_VERSION}"
+      - name: Custom rules have passing tests
+        run: |
+          cp security/semgrep/walktogether.yml security/semgrep/tests/walktogether.yml
+          semgrep --test security/semgrep/tests
+          rm security/semgrep/tests/walktogether.yml
+      - name: Scan (OWASP Top 10, Node/Express, TypeScript, React, secrets + WalkTogether rules)
+        run: |
+          semgrep scan --error --metrics=off --disable-version-check \
+            --config p/owasp-top-ten --config p/nodejsscan --config p/expressjs --config p/typescript \
+            --config p/react --config p/jwt --config p/secrets \
+            --config security/semgrep/walktogether.yml \
+            --exclude security/semgrep/tests --exclude '**/*.test.ts' --exclude '**/test/**' \
+            --sarif --output semgrep.sarif .
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: semgrep-sarif, path: semgrep.sarif, retention-days: 30 }
+
+  secrets:
+    name: Secret scan (Gitleaks, full history)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  dependencies:
+    name: Dependency scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - name: Lockfile is in sync with package.json files
+        run: npm ci --ignore-scripts
+      - name: npm audit (production dependencies; allowlist = documented exceptions)
+        run: npm run audit:prod
+      - name: Every audit-ci allowlist entry has an unexpired, documented exception
+        run: |
+          pip install --quiet pyyaml==6.0.2
+          python3 - <<'PY'
+          import json, re, pathlib, sys, yaml
+          raw = pathlib.Path('audit-ci.jsonc').read_text()
+          cfg = json.loads(re.sub(r'^\s*//.*$', '', raw, flags=re.M))
+          documented = {e['id'] for e in yaml.safe_load(pathlib.Path('security/vulnerability-management/exceptions.yaml').read_text())['exceptions']}
+          missing = [a for a in cfg.get('allowlist', []) if a not in documented]
+          if missing:
+              sys.exit(f'audit-ci allowlist entries without a documented exception: {missing}')
+          print('audit-ci allowlist matches the exception register')
+          PY
+          python3 security/vulnerability-management/check_exceptions.py
+      - name: Trivy filesystem scan (lockfile vulnerabilities, CRITICAL gate)
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work "$TRIVY_IMAGE" fs --scanners vuln --severity HIGH,CRITICAL \
+            --ignorefile security/vulnerability-management/trivyignore.yaml --format table .
+          docker run --rm -v "$PWD:/work" -w /work "$TRIVY_IMAGE" fs --scanners vuln --severity CRITICAL \
+            --ignorefile security/vulnerability-management/trivyignore.yaml --format json --output trivy-fs.json .
+          python3 security/vulnerability-management/check_exceptions.py trivy-fs.json
+
+  iac:
+    name: Infrastructure as code (Checkov, Trivy config, Terraform)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install --quiet "checkov==${CHECKOV_VERSION}"
+      - name: Checkov (Terraform, Kubernetes, Dockerfiles, GitHub Actions)
+        run: |
+          checkov --directory infrastructure --directory .github/workflows \
+            --framework terraform kubernetes dockerfile github_actions \
+            --compact --quiet --download-external-modules false
+      - name: Trivy misconfiguration scan (HIGH/CRITICAL)
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work "$TRIVY_IMAGE" config --severity HIGH,CRITICAL --exit-code 1 infrastructure
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.9.8 }
+      - name: terraform fmt / validate
+        run: |
+          terraform -chdir=infrastructure/terraform fmt -check -recursive
+          for env in development staging production; do
+            terraform -chdir=infrastructure/terraform/environments/$env init -backend=false -input=false
+            terraform -chdir=infrastructure/terraform/environments/$env validate
+          done
+
+  config:
+    name: Runtime configuration validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prometheus config and alert rules
+        run: |
+          docker run --rm -v "$PWD/infrastructure/monitoring/prometheus:/etc/prometheus" --entrypoint promtool prom/prometheus:v2.55.1 \
+            check rules /etc/prometheus/rules/security.yml /etc/prometheus/rules/platform.yml
+          mkdir -p "$RUNNER_TEMP/secrets" && echo placeholder > "$RUNNER_TEMP/secrets/metrics_token"
+          docker run --rm -v "$PWD/infrastructure/monitoring/prometheus:/etc/prometheus" -v "$RUNNER_TEMP/secrets:/run/secrets" \
+            --entrypoint promtool prom/prometheus:v2.55.1 check config /etc/prometheus/prometheus.yml
+      - name: Alertmanager config
+        run: |
+          docker run --rm -v "$PWD/infrastructure/monitoring/alertmanager:/etc/alertmanager" --entrypoint amtool prom/alertmanager:v0.27.0 \
+            check-config /etc/alertmanager/alertmanager.yml
+      - name: nginx configuration (self-signed placeholder certificate)
+        run: |
+          d="$RUNNER_TEMP/le/live/walktogether.app" && mkdir -p "$d"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=ci -keyout "$d/privkey.pem" -out "$d/fullchain.pem" 2>/dev/null
+          docker run --rm --add-host api:127.0.0.1 --add-host platform-admin:127.0.0.1 \
+            -v "$PWD/infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
+            -v "$PWD/infrastructure/nginx/security-headers.conf:/etc/nginx/security-headers.conf:ro" \
+            -v "$RUNNER_TEMP/le:/etc/letsencrypt:ro" nginx:1.27.3-alpine nginx -t
+      - name: Production Docker Compose file
+        run: |
+          # deploy.sh renders these from Secrets Manager on the host; empty placeholders here.
+          sudo mkdir -p /etc/walktogether && sudo touch /etc/walktogether/{api,migrate,postgres}.env
+          WT_API_IMAGE=ghcr.io/example/api@sha256:$(printf '0%.0s' {1..64}) \
+          WT_PLATFORM_ADMIN_IMAGE=ghcr.io/example/admin@sha256:$(printf '0%.0s' {1..64}) \
+          REDIS_PASSWORD=placeholder POSTGRES_PASSWORD=placeholder \
+            docker compose -f infrastructure/docker/docker-compose.yml --profile self-hosted-data config --quiet
+
+  dast:
+    name: DAST (OWASP ZAP API scan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: walktogether
+          POSTGRES_PASSWORD: walktogether
+          POSTGRES_DB: walktogether
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U walktogether" --health-interval 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-retries 10
+    env:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://walktogether:walktogether@localhost:5432/walktogether?schema=public
+      REDIS_URL: redis://localhost:6379
+      QUEUE_DRIVER: inline
+      LOG_LEVEL: warn
+      # The scanner sends thousands of requests from one IP; rate limiting is verified by the test suite instead.
+      RATE_LIMIT_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci -w @walktogether/server
+      - run: npm run db:generate
+      - name: Migrate and build
+        run: |
+          npm run db:deploy
+          npm run build -w @walktogether/server
+      - name: Start the API with throwaway per-run secrets
+        working-directory: server
+        run: |
+          export JWT_ACCESS_SECRET=$(openssl rand -hex 32) JWT_ADMIN_SECRET=$(openssl rand -hex 32) TOKEN_HASH_SECRET=$(openssl rand -hex 32) ENCRYPTION_KEY=$(openssl rand -base64 32)
+          nohup node dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://localhost:4000/health/ready && exit 0; sleep 2; done
+          cat "$RUNNER_TEMP/api.log"; exit 1
+      - name: ZAP API scan (OpenAPI-driven; FAIL rules in zap-rules.tsv break the build)
+        run: |
+          mkdir -p zap && cp security/vulnerability-management/zap-rules.tsv zap/ && chmod -R 777 zap
+          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" "$ZAP_IMAGE" zap-api-scan.py \
+            -t http://localhost:4000/api/v1/openapi.json -f openapi -c zap-rules.tsv -I -r zap-report.html -J zap-report.json
+      - name: API log
+        if: failure()
+        run: tail -100 "$RUNNER_TEMP/api.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: zap-report, path: zap/, retention-days: 30 }

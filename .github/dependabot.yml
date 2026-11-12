@@ -1,5 +1,7 @@
 version: 2
 updates:
+  # npm workspaces (one lockfile at the root). Security updates are opened immediately regardless
+  # of this schedule; version updates are grouped weekly to keep review load manageable.
   - package-ecosystem: npm
     directory: /
     schedule: { interval: weekly }
@@ -9,4 +11,14 @@ updates:
         update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
+    schedule: { interval: weekly }
+  # Base images in infrastructure/docker (node:22-bookworm-slim) and pinned compose images.
+  - package-ecosystem: docker
+    directory: /infrastructure/docker
+    schedule: { interval: weekly }
+  - package-ecosystem: docker-compose
+    directory: /infrastructure/docker
+    schedule: { interval: weekly }
+  - package-ecosystem: terraform
+    directory: /infrastructure/terraform
     schedule: { interval: monthly }

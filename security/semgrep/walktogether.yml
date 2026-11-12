@@ -1,0 +1,109 @@
+# Project-specific Semgrep rules (run in CI next to the p/owasp-top-ten, p/typescript, p/nodejsscan,
+# p/expressjs, p/react, p/secrets and p/dockerfile registry packs). Each rule encodes a security
+# invariant of WalkTogether; a finding blocks the pipeline unless an exception is documented.
+rules:
+  - id: wt-prisma-raw-unsafe-interpolation
+    message: >-
+      $queryRawUnsafe/$executeRawUnsafe with an interpolated or concatenated string is SQL injection.
+      Use the tagged-template $queryRaw`...${value}` form (parameterised) instead.
+    severity: ERROR
+    languages: [typescript]
+    metadata: { cwe: 'CWE-89', owasp: 'A03:2021 Injection' }
+    pattern-either:
+      - pattern: $DB.$queryRawUnsafe(`...${$X}...`, ...)
+      - pattern: $DB.$executeRawUnsafe(`...${$X}...`, ...)
+      - pattern: $DB.$queryRawUnsafe($A + $B, ...)
+      - pattern: $DB.$executeRawUnsafe($A + $B, ...)
+
+  - id: wt-insecure-randomness-for-secrets
+    message: Math.random() is not cryptographically secure; use crypto.randomBytes / randomToken() for tokens, codes and secrets.
+    severity: ERROR
+    languages: [typescript]
+    metadata: { cwe: 'CWE-338' }
+    patterns:
+      - pattern: Math.random()
+      - pattern-inside: |
+          function $F(...) { ... }
+      - metavariable-regex:
+          metavariable: $F
+          regex: (?i).*(token|secret|code|otp|password|key|nonce|salt).*
+
+  - id: wt-jwt-verify-without-algorithms
+    message: jwtVerify must pin `algorithms` (and issuer/audience) to prevent algorithm-confusion attacks.
+    severity: ERROR
+    languages: [typescript]
+    metadata: { cwe: 'CWE-347' }
+    patterns:
+      - pattern: jwtVerify($TOKEN, $KEY, $OPTS)
+      - pattern-not: 'jwtVerify($TOKEN, $KEY, {..., algorithms: $ALGS, ...})'
+
+  - id: wt-cookie-without-httponly
+    message: Session cookies must be httpOnly, secure and SameSite.
+    severity: ERROR
+    languages: [typescript]
+    metadata: { cwe: 'CWE-1004' }
+    patterns:
+      - pattern: '$RES.cookie($NAME, $VALUE, {...})'
+      - pattern-not: '$RES.cookie($NAME, $VALUE, {..., httpOnly: true, ...})'
+
+  - id: wt-ssrf-fetch-from-request
+    message: Server-side fetch of a URL taken from the request is SSRF. Only call fixed provider hosts.
+    severity: ERROR
+    languages: [typescript]
+    metadata: { cwe: 'CWE-918', owasp: 'API7:2023 SSRF' }
+    patterns:
+      - pattern-either:
+          - pattern: fetch($REQ.body.$F, ...)
+          - pattern: fetch($REQ.query.$F, ...)
+          - pattern: fetch($REQ.params.$F, ...)
+          - pattern: fetch(`...${$REQ.body.$F}...`, ...)
+          - pattern: fetch(`...${$REQ.query.$F}...`, ...)
+
+  - id: wt-html-response-without-escaping
+    message: HTML built from request data must pass through esc() (links pages) to prevent XSS.
+    severity: ERROR
+    languages: [typescript]
+    metadata: { cwe: 'CWE-79' }
+    patterns:
+      - pattern: $RES.send(`...${$REQ.$P.$F}...`)
+
+  - id: wt-react-dangerously-set-inner-html
+    message: dangerouslySetInnerHTML bypasses React's escaping; render text instead (or justify and sanitise).
+    severity: WARNING
+    languages: [typescript]
+    metadata: { cwe: 'CWE-79' }
+    pattern: <$EL dangerouslySetInnerHTML={...} />
+
+  - id: wt-log-sensitive-values
+    message: Never log passwords, tokens, secrets or codes (pino redaction covers request objects, not ad-hoc fields).
+    severity: ERROR
+    languages: [typescript]
+    metadata: { cwe: 'CWE-532' }
+    patterns:
+      - pattern-either:
+          - pattern: 'logger.$L({..., password: $X, ...}, ...)'
+          - pattern: 'logger.$L({..., accessToken: $X, ...}, ...)'
+          - pattern: 'logger.$L({..., refreshToken: $X, ...}, ...)'
+          - pattern: 'logger.$L({..., secret: $X, ...}, ...)'
+          - pattern: 'logger.$L({..., code: $X, ...}, ...)'
+
+  - id: wt-client-trusted-payment-status
+    message: Payment status must come from verified provider callbacks or status queries, never from the client request.
+    severity: ERROR
+    languages: [typescript]
+    metadata: { cwe: 'CWE-602' }
+    patterns:
+      - pattern-either:
+          - pattern: 'prisma.payment.update({..., data: {..., status: $REQ.body.$F, ...}, ...})'
+          - pattern: confirmPayment($REQ.body.$F, ...)
+
+  - id: wt-async-storage-for-secrets
+    message: Tokens and secrets must use SecureStore (Keystore/Keychain), never AsyncStorage (MASVS-STORAGE-1).
+    severity: ERROR
+    languages: [typescript]
+    metadata: { masvs: 'MASVS-STORAGE-1' }
+    patterns:
+      - pattern: AsyncStorage.setItem($KEY, $VALUE)
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: (?i).*(token|secret|password|session|credential).*

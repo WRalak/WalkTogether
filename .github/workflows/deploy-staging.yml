@@ -1,0 +1,210 @@
+name: Deploy staging
+
+# Stages 13–15: publish, sign and deploy to staging, then smoke-test it.
+# Runs only after CI succeeded on main AND the security scan for the same commit succeeded.
+# Images are pushed to GHCR, addressed by digest only, scanned again (CRITICAL gate), given an SBOM
+# and signed with Cosign (keyless, GitHub OIDC). The staging host verifies that signature before
+# running anything (infrastructure/deployment/deploy.sh). Production deploys only these signed digests.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  TRIVY_IMAGE: aquasec/trivy:0.57.1
+  SYFT_IMAGE: anchore/syft:v1.18.1
+  SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+jobs:
+  gate:
+    name: Require green CI and security scan for this commit
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: read
+    steps:
+      - name: Wait for the security scan of ${{ env.SHA }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 80); do
+            ci=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$SHA&per_page=50" \
+              --jq '[.workflow_runs[] | select(.name=="CI")] | first | .status + ":" + (.conclusion // "")')
+            sec=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$SHA&per_page=50" \
+              --jq '[.workflow_runs[] | select(.name=="Security scan")] | first | .status + ":" + (.conclusion // "")')
+            echo "CI=$ci  Security scan=$sec"
+            case "$ci" in completed:success) ;; completed:*) echo "::error::CI did not pass for $SHA"; exit 1;; esac
+            case "$sec" in completed:success) [ "$ci" = completed:success ] && exit 0;; completed:*) echo "::error::Security scan did not pass for $SHA"; exit 1;; esac
+            sleep 30
+          done
+          echo "::error::timed out waiting for CI and the security scan"; exit 1
+
+  publish:
+    name: Build, scan, SBOM and sign images
+    needs: [gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # Cosign keyless signing
+    outputs:
+      api: ${{ steps.refs.outputs.api }}
+      platform-admin: ${{ steps.refs.outputs.platform-admin }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ env.SHA }}' }
+      - name: Image names
+        run: echo "REGISTRY_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/walktogether" >> "$GITHUB_ENV"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: sigstore/cosign-installer@v3
+      - name: Build and push API
+        id: api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.api
+          push: true
+          provenance: mode=max
+          tags: ${{ env.REGISTRY_PREFIX }}-api:${{ env.SHA }}
+          labels: org.opencontainers.image.revision=${{ env.SHA }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+      - name: Build and push platform admin
+        id: admin
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.platform-admin
+          push: true
+          provenance: mode=max
+          tags: ${{ env.REGISTRY_PREFIX }}-platform-admin:${{ env.SHA }}
+          labels: org.opencontainers.image.revision=${{ env.SHA }}
+          cache-from: type=gha,scope=platform-admin
+          cache-to: type=gha,mode=max,scope=platform-admin
+      - name: Digest references
+        id: refs
+        run: |
+          echo "api=${REGISTRY_PREFIX}-api@${{ steps.api.outputs.digest }}" >> "$GITHUB_OUTPUT"
+          echo "platform-admin=${REGISTRY_PREFIX}-platform-admin@${{ steps.admin.outputs.digest }}" >> "$GITHUB_OUTPUT"
+      - name: Scan, SBOM, sign and attest
+        env:
+          API: ${{ steps.refs.outputs.api }}
+          ADMIN: ${{ steps.refs.outputs.platform-admin }}
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip install --quiet pyyaml==6.0.2
+          mkdir -p reports
+          for pair in "api=$API" "platform-admin=$ADMIN"; do
+            name="${pair%%=*}"; ref="${pair#*=}"
+            docker run --rm -e TRIVY_USERNAME -e TRIVY_PASSWORD -v "$PWD/reports:/out" "$TRIVY_IMAGE" image \
+              --scanners vuln --severity CRITICAL --format json --output "/out/trivy-$name.json" "$ref"
+            python3 security/vulnerability-management/check_exceptions.py "reports/trivy-$name.json"
+            docker run --rm -v "$HOME/.docker:/root/.docker:ro" -v "$PWD/reports:/out" "$SYFT_IMAGE" "$ref" \
+              -o "spdx-json=/out/sbom-$name.spdx.json"
+            cosign sign --yes "$ref"
+            cosign attest --yes --type spdxjson --predicate "reports/sbom-$name.spdx.json" "$ref"
+          done
+      - name: Summary
+        run: |
+          {
+            echo "### Signed images for ${SHA}"
+            echo '```'
+            echo "${{ steps.refs.outputs.api }}"
+            echo "${{ steps.refs.outputs.platform-admin }}"
+            echo '```'
+            echo "Promote to production: run **Deploy production** with these two references."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ env.SHA }}
+          path: reports/
+          retention-days: 90
+
+  deploy:
+    name: Deploy to staging
+    needs: [publish]
+    if: vars.STAGING_INSTANCE_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: staging
+      url: ${{ vars.STAGING_API_URL }}
+    permissions:
+      contents: read
+      id-token: write # AWS OIDC — no long-lived cloud keys in GitHub
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'af-south-1' }}
+      - name: Run deploy.sh on the host through SSM (no SSH)
+        env:
+          INSTANCE: ${{ vars.STAGING_INSTANCE_ID }}
+          API: ${{ needs.publish.outputs.api }}
+          ADMIN: ${{ needs.publish.outputs.platform-admin }}
+        run: |
+          cmd="cd /opt/walktogether && git fetch --depth 1 origin $SHA && git checkout --detach $SHA && infrastructure/deployment/deploy.sh staging $API $ADMIN"
+          id=$(aws ssm send-command --instance-ids "$INSTANCE" --document-name AWS-RunShellScript \
+            --comment "walktogether staging $SHA" --parameters "commands=[\"$cmd\"],executionTimeout=[\"1200\"]" \
+            --query Command.CommandId --output text)
+          aws ssm wait command-executed --command-id "$id" --instance-id "$INSTANCE" || true
+          aws ssm get-command-invocation --command-id "$id" --instance-id "$INSTANCE" --query '[Status,StandardOutputContent,StandardErrorContent]' --output text
+          [ "$(aws ssm get-command-invocation --command-id "$id" --instance-id "$INSTANCE" --query Status --output text)" = Success ]
+
+  smoke:
+    name: Staging smoke & security checks
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      API_URL: ${{ vars.STAGING_API_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ env.SHA }}' }
+      - name: Health, TLS and security headers
+        run: |
+          curl -fsS --proto '=https' --tlsv1.2 "$API_URL/health/ready"
+          h=$(curl -fsSI "$API_URL/health/live")
+          for header in strict-transport-security x-content-type-options x-frame-options referrer-policy; do
+            echo "$h" | grep -qi "^$header:" || { echo "::error::missing $header"; exit 1; }
+          done
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$API_URL/metrics")
+          [ "$code" = 404 ] || { echo "::error::/metrics is reachable from the internet ($code)"; exit 1; }
+          code=$(curl -s -o /dev/null -w '%{http_code}' "http://${API_URL#https://}/health/live")
+          case "$code" in 301|308) ;; *) echo "::error::plain HTTP is not redirected to HTTPS ($code)"; exit 1;; esac
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$API_URL/api/v1/platform-admin/overview")
+          [ "$code" = 401 ] || { echo "::error::admin API answered $code without credentials"; exit 1; }
+      - name: OWASP ZAP baseline (passive) against staging
+        run: |
+          mkdir -p zap && cp security/vulnerability-management/zap-rules.tsv zap/ && chmod -R 777 zap
+          docker run --rm -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:2.15.0 zap-baseline.py \
+            -t "$API_URL/health/live" -c zap-rules.tsv -I -r zap-baseline.html
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: zap-staging, path: zap/, retention-days: 30 }
+
+  not-configured:
+    name: Staging host not configured
+    needs: [publish]
+    if: vars.STAGING_INSTANCE_ID == ''
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::notice::Images were built, scanned, signed and published, but no staging host is configured (repository variables STAGING_INSTANCE_ID, STAGING_API_URL, AWS_DEPLOY_ROLE_ARN). See docs/deployment/DEPLOYMENT_GUIDE.md."
