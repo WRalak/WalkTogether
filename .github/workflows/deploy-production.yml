@@ -40,7 +40,7 @@ jobs:
     outputs:
       sha: ${{ steps.sha.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Inputs are immutable digests from this repository's registry
         run: |
           prefix="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/walktogether"

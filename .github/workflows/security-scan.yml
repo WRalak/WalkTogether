@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: pip install --quiet "semgrep==${SEMGREP_VERSION}" "setuptools<81" # semgrep 1.95 imports pkg_resources
@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - name: Lockfile is in sync with package.json files
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: pip install --quiet "checkov==${CHECKOV_VERSION}"
@@ -135,7 +135,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Prometheus config and alert rules
         run: |
           docker run --rm -v "$PWD/infrastructure/monitoring/prometheus:/etc/prometheus" --entrypoint promtool prom/prometheus:v2.55.1 \
@@ -192,7 +192,7 @@ jobs:
       # The scanner sends thousands of requests from one IP; rate limiting is verified by the test suite instead.
       RATE_LIMIT_ENABLED: 'false'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci -w @walktogether/server

@@ -62,7 +62,7 @@ jobs:
       api: ${{ steps.refs.outputs.api }}
       platform-admin: ${{ steps.refs.outputs.platform-admin }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: '${{ env.SHA }}' }
       - name: Image names
         run: echo "REGISTRY_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/walktogether" >> "$GITHUB_ENV"
@@ -176,7 +176,7 @@ jobs:
     env:
       API_URL: ${{ vars.STAGING_API_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: '${{ env.SHA }}' }
       - name: Health, TLS and security headers
         run: |
