@@ -274,6 +274,16 @@ describe('messaging', () => {
 });
 
 describe('video pipeline', () => {
+  it('refuses playlists and manifests: only local MP4/QuickTime input reaches ffmpeg', async () => {
+    const { transcodeVideo } = await import('../src/modules/media/video');
+    const hls = Buffer.from('#EXTM3U\n#EXT-X-TARGETDURATION:1\n#EXTINF:1,\nfile:///etc/passwd\n#EXT-X-ENDLIST\n');
+    const dash = Buffer.from(
+      '<?xml version="1.0"?><MPD xmlns="urn:mpeg:dash:schema:mpd:2011" type="static"><Period><AdaptationSet><Representation id="1" bandwidth="1"><BaseURL>http://169.254.169.254/</BaseURL></Representation></AdaptationSet></Period></MPD>',
+    );
+    await expect(transcodeVideo(hls)).rejects.toThrow('not a readable video');
+    await expect(transcodeVideo(dash)).rejects.toThrow('not a readable video');
+  });
+
   it('transcodes to MP4, strips location metadata and creates a poster', async () => {
     const { execFileSync } = await import('node:child_process');
     const { mkdtempSync, readFileSync } = await import('node:fs');

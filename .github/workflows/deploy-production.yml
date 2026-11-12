@@ -80,7 +80,7 @@ jobs:
           mkdir -p reports
           docker run --rm -e TRIVY_USERNAME -e TRIVY_PASSWORD -v "$PWD/reports:/out" "$TRIVY_IMAGE" image --scanners vuln --severity CRITICAL --format json --output /out/api.json "$API"
           docker run --rm -e TRIVY_USERNAME -e TRIVY_PASSWORD -v "$PWD/reports:/out" "$TRIVY_IMAGE" image --scanners vuln --severity CRITICAL --format json --output /out/admin.json "$ADMIN"
-          python3 security/vulnerability-management/check_exceptions.py reports/api.json reports/admin.json
+          python3 security/vulnerability-management/check_exceptions.py --production reports/api.json reports/admin.json
 
   deploy:
     name: Deploy to production (requires approval)

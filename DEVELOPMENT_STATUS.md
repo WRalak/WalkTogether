@@ -115,6 +115,7 @@ workspaces** (root `package.json` → `workspaces`) by the owner's choice, so th
 | Branch protection, `production` reviewers, CODEOWNERS enforcement, secret-scanning push protection | Repository settings, not code | `DEPLOYMENT_SECURITY.md` §6 |
 | Apply Terraform, populate Secrets Manager, first deploys | Needs AWS accounts | `security/security-checklists/NEW_ENVIRONMENT_CHECKLIST.md` |
 | Terraform provider lock files | Registry unreachable from the build environment | `terraform providers lock -platform=linux_amd64 -platform=darwin_arm64` in each environment, commit |
+| Approve or reject the libxml2 exception (CVE-2026-6653, API image) | No Debian fix yet; production deploys are blocked until the owner decides | Review `security/vulnerability-management/exceptions.yaml`; set `approved_by` to your handle or wait for the Debian fix |
 | Cross-region backup copy | Cost/scale decision | `BACKUP_AND_RECOVERY.md` §6 |
 | Audit-log archival job (> 7 years) | Not needed before year 7 | `DATA_PROTECTION_POLICY.md` §4 |
 | PostgreSQL RLS | Deliberately deferred | `ACCESS_CONTROL_POLICY.md` §6 |
@@ -124,13 +125,13 @@ workspaces** (root `package.json` → `workspaces`) by the owner's choice, so th
 
 | Suite | Tests |
 | --- | --- |
-| Server integration/unit (19 files: auth, MFA, users, clubs, tenant isolation, security (incl. threat-detection metrics, retention), links, platform analytics, phase 2, activities, events, social/media/video/messaging, challenges, payments/sponsorships, M-Pesa (mocked Daraja), platform admin, admin, journey, unit (incl. production config guard, AES-GCM tag length)) | 174 |
+| Server integration/unit (19 files: auth, MFA, users, clubs, tenant isolation, security (incl. threat-detection metrics, retention), links, platform analytics, phase 2, activities, events, social/media/video/messaging, challenges, payments/sponsorships, M-Pesa (mocked Daraja), platform admin, admin, journey, unit (incl. production config guard, AES-GCM tag length)) | 175 |
 | `packages/shared-utils` (formatting + GPS engine) | 12 |
 | `packages/validation` | 6 |
 | `packages/api-client` | 4 |
 | `platform-admin` | 1 |
 | Mobile (Jest: schemas, token store, tracking session, offline sync, QR parsing, component, club-admin access) | 12 |
-| **Total** | **209** |
+| **Total** | **210** |
 
 Also verified: workspace typecheck, ESLint and Prettier; the GitHub Actions pipeline described above
 (run results on GitHub); a real-browser run of every
