@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: walktogether
+resources:
+  - namespace.yaml
+  - deployments/api.yaml
+  - deployments/worker.yaml
+  - deployments/platform-admin.yaml
+  - services/services.yaml
+  - ingress/ingress.yaml
+  - secrets/external-secrets.yaml
+  - monitoring/network-policies.yaml
+  - monitoring/service-monitors.yaml
+  - monitoring/pod-disruption-budgets.yaml
+images:
+  # Replaced per release with the signed digests (see README.md). Never deploy tags.
+  - name: ghcr.io/wralak/walktogether-api
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  - name: ghcr.io/wralak/walktogether-platform-admin
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000

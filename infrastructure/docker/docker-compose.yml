@@ -80,7 +80,7 @@ services:
     <<: *hardening
     image: nginx:1.27.3-alpine
     cap_add: [NET_BIND_SERVICE, CHOWN, SETUID, SETGID]   # bind 80/443 and drop to the nginx user
-    ports: ['80:80', '443:443']                          # the only published ports
+    ports: ['80:80', '443:443', '8080:8080']             # the only published ports (8080: ALB health, SG-restricted)
     volumes:
       - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ../nginx/security-headers.conf:/etc/nginx/security-headers.conf:ro

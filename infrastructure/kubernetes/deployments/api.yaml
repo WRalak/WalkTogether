@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: walktogether
+  labels: { app.kubernetes.io/name: api, app.kubernetes.io/part-of: walktogether }
+  annotations:
+    checkov.io/skip1: CKV_K8S_40=UID 1000 is the image's dedicated non-root 'node' user that owns the app files; PSA restricted enforces non-root
+    checkov.io/skip2: CKV_K8S_35=The 12-factor API reads configuration from env; secrets come from ExternalSecret, never from git, and are redacted from logs
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels: { app.kubernetes.io/name: api }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: api, app.kubernetes.io/part-of: walktogether }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000 # the image's 'node' user; files in the image are owned by it
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app.kubernetes.io/name: api }
+      containers:
+        - name: api
+          image: ghcr.io/wralak/walktogether-api@sha256:0000000000000000000000000000000000000000000000000000000000000000 # set per release by kustomize (signed digest)
+          imagePullPolicy: Always
+          args: [node, dist/main.js]
+          ports:
+            - { name: http, containerPort: 4000 }
+          envFrom:
+            - secretRef: { name: walktogether-api }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 250m, memory: 768Mi }
+            limits: { cpu: '1', memory: 768Mi }
+          livenessProbe:
+            httpGet: { path: /health/ready, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            periodSeconds: 10
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 512Mi }

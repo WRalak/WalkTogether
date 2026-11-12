@@ -1,0 +1,8 @@
+# Copy to backend.hcl (gitignored). Create the state bucket (versioned, KMS-encrypted, public access
+# blocked) and lock table once per account before the first init.
+bucket         = "walktogether-terraform-state-ACCOUNT_ID"
+key            = "staging/terraform.tfstate"
+region         = "af-south-1"
+encrypt        = true
+kms_key_id     = "alias/walktogether-terraform-state"
+dynamodb_table = "walktogether-terraform-locks"

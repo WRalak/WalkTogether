@@ -7,6 +7,7 @@ name: Deploy production
 # documented, approved, unexpired exception in security/vulnerability-management/exceptions.yaml.
 # The `production` environment must be configured with required reviewers (GitHub settings).
 on:
+  # checkov:skip=CKV_GHA_7:This workflow builds nothing. Inputs only select already-built images, which must be digests signed by deploy-staging.yml (verified below and on the host).
   workflow_dispatch:
     inputs:
       api_image:

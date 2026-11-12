@@ -1,0 +1,16 @@
+# Prometheus Operator scrape configs. Metrics require the METRICS_TOKEN bearer (same as
+# infrastructure/monitoring/prometheus/prometheus.yml); the token comes from the api secret.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api
+  namespace: walktogether
+spec:
+  selector: { matchLabels: {} }
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      authorization:
+        type: Bearer
+        credentials: { name: walktogether-api, key: METRICS_TOKEN }

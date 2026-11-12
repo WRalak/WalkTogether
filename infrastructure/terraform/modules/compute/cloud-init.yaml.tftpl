@@ -1,0 +1,80 @@
+#cloud-config
+# Host hardening and bootstrap for the WalkTogether application host (Ubuntu 24.04).
+package_update: true
+package_upgrade: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - git
+  - age
+  - postgresql-client-16
+  - python3
+  - unattended-upgrades
+  - auditd
+  - openssl
+
+write_files:
+  # Automatic security updates, reboot in a quiet window when required.
+  - path: /etc/apt/apt.conf.d/52walktogether-unattended
+    content: |
+      Unattended-Upgrade::Allowed-Origins { "$${distro_id}:$${distro_codename}-security"; "$${distro_id}ESMApps:$${distro_codename}-apps-security"; };
+      Unattended-Upgrade::Automatic-Reboot "true";
+      Unattended-Upgrade::Automatic-Reboot-Time "02:30";
+  - path: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+  # SSH is disabled entirely (SSM Session Manager is the only shell access). If it is ever
+  # re-enabled for break-glass, only keys are accepted.
+  - path: /etc/ssh/sshd_config.d/10-walktogether.conf
+    content: |
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PermitRootLogin no
+  - path: /etc/docker/daemon.json
+    content: |
+      { "live-restore": true, "no-new-privileges": true, "userland-proxy": false,
+        "log-driver": "json-file", "log-opts": { "max-size": "20m", "max-file": "5" } }
+  - path: /etc/sysctl.d/90-walktogether.conf
+    content: |
+      net.ipv4.conf.all.accept_redirects = 0
+      net.ipv4.conf.all.send_redirects = 0
+      net.ipv4.conf.all.rp_filter = 1
+      net.ipv4.tcp_syncookies = 1
+      kernel.kptr_restrict = 2
+      kernel.dmesg_restrict = 1
+  # Daily encrypted database backup (infrastructure/backup/backup.sh) to the Object Lock bucket.
+  - path: /etc/systemd/system/walktogether-backup.service
+    content: |
+      [Unit]
+      Description=WalkTogether encrypted database backup
+      [Service]
+      Type=oneshot
+      Environment=AWS_REGION=${region}
+      Environment=BACKUP_BUCKET=${backup_bucket}
+      Environment=BACKUP_KMS_KEY_ID=${kms_key_arn}
+      ExecStart=/bin/bash -c 'set -a; eval "$(aws secretsmanager get-secret-value --region ${region} --secret-id walktogether/${environment}/backup --query SecretString --output text | python3 -c "import json,sys,shlex; [print(f\"{k}={shlex.quote(v)}\") for k,v in json.load(sys.stdin).items()]")"; exec /opt/walktogether/infrastructure/backup/backup.sh'
+  - path: /etc/systemd/system/walktogether-backup.timer
+    content: |
+      [Unit]
+      Description=Daily WalkTogether backup
+      [Timer]
+      OnCalendar=*-*-* 01:15:00 UTC
+      RandomizedDelaySec=600
+      Persistent=true
+      [Install]
+      WantedBy=timers.target
+
+runcmd:
+  - [systemctl, disable, --now, ssh.socket, ssh.service]
+  - [sysctl, --system]
+  - [systemctl, enable, --now, docker, auditd, unattended-upgrades]
+  - [snap, install, aws-cli, --classic]
+  # Cosign verifies image signatures on the host before every deploy (deploy.sh).
+  - [bash, -c, 'curl -fsSLo /tmp/cosign.deb https://github.com/sigstore/cosign/releases/download/v2.4.1/cosign_2.4.1_amd64.deb && dpkg -i /tmp/cosign.deb && rm /tmp/cosign.deb']
+  - [git, clone, --depth, '1', 'https://github.com/${github_repository}.git', /opt/walktogether]
+  # Origin certificate for ALB → nginx re-encryption inside the VPC (the ALB presents the public ACM
+  # certificate to clients and does not validate target certificates).
+  - [bash, -c, 'd=/etc/letsencrypt/live/walktogether.app; [ -f $d/fullchain.pem ] || { install -d -m 700 $d && openssl req -x509 -newkey rsa:3072 -nodes -days 825 -subj /CN=walktogether-origin -keyout $d/privkey.pem -out $d/fullchain.pem; }']
+  - [systemctl, daemon-reload]
+  - [systemctl, enable, --now, walktogether-backup.timer]

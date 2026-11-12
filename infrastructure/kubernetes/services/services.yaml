@@ -1,0 +1,33 @@
+# ClusterIP only: nothing is reachable from outside the cluster except through the ingress.
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: walktogether
+spec:
+  type: ClusterIP
+  selector: { app.kubernetes.io/name: api }
+  ports:
+    - { name: http, port: 4000, targetPort: http }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: worker-metrics
+  namespace: walktogether
+spec:
+  type: ClusterIP
+  selector: { app.kubernetes.io/name: worker }
+  ports:
+    - { name: http, port: 9464, targetPort: http }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: platform-admin
+  namespace: walktogether
+spec:
+  type: ClusterIP
+  selector: { app.kubernetes.io/name: platform-admin }
+  ports:
+    - { name: http, port: 3000, targetPort: http }

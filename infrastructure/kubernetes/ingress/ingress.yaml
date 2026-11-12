@@ -1,0 +1,55 @@
+# TLS-only ingress (ingress-nginx). Only the API's public path prefixes are routed, so /metrics and
+# the API docs are unreachable from outside. Snippet annotations are deliberately not used
+# (CVE-2021-25742); the API sets its security headers itself (Helmet: HSTS, nosniff, frame-deny…).
+# Optionally restrict the admin host with nginx.ingress.kubernetes.io/whitelist-source-range.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: walktogether
+  namespace: walktogether
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/proxy-body-size: 110m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '3600' # websockets
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [api.walktogether.app, admin.walktogether.app]
+      secretName: walktogether-tls
+  rules:
+    - host: api.walktogether.app
+      http:
+        paths:
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service: { name: api, port: { name: http } }
+          - path: /health
+            pathType: Prefix
+            backend:
+              service: { name: api, port: { name: http } }
+          - path: /links
+            pathType: Prefix
+            backend:
+              service: { name: api, port: { name: http } }
+          - path: /legal
+            pathType: Prefix
+            backend:
+              service: { name: api, port: { name: http } }
+          - path: /socket.io
+            pathType: Prefix
+            backend:
+              service: { name: api, port: { name: http } }
+          - path: /rt
+            pathType: Prefix
+            backend:
+              service: { name: api, port: { name: http } }
+    - host: admin.walktogether.app
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: platform-admin, port: { name: http } }

@@ -1,0 +1,17 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api
+  namespace: walktogether
+spec:
+  minAvailable: 1
+  selector: { matchLabels: { app.kubernetes.io/name: api } }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: platform-admin
+  namespace: walktogether
+spec:
+  minAvailable: 1
+  selector: { matchLabels: { app.kubernetes.io/name: platform-admin } }
