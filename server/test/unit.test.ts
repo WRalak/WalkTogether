@@ -12,6 +12,12 @@ describe('crypto', () => {
     expect(() => decrypt(parts.join('.'))).toThrow();
   });
 
+  it('rejects ciphertexts with a truncated authentication tag', () => {
+    const parts = encrypt('totp-secret').split('.');
+    parts[2] = Buffer.from(parts[2]!, 'base64url').subarray(0, 4).toString('base64url');
+    expect(() => decrypt(parts.join('.'))).toThrow('Invalid authentication tag');
+  });
+
   it('hashes tokens deterministically and compares safely', () => {
     expect(hashToken('abc')).toBe(hashToken('abc'));
     expect(hashToken('abc')).not.toBe(hashToken('abd'));

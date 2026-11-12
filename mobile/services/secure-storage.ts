@@ -1,3 +1,4 @@
+import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 
 /**
@@ -15,10 +16,8 @@ export const secureStorage = {
 };
 
 function randomId() {
-  const bytes = new Uint8Array(16);
-  globalThis.crypto?.getRandomValues?.(bytes);
-  if (bytes.every((b) => b === 0)) for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  // Native CSPRNG (Hermes has no global WebCrypto); never fall back to Math.random.
+  return Array.from(Crypto.getRandomBytes(16), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /** Stable per-install identifier used to label sessions ("Signed in on Tecno Spark"). Not an advertising ID. */

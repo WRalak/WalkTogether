@@ -72,7 +72,7 @@ linksRouter.post('/links/reset-password', authLimiter, form, async (req, res) =>
   if (!body.success) return send(res, page('Link invalid', '<h1>This reset link is invalid</h1><p>Request a new one from the app.</p>', { status: 'error' }), 400);
   const { token: t, password, confirm } = body.data;
   // eslint-disable-next-line security/detect-possible-timing-attacks -- both values are the user's own input, not a secret
-  if (password !== confirm) return send(res, resetForm(t, 'The passwords don’t match.'), 400);
+  if (password !== confirm) return send(res, resetForm(t, 'The passwords don’t match.'), 400); // nosemgrep: node_timing_attack
   const strength = passwordSchema.safeParse(password);
   if (!strength.success) return send(res, resetForm(t, strength.error.issues[0]?.message ?? 'Choose a stronger password.'), 400);
   try {
@@ -106,16 +106,17 @@ linksRouter.get('/links/invite/:code', async (req, res) => {
   if (!code.success) return send(res, page('Invitation invalid', '<h1>This invitation is invalid</h1>', { status: 'error' }), 404);
   try {
     const inv = await previewInvitation(code.data);
-    send(
-      res,
-      page(
-        `Join ${inv.club.name}`,
-        `<h1>You’re invited to join ${esc(inv.club.name)}</h1>
-         <p>Open the WalkTogether app to accept. If the button doesn’t work, open the club in the app and enter this code:</p>
-         <p><code>${esc(code.data)}</code></p>
-         <a class="btn" href="${appLink(`/clubs/${encodeURIComponent(inv.club.slug)}?invite=${encodeURIComponent(code.data)}`)}">Open in WalkTogether</a>`,
-      ),
-    );
+    // Every dynamic value is escaped before it reaches the markup; the code is also restricted to [A-Za-z0-9_-].
+    const clubName = esc(inv.club.name);
+    const codeText = esc(code.data);
+    const openUrl = esc(appLink(`/clubs/${encodeURIComponent(inv.club.slug)}?invite=${encodeURIComponent(code.data)}`));
+    const body = [
+      `<h1>You’re invited to join ${clubName}</h1>`, // nosemgrep: raw-html-format -- value escaped above
+      '<p>Open the WalkTogether app to accept. If the button doesn’t work, open the club in the app and enter this code:</p>',
+      `<p><code>${codeText}</code></p>`, // nosemgrep: raw-html-format -- value escaped above
+      `<a class="btn" href="${openUrl}">Open in WalkTogether</a>`, // nosemgrep: raw-html-format -- value escaped above
+    ].join('\n');
+    send(res, page(`Join ${inv.club.name}`, body));
   } catch {
     send(res, page('Invitation expired', '<h1>This invitation has expired</h1><p>Ask the club for a new one.</p>', { status: 'error' }), 404);
   }

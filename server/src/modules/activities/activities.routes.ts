@@ -72,6 +72,7 @@ activitiesRouter.delete('/:id', requireAuth, async (req, res) => {
 });
 activitiesRouter.get('/:id/export.gpx', requireAuth, async (req, res) => {
   await requireFeature({ userId: authUserId(req) }, 'user.activity_exports');
+  // nosemgrep: express_xss -- GPX download (attachment, XML content type); every value is XML-escaped in exportGpx
   const gpx = await svc.exportGpx(authUserId(req), parse(idParam, req.params).id);
   res.setHeader('Content-Type', 'application/gpx+xml');
   res.setHeader('Content-Disposition', 'attachment; filename="activity.gpx"');

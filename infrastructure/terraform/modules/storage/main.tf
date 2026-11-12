@@ -61,9 +61,25 @@ locals {
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "this" {
-  for_each                = local.all
-  bucket                  = each.value.id
+# One block per bucket (explicit resources so scanners can link them to their bucket).
+resource "aws_s3_bucket_public_access_block" "media" {
+  bucket                  = aws_s3_bucket.media.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_public_access_block" "backups" {
+  bucket                  = aws_s3_bucket.backups.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_public_access_block" "logs" {
+  bucket                  = aws_s3_bucket.logs.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -255,7 +271,7 @@ resource "aws_s3_bucket_policy" "this" {
   for_each   = local.all
   bucket     = each.value.id
   policy     = data.aws_iam_policy_document.tls_only[each.key].json
-  depends_on = [aws_s3_bucket_public_access_block.this]
+  depends_on = [aws_s3_bucket_public_access_block.media, aws_s3_bucket_public_access_block.backups, aws_s3_bucket_public_access_block.logs]
 }
 
 output "media_bucket_id" { value = aws_s3_bucket.media.id }

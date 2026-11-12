@@ -5,6 +5,7 @@ import { createUserWithDefaults } from '../src/modules/auth/auth.service';
 
 /** Local-development demo data. The password is printed so developers can sign in. */
 export async function seedDemo() {
+  // nosemgrep: node_password -- local demo data; seed.ts refuses to run in staging/production
   const password = 'walktogether-demo-1';
   const passwordHash = await hashPassword(password);
   const users = [

@@ -101,6 +101,7 @@ export function createApp(): Express {
     app.get('/api/v1/openapi.json', (_req, res) => {
       res.json(doc);
     });
+    // nosemgrep: helmet_feature_disabled -- Swagger UI needs inline scripts; non-production only
     app.use('/api/docs', helmet({ contentSecurityPolicy: false }), swaggerUi.serve, swaggerUi.setup(doc));
   }
 

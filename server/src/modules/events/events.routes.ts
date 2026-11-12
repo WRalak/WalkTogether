@@ -43,6 +43,7 @@ eventsRouter.post('/:id/attendance', requireAuth, async (req, res) => {
   res.status(204).end();
 });
 eventsRouter.get('/:id/attendance.csv', requireAuth, async (req, res) => {
+  // nosemgrep: express_xss -- CSV attachment built by toCsv (RFC 4180 + formula-injection escaping)
   const csv = await svc.attendanceCsv(parse(idParam, req.params).id, authUserId(req));
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="attendance.csv"');

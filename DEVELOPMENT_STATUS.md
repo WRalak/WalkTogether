@@ -111,7 +111,7 @@ workspaces** (root `package.json` → `workspaces`) by the owner's choice, so th
 
 | Item | Why open | Owner action |
 | --- | --- | --- |
-| Pin GitHub Actions to commit SHAs | Needs GitHub API access to resolve SHAs | Run a pinning tool (e.g. `pinact`), Dependabot then maintains them |
+| nginx hostnames are the production ones (`api.`/`admin.walktogether.app`) | Staging needs its own names | Template `infrastructure/nginx/nginx.conf` per environment (e.g. nginx `envsubst` templates) before the first staging deploy |
 | Branch protection, `production` reviewers, CODEOWNERS enforcement, secret-scanning push protection | Repository settings, not code | `DEPLOYMENT_SECURITY.md` §6 |
 | Apply Terraform, populate Secrets Manager, first deploys | Needs AWS accounts | `security/security-checklists/NEW_ENVIRONMENT_CHECKLIST.md` |
 | Terraform provider lock files | Registry unreachable from the build environment | `terraform providers lock -platform=linux_amd64 -platform=darwin_arm64` in each environment, commit |
@@ -124,13 +124,13 @@ workspaces** (root `package.json` → `workspaces`) by the owner's choice, so th
 
 | Suite | Tests |
 | --- | --- |
-| Server integration/unit (19 files: auth, MFA, users, clubs, tenant isolation, security (incl. threat-detection metrics, retention), links, platform analytics, phase 2, activities, events, social/media/video/messaging, challenges, payments/sponsorships, M-Pesa (mocked Daraja), platform admin, admin, journey, unit (incl. production config guard)) | 173 |
+| Server integration/unit (19 files: auth, MFA, users, clubs, tenant isolation, security (incl. threat-detection metrics, retention), links, platform analytics, phase 2, activities, events, social/media/video/messaging, challenges, payments/sponsorships, M-Pesa (mocked Daraja), platform admin, admin, journey, unit (incl. production config guard, AES-GCM tag length)) | 174 |
 | `packages/shared-utils` (formatting + GPS engine) | 12 |
 | `packages/validation` | 6 |
 | `packages/api-client` | 4 |
 | `platform-admin` | 1 |
 | Mobile (Jest: schemas, token store, tracking session, offline sync, QR parsing, component, club-admin access) | 12 |
-| **Total** | **208** |
+| **Total** | **209** |
 
 Also verified: workspace typecheck, ESLint and Prettier; the GitHub Actions pipeline described above
 (run results on GitHub); a real-browser run of every

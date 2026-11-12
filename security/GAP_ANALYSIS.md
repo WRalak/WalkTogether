@@ -38,7 +38,8 @@ gap in this iteration; anything not closed is tracked in `DEVELOPMENT_STATUS.md`
 | G13 | PostgreSQL Row-Level Security not used | §5 (consider) | **Decision recorded, not implemented** — see `security/policies/ACCESS_CONTROL_POLICY.md` §6 |
 | G15 | Login history kept forever (data-protection retention not enforced) | §5, DPA 2019 | Closed: daily purge after 12 months (`session-maintenance.ts`, tested) |
 | G16 | Backup restorability only checked manually | §10 | Closed: encrypted backup → restore drill runs in CI on every push |
-| G17 | GitHub Actions pinned by tag, not commit SHA | §3 SLSA | **Open** — needs GitHub API access to resolve SHAs; Dependabot is configured to maintain them once pinned |
+| G17 | GitHub Actions pinned by tag, not commit SHA | §3 SLSA | Closed: every action pinned to a commit SHA (version in a comment for Dependabot, 7-day cooldown) |
 | G18 | GitHub branch protection, environment reviewers, CODEOWNERS enforcement | §3, §8 | **Owner action** — repository settings, listed in `DEPLOYMENT_SECURITY.md` §6 |
+| G20 | Semgrep registry findings (first CI run): AES-GCM decrypt without fixed tag length; `Math.random` fallback for the mobile device id; nginx forwarded any `Upgrade` value (h2c smuggling); HTTP→HTTPS redirect reflected the Host header; no package-age delay | §3 SAST | Closed: 128-bit tag enforced (tested), `expo-crypto` CSPRNG, WebSocket-only upgrade map, per-host redirects, `min-release-age=7` + Dependabot cooldown. Remaining matches are documented `nosemgrep` false positives (escaped CSV/GPX/HTML output, dev-only seed, docs-only CSP relaxation) |
 | G19 | No cross-region copy of backups/media | §10 | **Open** — planned, `BACKUP_AND_RECOVERY.md` §6 |
 | G14 | Physical-device mobile security testing (background GPS permissions, MASVS dynamic checks), external pen test | §6, §13 | **Open** — needs devices / an external firm |

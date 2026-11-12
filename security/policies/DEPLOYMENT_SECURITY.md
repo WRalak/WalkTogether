@@ -47,8 +47,8 @@ finding is a documented, approved, expiring exception (`VULNERABILITY_MANAGEMENT
 * Build provenance (`provenance: mode=max`) and SBOM attestations are attached to each image.
 * Cosign keyless signatures bind each image to `deploy-staging.yml@refs/heads/main` of this
   repository; `deploy.sh` refuses unsigned images and mutable tags.
-* GitHub Actions are pinned to major-version tags. **Gap:** pinning to commit SHAs is planned
-  (Dependabot will keep SHAs current).
+* GitHub Actions are pinned to full commit SHAs (version tag in a comment); Dependabot updates them
+  after a 7-day cooldown. npm resolves only versions older than 7 days (`min-release-age`, npm ≥ 11.10).
 * Scanner versions are pinned (Semgrep, Checkov, Trivy, Syft, ZAP images).
 
 ## 4. Secrets

@@ -53,6 +53,7 @@ paymentsRouter.get('/invoices/:id', requireAuth, async (req, res) => {
   res.json({ data: await svc.getInvoice(parse(idParam, req.params).id, authUserId(req)) });
 });
 paymentsRouter.get('/invoices/:id/html', requireAuth, async (req, res) => {
+  // nosemgrep: express_xss -- renderInvoiceHtml HTML-escapes every value and the response carries CSP default-src 'none'
   const inv = await svc.getInvoice(parse(idParam, req.params).id, authUserId(req));
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");

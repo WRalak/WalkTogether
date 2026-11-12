@@ -27,6 +27,7 @@ clubAnalyticsRouter.get('/:clubId/reports/attendance', requireAuth, async (req, 
   res.json({ data: await analytics.attendanceReport(parse(clubParam, req.params).clubId, authUserId(req), from, to) });
 });
 clubAnalyticsRouter.get('/:clubId/reports/members.csv', requireAuth, async (req, res) => {
+  // nosemgrep: express_xss -- CSV attachment built by toCsv (RFC 4180 + formula-injection escaping)
   const csv = await analytics.membersCsv(parse(clubParam, req.params).clubId, authUserId(req));
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="members.csv"');

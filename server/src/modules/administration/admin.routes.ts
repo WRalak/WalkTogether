@@ -355,6 +355,7 @@ const REPORT_PERMISSION: Record<platformAnalytics.ReportKind, AdminPermissionKey
   activity: 'platform.overview.view',
 };
 adminRouter.get('/reports/:kind.csv', async (req, res, next) => {
+  // nosemgrep: express_xss -- CSV attachment built by toCsv (RFC 4180 + formula-injection escaping); kind is an enum
   const kind = z.enum(platformAnalytics.REPORT_KINDS).safeParse(req.params.kind);
   if (!kind.success) return next();
   await new Promise<void>((resolve, reject) => requireAdminPermission(REPORT_PERMISSION[kind.data])(req, res, (err?: unknown) => (err ? reject(err) : resolve())));
