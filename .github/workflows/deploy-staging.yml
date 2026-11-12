@@ -75,7 +75,7 @@ jobs:
       - uses: sigstore/cosign-installer@v3
       - name: Build and push API
         id: api
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: infrastructure/docker/Dockerfile.api
@@ -87,7 +87,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=api
       - name: Build and push platform admin
         id: admin
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: infrastructure/docker/Dockerfile.platform-admin
