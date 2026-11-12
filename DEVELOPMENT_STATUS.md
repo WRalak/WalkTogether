@@ -1,7 +1,8 @@
 # Development Status
 
-_Last updated: 2026-11-10 — Phases 1–9 implemented. Everything that can be built and verified without
-physical devices, live provider credentials or third parties is done; those items are listed at the end._
+_Last updated: 2026-11-12 — Phases 1–9 implemented, plus the DevSecOps & security architecture phase
+(section below). Everything that can be built and verified without physical devices, live provider
+credentials, cloud accounts or third parties is done; those items are listed at the end._
 
 ## Roadmap
 
@@ -16,6 +17,7 @@ physical devices, live provider credentials or third parties is done; those item
 | 7 Monetization | M-Pesa/Stripe providers, verified checkout, invoices, refunds (incl. M-Pesa reversals), promotions, sponsorships | ✅ |
 | 8 Platform administration | KPIs, revenue, plans, sponsors, moderation, security, system health, admins | ✅ |
 | 9 Production hardening | Audit, metrics, OpenAPI, Zod 4, partitioning, security suite, load test, Docker/CI, backup drill | ✅ |
+| 10 DevSecOps | Secure CI/CD (18 stages), SAST/DAST/IaC/container scanning, SBOM, signed images, Terraform + Kubernetes baseline, member MFA, least-privilege DB, threat detection, security policies | ✅ (see open items) |
 
 ## Architecture in one paragraph
 
@@ -60,21 +62,78 @@ competitions & badges); events across all clubs (moderator cancel); analytics (p
 flagged activities, revenue); reports (CSV: users, clubs, payments, daily activity); moderation queue;
 settings & feature flags; audit logs; security monitoring; system health; administrators.
 
+## DevSecOps & security architecture — done (2026-11-12)
+
+Started from a gap analysis of the repository (`security/GAP_ANALYSIS.md`, gaps G1–G19 with evidence
+and status). Decisions are recorded where they are made: inline `#checkov:skip` reasons, the
+vulnerability exception register, the RLS decision (`ACCESS_CONTROL_POLICY.md` §6).
+
+* **Pipeline** (`security/policies/DEPLOYMENT_SECURITY.md`): `ci.yml` (lockfile install, ESLint with
+  security rules + Prettier, typecheck, unit, API security and integration tests **as the
+  least-privilege `wt_app` role**, encrypted backup → restore drill, migration drift, builds, non-root
+  image check, Trivy CRITICAL gate, Syft SBOM); `security-scan.yml` (Semgrep registry packs + 10
+  tested custom rules, Gitleaks full history, npm audit + Trivy fs, Checkov + Trivy config + Terraform
+  validate, Prometheus/Alertmanager/nginx/Compose validation, OWASP ZAP API scan; weekly schedule);
+  `mobile-build.yml` (tests, hardened release-config checks, EAS on tags); `deploy-staging.yml`
+  (only after green CI + security scan; GHCR by digest, re-scan, SBOM attestation, Cosign keyless
+  signing, AWS OIDC → SSM deploy, smoke/security checks, ZAP baseline); `deploy-production.yml`
+  (signature + attestation verification, re-scan, exception-register gate, `production` environment
+  approval, health verification). Critical findings can only pass through a documented, approved,
+  expiring entry in `security/vulnerability-management/exceptions.yaml` (`check_exceptions.py`).
+* **Application:** optional member TOTP MFA with recovery codes (API + mobile, all sign-in paths);
+  RS256 pinned for Google/Apple ID tokens; production start-up guard requires TLS to PostgreSQL
+  (`sslmode`) and Redis (`rediss://`); security-event metrics (auth/MFA failures, token reuse,
+  suspicious logins, rate limiting, 401/403, admin actions, forged payment webhooks) with Prometheus
+  alerts and a Grafana dashboard; payments protected by a DB trigger (no deletes, no edits to
+  amounts); login history purged after 12 months; Android `allowBackup=false`, cleartext only in dev
+  builds, release builds refuse a non-HTTPS API URL.
+* **Database:** roles `wt_migrator` / `wt_app` / `wt_readonly` (`infrastructure/deployment/database-roles.sql`);
+  the app role cannot run DDL or alter audit logs, invoices or payments — the whole server suite runs as it in CI.
+* **Infrastructure:** `infrastructure/docker` (hardened production Compose: read-only, cap-drop ALL,
+  limits, segmented networks, digests), `infrastructure/nginx` (TLS 1.2/1.3, headers, rate limits),
+  `infrastructure/terraform` (AWS: VPC tiers + flow logs, WAF + ALB, private SSM-only host with IMDSv2,
+  RDS with force_ssl/pgaudit/PITR, ElastiCache TLS+AUTH, KMS everywhere, Object-Lock backups, Secrets
+  Manager, CloudWatch alarms, GuardDuty, CloudTrail, GitHub OIDC; dev/staging/prod), `infrastructure/kubernetes`
+  (PSA restricted, default-deny network policies — for later scale), `infrastructure/monitoring`,
+  `infrastructure/deployment/deploy.sh` (signature verification, secrets from Secrets Manager, rollback).
+  Checkov: 0 failed checks.
+* **Documentation:** `SECURITY.md`; `security/threat-model/THREAT_MODEL.md`;
+  `security/incident-response/INCIDENT_RESPONSE.md`; `security/vulnerability-management/VULNERABILITY_MANAGEMENT.md`;
+  `security/policies/{ACCESS_CONTROL_POLICY,BACKUP_AND_RECOVERY,DEPLOYMENT_SECURITY,DATA_PROTECTION_POLICY}.md`;
+  `security/security-checklists/*`.
+
+Note on the spec's file tree: it lists `pnpm-workspace.yaml`; this repository uses **npm
+workspaces** (root `package.json` → `workspaces`) by the owner's choice, so that file does not exist.
+
+**Not claimed:** no external penetration test, certification or compliance attestation has been done.
+
+### Open security items
+
+| Item | Why open | Owner action |
+| --- | --- | --- |
+| Pin GitHub Actions to commit SHAs | Needs GitHub API access to resolve SHAs | Run a pinning tool (e.g. `pinact`), Dependabot then maintains them |
+| Branch protection, `production` reviewers, CODEOWNERS enforcement, secret-scanning push protection | Repository settings, not code | `DEPLOYMENT_SECURITY.md` §6 |
+| Apply Terraform, populate Secrets Manager, first deploys | Needs AWS accounts | `security/security-checklists/NEW_ENVIRONMENT_CHECKLIST.md` |
+| Terraform provider lock files | Registry unreachable from the build environment | `terraform providers lock -platform=linux_amd64 -platform=darwin_arm64` in each environment, commit |
+| Cross-region backup copy | Cost/scale decision | `BACKUP_AND_RECOVERY.md` §6 |
+| Audit-log archival job (> 7 years) | Not needed before year 7 | `DATA_PROTECTION_POLICY.md` §4 |
+| PostgreSQL RLS | Deliberately deferred | `ACCESS_CONTROL_POLICY.md` §6 |
+| MASVS dynamic testing on devices, external pen test, ODPC registration/DPIA | Needs devices, a firm, counsel | below |
+
 ## Tests (all passing)
 
 | Suite | Tests |
 | --- | --- |
-| Server integration/unit (18 files: auth, users, clubs, tenant isolation, security, links, platform analytics, phase 2, activities, events, social/media/video/messaging, challenges, payments/sponsorships, M-Pesa (mocked Daraja), platform admin, admin, journey, unit) | 164 |
+| Server integration/unit (19 files: auth, MFA, users, clubs, tenant isolation, security (incl. threat-detection metrics, retention), links, platform analytics, phase 2, activities, events, social/media/video/messaging, challenges, payments/sponsorships, M-Pesa (mocked Daraja), platform admin, admin, journey, unit (incl. production config guard)) | 173 |
 | `packages/shared-utils` (formatting + GPS engine) | 12 |
 | `packages/validation` | 6 |
 | `packages/api-client` | 4 |
 | `platform-admin` | 1 |
 | Mobile (Jest: schemas, token store, tracking session, offline sync, QR parsing, component, club-admin access) | 12 |
-| **Total** | **199** |
+| **Total** | **208** |
 
-Also verified: workspace typecheck; per-application GitHub Actions workflows (integration against
-PostGIS/Redis, migration drift check, platform-admin build, Android JS bundle export, Docker image
-builds with an API boot smoke test, `npm run audit:prod`, gitleaks); a real-browser run of every
+Also verified: workspace typecheck, ESLint and Prettier; the GitHub Actions pipeline described above
+(run results on GitHub); a real-browser run of every
 platform-admin section against a live API (MFA sign-in, CSV download); a database backup/restore
 drill; and a load test (`infrastructure/loadtest/README.md`).
 
