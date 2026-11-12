@@ -68,5 +68,5 @@ version, because users update slowly.
 npm run test -w @walktogether/mobile
 ```
 
-CI: `.github/workflows/mobile.yml` (typecheck, Jest, Android JS bundle) runs when this folder or a
-package it uses changes.
+CI: `.github/workflows/mobile-build.yml` (typecheck, Jest, hardened release-config checks, Android JS
+bundle; EAS store builds on `mobile-v*` tags) runs when this folder or a package it uses changes.

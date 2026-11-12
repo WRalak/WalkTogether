@@ -34,6 +34,11 @@ gap in this iteration; anything not closed is tracked in `DEVELOPMENT_STATUS.md`
 | G9 | Payment rows could be deleted or their amount/currency altered in SQL | §11 immutable financial records | Closed: trigger blocks DELETE and edits to financial fields |
 | G10 | Android backups and cleartext traffic not explicitly disabled | §6 MASVS-STORAGE/NETWORK | Closed: `allowBackup: false`, cleartext only in development builds |
 | G11 | Compose stack lacked read-only filesystems, resource limits, network segmentation | §7 | Closed: `infrastructure/docker/docker-compose.yml` |
-| G12 | Security policy documents missing | §12 | Closed: `SECURITY.md` + `security/*` |
+| G12 | Security policy documents missing | §12 | Closed: `SECURITY.md` + `security/*` (threat model, incident response, vulnerability management, access control, backup & recovery, deployment security, data protection, checklists) |
 | G13 | PostgreSQL Row-Level Security not used | §5 (consider) | **Decision recorded, not implemented** — see `security/policies/ACCESS_CONTROL_POLICY.md` §6 |
+| G15 | Login history kept forever (data-protection retention not enforced) | §5, DPA 2019 | Closed: daily purge after 12 months (`session-maintenance.ts`, tested) |
+| G16 | Backup restorability only checked manually | §10 | Closed: encrypted backup → restore drill runs in CI on every push |
+| G17 | GitHub Actions pinned by tag, not commit SHA | §3 SLSA | **Open** — needs GitHub API access to resolve SHAs; Dependabot is configured to maintain them once pinned |
+| G18 | GitHub branch protection, environment reviewers, CODEOWNERS enforcement | §3, §8 | **Owner action** — repository settings, listed in `DEPLOYMENT_SECURITY.md` §6 |
+| G19 | No cross-region copy of backups/media | §10 | **Open** — planned, `BACKUP_AND_RECOVERY.md` §6 |
 | G14 | Physical-device mobile security testing (background GPS permissions, MASVS dynamic checks), external pen test | §6, §13 | **Open** — needs devices / an external firm |

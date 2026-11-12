@@ -45,12 +45,13 @@ jobs:
           rm security/semgrep/tests/walktogether.yml
       - name: Scan (OWASP Top 10, Node/Express, TypeScript, React, secrets + WalkTogether rules)
         run: |
+          # Findings are printed to this log and also saved as SARIF (artifact) for code-scanning tools.
           semgrep scan --error --metrics=off --disable-version-check \
             --config p/owasp-top-ten --config p/nodejsscan --config p/expressjs --config p/typescript \
             --config p/react --config p/jwt --config p/secrets \
             --config security/semgrep/walktogether.yml \
             --exclude security/semgrep/tests --exclude '**/*.test.ts' --exclude '**/test/**' \
-            --sarif --output semgrep.sarif .
+            --sarif-output=semgrep.sarif .
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: semgrep-sarif, path: semgrep.sarif, retention-days: 30 }

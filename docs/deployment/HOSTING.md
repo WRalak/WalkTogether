@@ -7,9 +7,9 @@ CI workflow, so it can be hosted on its own schedule.
 
 | Folder | What it is | Who uses it | Recommended host | Domain (example) | Deploy artifact | CI workflow |
 | --- | --- | --- | --- | --- | --- | --- |
-| `server/` | REST + Socket.IO API, background worker, migrations; also email-link and legal pages | everything | Container platform (ECS Fargate, Fly.io, Render, Railway, a VM) | `api.walktogether.app` | `server/Dockerfile` (one image, three roles) | `server.yml` |
-| `mobile/` | Android & iOS app — members **and** club owners, admins, organisers, moderators | all members | EAS Build → Google Play / App Store | — | `mobile/eas.json` | `mobile.yml` |
-| `platform-admin/` | The only web app: platform-level administration | WalkTogether staff | Vercel (`platform-admin/vercel.json`) or container, **behind an IP allow-list / VPN** | `admin.walktogether.app` | `platform-admin/Dockerfile` | `platform-admin.yml` |
+| `server/` | REST + Socket.IO API, background worker, migrations; also email-link and legal pages | everything | Container platform (ECS Fargate, Fly.io, Render, Railway, a VM) | `api.walktogether.app` | `infrastructure/docker/Dockerfile.api` (one image, three roles) | `ci.yml`, `deploy-*.yml` |
+| `mobile/` | Android & iOS app — members **and** club owners, admins, organisers, moderators | all members | EAS Build → Google Play / App Store | — | `mobile/eas.json` | `mobile-build.yml` |
+| `platform-admin/` | The only web app: platform-level administration | WalkTogether staff | Vercel (`platform-admin/vercel.json`) or container, **behind an IP allow-list / VPN** | `admin.walktogether.app` | `infrastructure/docker/Dockerfile.platform-admin` | `ci.yml`, `deploy-*.yml` |
 
 There is deliberately **no public marketing website** and **no club-admin web app**. Links that open
 outside the app are served by the API:
@@ -50,11 +50,11 @@ a browser origin and is unaffected (tokens live in the device keychain).
 Dockerfiles are built from the **repository root**, because each application compiles `packages/`:
 
 ```bash
-docker build -f server/Dockerfile -t walktogether-api .
+docker build -f infrastructure/docker/Dockerfile.api -t walktogether-api .
 ```
 
 ```bash
-docker build -f platform-admin/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app -t walktogether-platform-admin .
+docker build -f infrastructure/docker/Dockerfile.platform-admin --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app -t walktogether-platform-admin .
 ```
 
 On Vercel, create one project for the platform admin with *Root Directory* `platform-admin`; its

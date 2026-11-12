@@ -24,7 +24,7 @@ the same PostgreSQL database. Full hosting map: [`docs/deployment/HOSTING.md`](d
 | `platform-admin/` | The **only web app**: platform-level administration for WalkTogether staff, with mandatory MFA | Vercel or container (`admin.`, IP-restricted) | [README](platform-admin/README.md) |
 | `server/` | Express 5 API + Socket.IO + BullMQ worker, Prisma/PostgreSQL+PostGIS, Redis; also email-link and legal pages | Container (`api.`) | [README](server/README.md) |
 | `packages/` | `shared-types`, `validation`, `api-client`, `shared-utils` | not deployed | — |
-| `infrastructure/` | local Postgres init, Nginx for self-hosting, backup/restore scripts, load tests | — | [README](infrastructure/README.md) |
+| `infrastructure/` | Dockerfiles + production Compose, nginx, Terraform (AWS), Kubernetes baseline, monitoring, backup/restore, deploy script, load tests | — | [README](infrastructure/README.md) |
 | `docs/` | Architecture, database, security, API, multi-tenancy, GPS, monetization, deployment | — | below |
 
 ## Prerequisites

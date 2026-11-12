@@ -17,7 +17,7 @@ member/admin JWT secrets.
 
 * **Compute:** ECS Fargate services — `api` (≥2 tasks), `worker` (≥1), `platform-admin`; one-off
   `migrate` task per release. The mobile app ships through EAS and the app stores.
-* **Ingress:** ALB with ACM certificates (or Nginx per `infrastructure/nginx/walktogether.conf`);
+* **Ingress:** ALB with ACM certificates (or Nginx per `infrastructure/nginx/nginx.conf`);
   AWS WAF managed rules; platform admin hostname restricted by IP/VPN.
 * **Data:** RDS PostgreSQL 16 Multi-AZ with the PostGIS extension; RDS Proxy for pooling;
   ElastiCache Redis 7 (cluster mode off, Multi-AZ, `noeviction` for BullMQ).
@@ -28,15 +28,15 @@ member/admin JWT secrets.
 
 ## 3. Images
 
-Each deployable folder owns its Dockerfile; all are built from the repository root (they compile
+The Dockerfiles live in `infrastructure/docker/`; all are built from the repository root (they compile
 shared code from `packages/`). See [`HOSTING.md`](HOSTING.md) for the full hosting map.
 
 ```bash
-docker build -f server/Dockerfile -t walktogether-api .
+docker build -f infrastructure/docker/Dockerfile.api -t walktogether-api .
 ```
 
 ```bash
-docker build -f platform-admin/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app -t walktogether-platform-admin .
+docker build -f infrastructure/docker/Dockerfile.platform-admin --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app -t walktogether-platform-admin .
 ```
 
 The API image
@@ -44,9 +44,11 @@ runs `node dist/main.js` by default; the worker uses `node dist/worker.js`; migr
 `npx prisma migrate deploy`. The platform admin can alternatively be deployed to Vercel using
 `platform-admin/vercel.json`.
 
-Each application's CI workflow (`server.yml`, `platform-admin.yml`) builds
-its image when that unit or a shared package changes; the API image is additionally smoke-tested to
-confirm it refuses to start with an unsafe production configuration. The API image includes `ffmpeg`
+`ci.yml` builds both images on every push (non-root check, Trivy gate, SBOM); the API image is
+additionally smoke-tested to confirm it refuses to start with an unsafe production configuration.
+`deploy-staging.yml` publishes them to GHCR by digest and signs them with Cosign;
+`deploy-production.yml` promotes those signed digests after approval
+(`security/policies/DEPLOYMENT_SECURITY.md`). The API image includes `ffmpeg`
 for video transcoding.
 
 ## 4. Release procedure
@@ -82,14 +84,15 @@ for video transcoding.
 
 | Item | Policy |
 | --- | --- |
-| RDS automated backups | 14–35 days PITR; snapshots before every migration; cross-region copy daily |
+| RDS automated backups | 7–35 days PITR (per environment); snapshot before every major migration |
 | Redis | Queues are recoverable state; AOF on; jobs are idempotent |
 | Object storage | Versioning + lifecycle rules |
 | Restore drill | Quarterly: restore PITR into an isolated instance, run smoke tests, record RTO/RPO |
 
-Targets: RPO ≤ 5 minutes, RTO ≤ 2 hours. `infrastructure/deployment/backup.sh` produces encrypted
-`pg_dump` archives to S3; `restore-drill.sh` restores the latest into a scratch database and verifies
-row counts and migrations (drill executed successfully during Phase 9). Repeat quarterly on staging.
+Targets and procedures: `security/policies/BACKUP_AND_RECOVERY.md`. `infrastructure/backup/backup.sh`
+produces age-encrypted `pg_dump` archives (Object Lock S3 bucket); `infrastructure/backup/restore-drill.sh`
+verifies checksum, decrypts, restores into a scratch database and checks it — this runs in CI on
+every push and must be repeated quarterly against a real production backup.
 
 ## 6. Mobile releases
 

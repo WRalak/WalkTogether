@@ -58,7 +58,7 @@ npm run dev:worker -w @walktogether/server
 | Worker | `node dist/worker.js` | ≥ 1 | process up |
 | Migrate | `npx prisma migrate deploy` | one-off per release, before the API | exit code |
 
-Build: `docker build -f server/Dockerfile -t walktogether-api .` (from the repository root).
+Build: `docker build -f infrastructure/docker/Dockerfile.api -t walktogether-api .` (from the repository root).
 Without Docker: `npm ci -w @walktogether/server`, then
 `npm exec -w @walktogether/server -- prisma generate`, `npm run build -w @walktogether/server`,
 and `npm run start -w @walktogether/server`.

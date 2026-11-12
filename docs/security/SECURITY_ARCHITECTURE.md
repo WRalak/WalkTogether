@@ -20,6 +20,7 @@ today (✅), and those designed for later phases (🗓).
 | ✅ Phone OTP | 6-digit codes, HMAC-hashed, 10-min expiry, single use, 5 attempts, 60 s cooldown, 5/hour per number |
 | ✅ OAuth | Google/Apple ID tokens verified against provider JWKS (`iss`, `aud`, `exp`); auto-link only when both sides have verified the email |
 | ✅ Email verification / reset | Single-use HMAC-hashed tokens (24 h / 30 min); resets invalidate older links |
+| ✅ Member MFA (optional) | TOTP (encrypted secret, replay-protected), 10 single-use hashed recovery codes; when enabled every sign-in path (password, phone OTP, OAuth) returns a 5-minute challenge instead of tokens; disabling needs password + second factor; failures count toward lockout |
 | ✅ Account deletion | Re-authentication, immediate global sign-out, 30-day grace, then irreversible anonymisation job |
 
 ### Token storage on clients

@@ -54,7 +54,7 @@ Attach a custom domain on the same parent domain as the API.
 **Container:** from the repository root —
 
 ```bash
-docker build -f platform-admin/Dockerfile --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app -t walktogether-platform-admin .
+docker build -f infrastructure/docker/Dockerfile.platform-admin --build-arg NEXT_PUBLIC_API_URL=https://api.walktogether.app -t walktogether-platform-admin .
 ```
 
 The image runs the standalone Next.js server on port 3000 as a non-root user.
@@ -68,5 +68,5 @@ The image runs the standalone Next.js server on port 3000 as a non-root user.
 npm run test -w @walktogether/platform-admin
 ```
 
-CI: `.github/workflows/platform-admin.yml` (typecheck, tests, build, Docker image) runs when this folder or
-`packages/` changes.
+CI: `.github/workflows/ci.yml` (lint, typecheck, tests, build, Docker image + Trivy + SBOM) and
+`security-scan.yml` run on every push; releases go through `deploy-staging.yml` → `deploy-production.yml`.

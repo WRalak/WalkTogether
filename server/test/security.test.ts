@@ -231,3 +231,17 @@ describe('threat-detection metrics', () => {
     expect(await value('payment_anomaly')).toBeGreaterThan(before.pay);
   });
 });
+
+describe('data retention', () => {
+  it('login history older than the retention period is purged; recent history is kept', async () => {
+    const { cleanupExpiredSessions, LOGIN_HISTORY_RETENTION_DAYS } = await import('../src/modules/auth/session-maintenance');
+    const u = await registerUser();
+    const old = new Date(Date.now() - (LOGIN_HISTORY_RETENTION_DAYS + 1) * 24 * 3600_000);
+    const stale = await prisma.loginEvent.create({ data: { userId: u.id, method: 'PASSWORD', success: true, createdAt: old } });
+    const recent = await prisma.loginEvent.create({ data: { userId: u.id, method: 'PASSWORD', success: true } });
+    const result = await cleanupExpiredSessions();
+    expect(result.loginEvents).toBeGreaterThanOrEqual(1);
+    expect(await prisma.loginEvent.findUnique({ where: { id: stale.id } })).toBeNull();
+    expect(await prisma.loginEvent.findUnique({ where: { id: recent.id } })).not.toBeNull();
+  });
+});
