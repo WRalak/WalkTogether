@@ -106,7 +106,7 @@ services:
 
   redis:
     profiles: [self-hosted-data]
-    image: redis:7.4-alpine
+    image: redis:8.0-alpine
     restart: unless-stopped
     security_opt: ['no-new-privileges:true']
     # TLS only (the API refuses plaintext redis:// in staging/production): clients use rediss://.
