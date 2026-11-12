@@ -14,7 +14,7 @@ updates:
     directory: /
     schedule: { interval: weekly }
     cooldown: { default-days: 7 } # let the ecosystem catch malicious/compromised releases first
-  # Base images in infrastructure/docker (node:22-bookworm-slim) and pinned compose images.
+  # Base images in infrastructure/docker (node:22-trixie-slim, pinned by digest) and pinned compose images.
   - package-ecosystem: docker
     directory: /infrastructure/docker
     schedule: { interval: weekly }
