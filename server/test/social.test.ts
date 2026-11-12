@@ -63,7 +63,11 @@ describe('posts, feed and interactions', () => {
     const id = p.body.data.id;
     await api().post(`/api/v1/posts/${id}/like`).set(bearer(fan)).expect(200);
     await api().post(`/api/v1/posts/${id}/like`).set(bearer(fan)).expect(200);
-    const c = await api().post(`/api/v1/posts/${id}/comments`).set(bearer(fan)).send({ body: `Me! @${mentioned.username} come too` }).expect(201);
+    const c = await api()
+      .post(`/api/v1/posts/${id}/comments`)
+      .set(bearer(fan))
+      .send({ body: `Me! @${mentioned.username} come too` })
+      .expect(201);
     await api().post(`/api/v1/posts/${id}/comments`).set(bearer(author)).send({ body: 'Great', parentId: c.body.data.id }).expect(201);
     await api().post(`/api/v1/posts/${id}/bookmark`).set(bearer(fan)).expect(200);
     const post = await api().get(`/api/v1/posts/${id}`).set(bearer(fan)).expect(200);
@@ -81,16 +85,28 @@ describe('posts, feed and interactions', () => {
 
   it('mentions never leak private posts', async () => {
     const [author, outsider] = [await registerUser(), await registerUser()];
-    await api().post('/api/v1/posts').set(bearer(author)).send({ body: `secret @${outsider.username}`, visibility: 'PRIVATE' }).expect(201);
+    await api()
+      .post('/api/v1/posts')
+      .set(bearer(author))
+      .send({ body: `secret @${outsider.username}`, visibility: 'PRIVATE' })
+      .expect(201);
     expect((await api().get('/api/v1/notifications').set(bearer(outsider)).expect(200)).body.data).toHaveLength(0);
   });
 
   it('completed activities appear in followers’ feeds', async () => {
     const [walker, follower] = [await registerUser(), await registerUser()];
     await api().post(`/api/v1/users/${walker.id}/follow`).set(bearer(follower)).expect(200);
-    const a = await api().post('/api/v1/activities').set(bearer(walker)).send({ clientId: randomUUID(), type: 'WALK', startedAt: new Date(Date.now() - 600_000).toISOString() }).expect(201);
+    const a = await api()
+      .post('/api/v1/activities')
+      .set(bearer(walker))
+      .send({ clientId: randomUUID(), type: 'WALK', startedAt: new Date(Date.now() - 600_000).toISOString() })
+      .expect(201);
     const t0 = Date.now() - 400_000;
-    await api().post(`/api/v1/activities/${a.body.data.id}/gps-points`).set(bearer(walker)).send({ points: Array.from({ length: 50 }, (_, i) => ({ seq: i, t: t0 + i * 3000, lat: -1.29 + i * 0.00004, lng: 36.82, accuracy: 5 })) }).expect(200);
+    await api()
+      .post(`/api/v1/activities/${a.body.data.id}/gps-points`)
+      .set(bearer(walker))
+      .send({ points: Array.from({ length: 50 }, (_, i) => ({ seq: i, t: t0 + i * 3000, lat: -1.29 + i * 0.00004, lng: 36.82, accuracy: 5 })) })
+      .expect(200);
     await api().post(`/api/v1/activities/${a.body.data.id}/complete`).set(bearer(walker)).send({ endedAt: new Date().toISOString(), visibility: 'FOLLOWERS' }).expect(200);
     const feed = await api().get('/api/v1/feed').set(bearer(follower)).expect(200);
     expect(feed.body.data[0].activity.id).toBe(a.body.data.id);
@@ -108,7 +124,11 @@ describe('media pipeline', () => {
       .toBuffer();
     const req = await api().post('/api/v1/media').set(bearer(u)).send({ purpose: 'AVATAR', mimeType: 'image/jpeg', sizeBytes: jpeg.length }).expect(201);
     const url = new URL(req.body.data.upload.url);
-    await api().put(url.pathname + url.search).set('Content-Type', 'image/jpeg').send(jpeg).expect(200);
+    await api()
+      .put(url.pathname + url.search)
+      .set('Content-Type', 'image/jpeg')
+      .send(jpeg)
+      .expect(200);
     const done = await api().post(`/api/v1/media/${req.body.data.mediaId}/complete`).set(bearer(u)).expect(200);
     expect(done.body.data.status).toBe('READY');
     const asset = await prisma.mediaAsset.findUniqueOrThrow({ where: { id: req.body.data.mediaId } });
@@ -125,15 +145,27 @@ describe('media pipeline', () => {
     const u = await registerUser();
     await api().post('/api/v1/media').set(bearer(u)).send({ purpose: 'POST', mimeType: 'application/x-msdownload', sizeBytes: 100 }).expect(400);
     await api().post('/api/v1/media').set(bearer(u)).send({ purpose: 'AVATAR', mimeType: 'video/mp4', sizeBytes: 100 }).expect(400);
-    await api().post('/api/v1/media').set(bearer(u)).send({ purpose: 'POST', mimeType: 'image/png', sizeBytes: 50 * 1024 * 1024 }).expect(400);
+    await api()
+      .post('/api/v1/media')
+      .set(bearer(u))
+      .send({ purpose: 'POST', mimeType: 'image/png', sizeBytes: 50 * 1024 * 1024 })
+      .expect(400);
     const fake = Buffer.from('X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*  padding padding');
     const req = await api().post('/api/v1/media').set(bearer(u)).send({ purpose: 'POST', mimeType: 'image/png', sizeBytes: fake.length }).expect(201);
     const url = new URL(req.body.data.upload.url);
-    await api().put(url.pathname + url.search).set('Content-Type', 'image/png').send(fake).expect(200);
+    await api()
+      .put(url.pathname + url.search)
+      .set('Content-Type', 'image/png')
+      .send(fake)
+      .expect(200);
     const done = await api().post(`/api/v1/media/${req.body.data.mediaId}/complete`).set(bearer(u)).expect(200);
     expect(done.body.data).toMatchObject({ status: 'REJECTED', rejectReason: 'type_mismatch' });
     // Upload URLs cannot be forged.
-    await api().put(`${url.pathname}?exp=${Math.floor(Date.now() / 1000) + 60}&token=forged`).set('Content-Type', 'image/png').send(fake).expect(401);
+    await api()
+      .put(`${url.pathname}?exp=${Math.floor(Date.now() / 1000) + 60}&token=forged`)
+      .set('Content-Type', 'image/png')
+      .send(fake)
+      .expect(401);
   });
 });
 
@@ -155,9 +187,16 @@ describe('moderation', () => {
     const dm = await api().post('/api/v1/posts').set(bearer(troll)).send({ body: 'abuse', visibility: 'PUBLIC' }).expect(201);
     const r2 = await api().post('/api/v1/reports').set(bearer(member)).send({ targetType: 'POST', targetId: dm.body.data.id, reason: 'HARASSMENT' }).expect(201);
     const admin = await createAdmin('MODERATOR');
-    const queue = await api().get('/api/v1/platform-admin/reports').set({ Authorization: `Bearer ${admin.accessToken}` }).expect(200);
+    const queue = await api()
+      .get('/api/v1/platform-admin/reports')
+      .set({ Authorization: `Bearer ${admin.accessToken}` })
+      .expect(200);
     expect(queue.body.data.map((r: { id: string }) => r.id)).toContain(r2.body.data.id);
-    await api().post(`/api/v1/platform-admin/reports/${r2.body.data.id}/resolve`).set({ Authorization: `Bearer ${admin.accessToken}` }).send({ action: 'SUSPEND_USER', note: 'Repeated harassment' }).expect(204);
+    await api()
+      .post(`/api/v1/platform-admin/reports/${r2.body.data.id}/resolve`)
+      .set({ Authorization: `Bearer ${admin.accessToken}` })
+      .send({ action: 'SUSPEND_USER', note: 'Repeated harassment' })
+      .expect(204);
     await api().get('/api/v1/users/me').set(bearer(troll)).expect(401);
   });
 });
@@ -208,7 +247,12 @@ describe('messaging', () => {
     intruder.disconnect();
     // Bad tokens are refused at the handshake.
     const anon = ioClient(`http://127.0.0.1:${port}/rt`, { auth: { token: 'nope' }, transports: ['websocket'] });
-    await expect(new Promise((resolve, reject) => { anon.on('connect', () => resolve(null)); anon.on('connect_error', reject); })).rejects.toThrow();
+    await expect(
+      new Promise((resolve, reject) => {
+        anon.on('connect', () => resolve(null));
+        anon.on('connect_error', reject);
+      }),
+    ).rejects.toThrow();
     anon.disconnect();
     // Blocking ends the conversation.
     await api().post(`/api/v1/users/${a.id}/block`).set(bearer(b)).expect(204);
@@ -237,12 +281,33 @@ describe('video pipeline', () => {
     const { tmpdir } = await import('node:os');
     const dir = mkdtempSync(join(tmpdir(), 'wt-vtest-'));
     const src = join(dir, 'in.mp4');
-    execFileSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=1920x1080:rate=25', '-t', '2', '-metadata', 'location=-01.2921+036.8219/', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', src]);
+    execFileSync('ffmpeg', [
+      '-y',
+      '-v',
+      'error',
+      '-f',
+      'lavfi',
+      '-i',
+      'testsrc=size=1920x1080:rate=25',
+      '-t',
+      '2',
+      '-metadata',
+      'location=-01.2921+036.8219/',
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      src,
+    ]);
     const buf = readFileSync(src);
     const u = await registerUser();
     const req = await api().post('/api/v1/media').set(bearer(u)).send({ purpose: 'POST', mimeType: 'video/mp4', sizeBytes: buf.length }).expect(201);
     const url = new URL(req.body.data.upload.url);
-    await api().put(url.pathname + url.search).set('Content-Type', 'video/mp4').send(buf).expect(200);
+    await api()
+      .put(url.pathname + url.search)
+      .set('Content-Type', 'video/mp4')
+      .send(buf)
+      .expect(200);
     const done = await api().post(`/api/v1/media/${req.body.data.mediaId}/complete`).set(bearer(u)).expect(200);
     expect(done.body.data).toMatchObject({ status: 'READY', width: 1280, height: 720 });
     const asset = await prisma.mediaAsset.findUniqueOrThrow({ where: { id: req.body.data.mediaId } });

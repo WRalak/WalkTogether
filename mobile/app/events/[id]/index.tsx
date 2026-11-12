@@ -17,7 +17,9 @@ export default function EventDetail() {
   const rsvp = useMutation({
     mutationFn: (going: boolean) => api.events.rsvp(id, going),
     onSuccess: (r) => {
-      setMsg(r.status === 'GOING' ? 'You’re going! We’ll remind you before it starts.' : r.status === 'WAITLISTED' ? 'The event is full: you’re on the waitlist.' : 'RSVP cancelled.');
+      setMsg(
+        r.status === 'GOING' ? 'You’re going! We’ll remind you before it starts.' : r.status === 'WAITLISTED' ? 'The event is full: you’re on the waitlist.' : 'RSVP cancelled.',
+      );
       void qc.invalidateQueries({ queryKey: ['event', id] });
     },
     onError: (e) => setMsg(errorMessage(e)),
@@ -34,7 +36,10 @@ export default function EventDetail() {
   const start = new Date(e.startsAt);
   const directions = () => {
     if (e.meetingLat == null) return;
-    const url = Platform.OS === 'ios' ? `maps://?daddr=${e.meetingLat},${e.meetingLng}` : `geo:${e.meetingLat},${e.meetingLng}?q=${e.meetingLat},${e.meetingLng}(${encodeURIComponent(e.meetingPoint)})`;
+    const url =
+      Platform.OS === 'ios'
+        ? `maps://?daddr=${e.meetingLat},${e.meetingLng}`
+        : `geo:${e.meetingLat},${e.meetingLng}?q=${e.meetingLat},${e.meetingLng}(${encodeURIComponent(e.meetingPoint)})`;
     void Linking.openURL(url);
   };
   return (

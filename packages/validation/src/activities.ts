@@ -42,16 +42,17 @@ export const completeActivitySchema = z
     endedAt: isoDate,
     ...activitySharingSchema,
     /** Client-side figures are hints only; the server recomputes authoritative statistics. */
-    clientStats: z.object({ distanceM: z.number().min(0).max(1_000_000), movingSeconds: z.number().int().min(0).max(1_000_000) }).strict().optional(),
+    clientStats: z
+      .object({ distanceM: z.number().min(0).max(1_000_000), movingSeconds: z.number().int().min(0).max(1_000_000) })
+      .strict()
+      .optional(),
     mockLocationDetected: z.boolean().optional(),
   })
   .strict();
 
 export const updateActivitySchema = z.object(activitySharingSchema).strict();
 
-export const listActivitiesQuerySchema = cursorPaginationSchema
-  .extend({ type: z.enum(ACTIVITY_TYPES).optional(), from: isoDate.optional(), to: isoDate.optional() })
-  .strict();
+export const listActivitiesQuerySchema = cursorPaginationSchema.extend({ type: z.enum(ACTIVITY_TYPES).optional(), from: isoDate.optional(), to: isoDate.optional() }).strict();
 
 export const statsQuerySchema = z.object({ type: z.enum(ACTIVITY_TYPES).optional(), from: isoDate.optional(), to: isoDate.optional() }).strict();
 

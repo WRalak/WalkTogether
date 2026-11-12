@@ -8,10 +8,20 @@ import { Section, useAction } from '@/features/ui';
 type Kind = 'users' | 'clubs' | 'payments' | 'activity';
 
 const REPORTS: { kind: Kind; title: string; description: string; permission: string }[] = [
-  { kind: 'users', title: 'New users', description: 'Sign-ups in the period with status, verification and active club count. No email addresses or locations.', permission: 'users.view' },
+  {
+    kind: 'users',
+    title: 'New users',
+    description: 'Sign-ups in the period with status, verification and active club count. No email addresses or locations.',
+    permission: 'users.view',
+  },
   { kind: 'clubs', title: 'Clubs', description: 'Clubs created in the period with status, visibility, category, location and members.', permission: 'clubs.view' },
   { kind: 'payments', title: 'Payments', description: 'All payments with purpose, amount, provider, status, receipt and invoice number.', permission: 'billing.view' },
-  { kind: 'activity', title: 'Daily activity', description: 'Validated activities, distance, active members and flagged activities per day.', permission: 'platform.overview.view' },
+  {
+    kind: 'activity',
+    title: 'Daily activity',
+    description: 'Validated activities, distance, active members and flagged activities per day.',
+    permission: 'platform.overview.view',
+  },
 ];
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -61,7 +71,15 @@ export default function ReportsAdmin() {
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {REPORTS.filter((r) => can(r.permission)).map((r) => (
-          <Section key={r.kind} title={r.title} action={<Button size="sm" onClick={() => void get(r.kind)} disabled={busyKind === r.kind}>{busyKind === r.kind ? 'Preparing…' : 'Download CSV'}</Button>}>
+          <Section
+            key={r.kind}
+            title={r.title}
+            action={
+              <Button size="sm" onClick={() => void get(r.kind)} disabled={busyKind === r.kind}>
+                {busyKind === r.kind ? 'Preparing…' : 'Download CSV'}
+              </Button>
+            }
+          >
             <p className="text-sm text-muted-foreground">{r.description}</p>
           </Section>
         ))}

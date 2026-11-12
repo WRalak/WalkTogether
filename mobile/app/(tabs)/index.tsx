@@ -28,7 +28,11 @@ export default function Home() {
           </Text>
         </View>
         <Link href="/notifications" asChild>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Notifications${unread ? `, ${unread} unread` : ''}`} className="mt-2 h-11 w-11 items-center justify-center rounded-full bg-surface">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Notifications${unread ? `, ${unread} unread` : ''}`}
+            className="mt-2 h-11 w-11 items-center justify-center rounded-full bg-surface"
+          >
             <Text className="text-lg">🔔</Text>
             {unread > 0 && (
               <View className="absolute -right-0.5 -top-0.5 min-w-[18px] items-center rounded-full bg-accent px-1">
@@ -73,7 +77,9 @@ export default function Home() {
               <View className="h-2 overflow-hidden rounded-full bg-white/25">
                 <View className="h-2 rounded-full bg-accent" style={{ width: `${Math.round((stats.data.goals[0].progress ?? 0) * 100)}%` }} />
               </View>
-              <Text className="mt-1 text-xs text-white/80">{Math.round((stats.data.goals[0].progress ?? 0) * 100)}% of your {stats.data.goals[0].period.toLowerCase()}ly goal</Text>
+              <Text className="mt-1 text-xs text-white/80">
+                {Math.round((stats.data.goals[0].progress ?? 0) * 100)}% of your {stats.data.goals[0].period.toLowerCase()}ly goal
+              </Text>
             </View>
           )}
         </Pressable>

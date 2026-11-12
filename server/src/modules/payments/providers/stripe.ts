@@ -21,7 +21,11 @@ export class StripeProvider implements PaymentProvider {
   private async call<T>(method: 'GET' | 'POST', path: string, body?: URLSearchParams, idempotencyKey?: string): Promise<T> {
     const res = await fetch(`${API}${path}`, {
       method,
-      headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, ...(body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}), ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}) },
+      headers: {
+        Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+        ...(body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
+        ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+      },
       body,
       signal: AbortSignal.timeout(20_000),
     });
@@ -57,7 +61,9 @@ export class StripeProvider implements PaymentProvider {
     const parts = Object.fromEntries(header.split(',').map((kv) => kv.split('=') as [string, string]));
     const t = Number(parts.t);
     if (!t || Math.abs(now / 1000 - t) > TOLERANCE_S) return false;
-    const expected = createHmac('sha256', secret).update(`${t}.${rawBody.toString('utf8')}`).digest('hex');
+    const expected = createHmac('sha256', secret)
+      .update(`${t}.${rawBody.toString('utf8')}`)
+      .digest('hex');
     return header
       .split(',')
       .filter((kv) => kv.startsWith('v1='))
@@ -69,7 +75,12 @@ export class StripeProvider implements PaymentProvider {
     if (!raw || !env.STRIPE_WEBHOOK_SECRET || !StripeProvider.verifySignature(raw, req.header('stripe-signature'), env.STRIPE_WEBHOOK_SECRET)) throw new WebhookAuthError();
     const event = JSON.parse(raw.toString('utf8')) as { id: string; type: string; data: { object: { id: string; payment_status?: string } } };
     const obj = event.data.object;
-    const outcome = event.type === 'checkout.session.completed' && obj.payment_status === 'paid' ? 'SUCCEEDED' : event.type === 'checkout.session.expired' || event.type === 'checkout.session.async_payment_failed' ? 'FAILED' : 'PENDING';
+    const outcome =
+      event.type === 'checkout.session.completed' && obj.payment_status === 'paid'
+        ? 'SUCCEEDED'
+        : event.type === 'checkout.session.expired' || event.type === 'checkout.session.async_payment_failed'
+          ? 'FAILED'
+          : 'PENDING';
     return { eventId: event.id, providerRef: obj.id, outcome: outcome as 'SUCCEEDED' | 'FAILED' | 'PENDING', raw: event };
   }
 

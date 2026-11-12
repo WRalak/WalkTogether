@@ -81,7 +81,8 @@ export function attachRealtime(server: HttpServer) {
     });
     socket.on('typing', async (raw) => {
       const parsed = z.object({ conversationId: z.string().uuid() }).safeParse(raw);
-      if (parsed.success && socket.rooms.has(`conv:${parsed.data.conversationId}`)) socket.to(`conv:${parsed.data.conversationId}`).emit('typing', { conversationId: parsed.data.conversationId, userId });
+      if (parsed.success && socket.rooms.has(`conv:${parsed.data.conversationId}`))
+        socket.to(`conv:${parsed.data.conversationId}`).emit('typing', { conversationId: parsed.data.conversationId, userId });
     });
   });
   logger.info('realtime attached');

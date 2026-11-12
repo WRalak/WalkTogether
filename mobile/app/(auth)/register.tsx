@@ -17,7 +17,10 @@ export default function Register() {
   const loadUser = useAuthStore((s) => s.loadUser);
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { control, handleSubmit, formState } = useForm<Values>({ resolver: zodResolver(registerFormSchema), defaultValues: { displayName: '', username: '', email: '', password: '' } });
+  const { control, handleSubmit, formState } = useForm<Values>({
+    resolver: zodResolver(registerFormSchema),
+    defaultValues: { displayName: '', username: '', email: '', password: '' },
+  });
 
   const onSubmit = handleSubmit(async (values) => {
     if (!accepted) return setError('Please accept the Terms and Privacy Policy to continue.');
@@ -31,7 +34,11 @@ export default function Register() {
   });
 
   const field = (name: keyof Values, label: string, props: object = {}) => (
-    <Controller control={control} name={name} render={({ field: f }) => <TextField label={label} value={f.value} onChangeText={f.onChange} onBlur={f.onBlur} error={formState.errors[name]?.message} {...props} />} />
+    <Controller
+      control={control}
+      name={name}
+      render={({ field: f }) => <TextField label={label} value={f.value} onChangeText={f.onChange} onBlur={f.onBlur} error={formState.errors[name]?.message} {...props} />}
+    />
   );
 
   return (
@@ -49,7 +56,9 @@ export default function Register() {
       {field('email', 'Email', { autoCapitalize: 'none', keyboardType: 'email-address', autoComplete: 'email' })}
       {field('password', 'Password', { secureTextEntry: true, autoComplete: 'new-password', hint: 'At least 10 characters with letters and numbers' })}
       <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: accepted }} onPress={() => setAccepted((a) => !a)} className="mb-5 flex-row items-start gap-3">
-        <View className={`mt-0.5 h-6 w-6 items-center justify-center rounded-md border-2 ${accepted ? 'border-primary bg-primary' : 'border-line bg-surface'}`}>{accepted && <Text className="font-bold text-white">✓</Text>}</View>
+        <View className={`mt-0.5 h-6 w-6 items-center justify-center rounded-md border-2 ${accepted ? 'border-primary bg-primary' : 'border-line bg-surface'}`}>
+          {accepted && <Text className="font-bold text-white">✓</Text>}
+        </View>
         <Text className="flex-1 text-sm text-ink-muted">
           I agree to the{' '}
           <Text className="font-semibold text-primary" onPress={() => void Linking.openURL('https://walktogether.app/terms')}>

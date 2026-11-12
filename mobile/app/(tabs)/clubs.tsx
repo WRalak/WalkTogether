@@ -35,7 +35,12 @@ function MyClubs() {
         </>
       )}
       {/* Club administration lives in the app: shown to owners, admins, organisers and moderators. */}
-      <Button title={manages ? 'Manage my clubs' : 'Start a club'} variant={manages ? 'primary' : 'secondary'} className="mt-3" onPress={() => router.push(manages ? '/admin' : '/admin/new')} />
+      <Button
+        title={manages ? 'Manage my clubs' : 'Start a club'}
+        variant={manages ? 'primary' : 'secondary'}
+        className="mt-3"
+        onPress={() => router.push(manages ? '/admin' : '/admin/new')}
+      />
     </View>
   );
 }
@@ -74,7 +79,17 @@ export default function ClubsTab() {
             {!!sponsored.data?.length && (
               <View className="mb-4">
                 {sponsored.data.map((sp) => (
-                  <Link key={sp.id} href={sp.challenge ? { pathname: '/challenges/[id]', params: { id: sp.challenge.id } } : sp.events[0] ? { pathname: '/events/[id]', params: { id: sp.events[0].id } } : '/challenges'} asChild>
+                  <Link
+                    key={sp.id}
+                    href={
+                      sp.challenge
+                        ? { pathname: '/challenges/[id]', params: { id: sp.challenge.id } }
+                        : sp.events[0]
+                          ? { pathname: '/events/[id]', params: { id: sp.events[0].id } }
+                          : '/challenges'
+                    }
+                    asChild
+                  >
                     <Pressable accessibilityRole="link" className="mb-2 rounded-3xl border border-orange-200 bg-orange-50 p-4">
                       <Badge label={`${sp.label} · ${sp.sponsor.name}`} tone="warning" />
                       <Text className="mt-2 font-bold text-ink">{sp.challenge?.title ?? sp.name}</Text>
@@ -98,7 +113,13 @@ export default function ClubsTab() {
           </View>
         }
         ListEmptyComponent={
-          clubs.isLoading ? <Loading /> : clubs.error ? <ErrorState message={errorMessage(clubs.error)} onRetry={() => void clubs.refetch()} /> : <EmptyState title="No clubs found" body="Try another search, or start a club for your area." />
+          clubs.isLoading ? (
+            <Loading />
+          ) : clubs.error ? (
+            <ErrorState message={errorMessage(clubs.error)} onRetry={() => void clubs.refetch()} />
+          ) : (
+            <EmptyState title="No clubs found" body="Try another search, or start a club for your area." />
+          )
         }
         ListFooterComponent={clubs.isFetchingNextPage ? <Loading label="Loading more clubs" /> : null}
       />

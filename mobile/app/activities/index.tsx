@@ -79,7 +79,15 @@ export default function ActivitiesScreen() {
           </View>
         ) : null
       }
-      ListEmptyComponent={q.isLoading ? <Loading /> : q.error ? <ErrorState message={errorMessage(q.error)} onRetry={() => void q.refetch()} /> : <EmptyState title="No activities yet" body="Record your first walk or run from the Record tab." />}
+      ListEmptyComponent={
+        q.isLoading ? (
+          <Loading />
+        ) : q.error ? (
+          <ErrorState message={errorMessage(q.error)} onRetry={() => void q.refetch()} />
+        ) : (
+          <EmptyState title="No activities yet" body="Record your first walk or run from the Record tab." />
+        )
+      }
     />
   );
 }

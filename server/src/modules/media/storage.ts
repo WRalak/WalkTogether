@@ -33,7 +33,9 @@ class S3Storage implements StorageProvider {
   });
   async presignUpload(key: string, mimeType: string, sizeBytes: number) {
     // ContentType and ContentLength are signed: the client cannot upload a different type or size.
-    const url = await getSignedUrl(this.client, new PutObjectCommand({ Bucket: env.S3_BUCKET, Key: key, ContentType: mimeType, ContentLength: sizeBytes }), { expiresIn: UPLOAD_TTL_S });
+    const url = await getSignedUrl(this.client, new PutObjectCommand({ Bucket: env.S3_BUCKET, Key: key, ContentType: mimeType, ContentLength: sizeBytes }), {
+      expiresIn: UPLOAD_TTL_S,
+    });
     return { method: 'PUT' as const, url, headers: { 'Content-Type': mimeType }, expiresAt: new Date(Date.now() + UPLOAD_TTL_S * 1000).toISOString() };
   }
   async read(key: string, maxBytes?: number) {

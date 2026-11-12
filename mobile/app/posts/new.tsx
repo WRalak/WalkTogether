@@ -60,7 +60,13 @@ export default function NewPost() {
       <Text className="mb-2 mt-5 font-semibold text-ink">Share with</Text>
       <View className="flex-row flex-wrap gap-2">
         {options.map((o) => (
-          <Pressable key={o.key} accessibilityRole="radio" accessibilityState={{ selected: audience === o.key }} onPress={() => setAudience(o.key)} className={`rounded-full border px-4 py-2 ${audience === o.key ? 'border-primary bg-primary-soft' : 'border-line bg-surface'}`}>
+          <Pressable
+            key={o.key}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: audience === o.key }}
+            onPress={() => setAudience(o.key)}
+            className={`rounded-full border px-4 py-2 ${audience === o.key ? 'border-primary bg-primary-soft' : 'border-line bg-surface'}`}
+          >
             <Text className={audience === o.key ? 'font-semibold text-primary' : 'text-ink-muted'}>{o.label}</Text>
           </Pressable>
         ))}
@@ -74,7 +80,12 @@ export default function NewPost() {
           setBusy('post');
           setError(null);
           try {
-            await api.social.createPost({ body: body.trim() || null, visibility: isClub ? 'FOLLOWERS' : (audience as 'PUBLIC'), clubId: isClub ? audience : null, mediaIds: photo ? [photo.id] : [] });
+            await api.social.createPost({
+              body: body.trim() || null,
+              visibility: isClub ? 'FOLLOWERS' : (audience as 'PUBLIC'),
+              clubId: isClub ? audience : null,
+              mediaIds: photo ? [photo.id] : [],
+            });
             void qc.invalidateQueries({ queryKey: ['feed'] });
             router.back();
           } catch (e) {

@@ -27,7 +27,9 @@ export const reportSchema = z
 export const reportListQuerySchema = cursorPaginationSchema.extend({ status: z.enum(['OPEN', 'ACTIONED', 'DISMISSED']).optional() }).strict();
 export const clubReportResolveSchema = z.object({ action: z.enum(['DISMISS', 'HIDE']), note: z.string().trim().max(300).optional() }).strict();
 export const adminReportResolveSchema = z.object({ action: z.enum(['DISMISS', 'HIDE_CONTENT', 'SUSPEND_USER']), note: z.string().trim().min(3).max(300) }).strict();
-export const moderateContentSchema = z.object({ targetType: z.enum(['POST', 'COMMENT']), targetId: z.string().uuid(), hide: z.boolean(), reason: z.string().trim().max(200).optional() }).strict();
+export const moderateContentSchema = z
+  .object({ targetType: z.enum(['POST', 'COMMENT']), targetId: z.string().uuid(), hide: z.boolean(), reason: z.string().trim().max(200).optional() })
+  .strict();
 
 export const sendMessageSchema = z.object({ body: z.string().trim().min(1).max(4000), clientId: z.string().uuid().optional() }).strict();
 export const mediaRefSchema = z.object({ mediaId: z.string().uuid() }).strict();

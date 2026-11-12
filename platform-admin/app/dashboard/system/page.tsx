@@ -4,7 +4,18 @@ import { Spinner, Stat } from '@/components/ui';
 import { adminApi } from '@/lib/api';
 import { JsonBlock, Section, StatusBadge } from '@/features/ui';
 
-type Sys = { status: string; environment: string; uptimeSeconds: number; memoryMb: number; database: { ok: boolean; latencyMs?: number }; redis: { ok: boolean; latencyMs?: number }; queues: Record<string, unknown>; latestMigration: unknown; integrations: Record<string, unknown>; signals: { webhookErrors24h: number; pendingPayments: number; openReports: number } };
+type Sys = {
+  status: string;
+  environment: string;
+  uptimeSeconds: number;
+  memoryMb: number;
+  database: { ok: boolean; latencyMs?: number };
+  redis: { ok: boolean; latencyMs?: number };
+  queues: Record<string, unknown>;
+  latestMigration: unknown;
+  integrations: Record<string, unknown>;
+  signals: { webhookErrors24h: number; pendingPayments: number; openReports: number };
+};
 
 export default function SystemPage() {
   const q = useQuery({ queryKey: ['system'], queryFn: () => adminApi.system() as Promise<Sys>, refetchInterval: 30_000 });

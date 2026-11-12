@@ -32,7 +32,10 @@ export default function Profile() {
   useEffect(() => {
     void healthStatus().then((h) => {
       setHealth(h);
-      if (h === 'granted') void syncSteps().then(() => stats.refetch()).catch(() => undefined);
+      if (h === 'granted')
+        void syncSteps()
+          .then(() => stats.refetch())
+          .catch(() => undefined);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -55,7 +58,11 @@ export default function Profile() {
             }
           }}
         >
-          {user.profile?.avatarUrl ? <Image source={{ uri: user.profile.avatarUrl }} className="h-[84px] w-[84px] rounded-full" accessibilityIgnoresInvertColors /> : <Avatar label={initials(name)} size={84} />}
+          {user.profile?.avatarUrl ? (
+            <Image source={{ uri: user.profile.avatarUrl }} className="h-[84px] w-[84px] rounded-full" accessibilityIgnoresInvertColors />
+          ) : (
+            <Avatar label={initials(name)} size={84} />
+          )}
         </Pressable>
         <Text accessibilityRole="header" className="mt-3 text-2xl font-extrabold text-ink">
           {name}
@@ -103,10 +110,22 @@ export default function Profile() {
             {stats.data.steps.today.toLocaleString()} today · {stats.data.steps.thisWeek.toLocaleString()} this week
           </Text>
         ) : (
-          <Text className="mt-1 text-sm text-ink-muted">Connect {Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect'} to see your step count. We never estimate steps from GPS.</Text>
+          <Text className="mt-1 text-sm text-ink-muted">
+            Connect {Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect'} to see your step count. We never estimate steps from GPS.
+          </Text>
         )}
         {health !== 'granted' && health !== 'unavailable' && (
-          <Button title={`Connect ${Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect'}`} variant="outline" className="mt-3" onPress={() => void connectHealth().then(() => { setHealth('granted'); void stats.refetch(); })} />
+          <Button
+            title={`Connect ${Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect'}`}
+            variant="outline"
+            className="mt-3"
+            onPress={() =>
+              void connectHealth().then(() => {
+                setHealth('granted');
+                void stats.refetch();
+              })
+            }
+          />
         )}
         {health === 'unavailable' && !stats.data?.steps && <Text className="mt-2 text-xs text-ink-muted">Not available on this device or build.</Text>}
       </Card>

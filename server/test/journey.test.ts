@@ -17,7 +17,10 @@ it('register → verify → create club → discover → request → approve', a
     .send({ email: ownerEmail, password: 'sunrise-walks-2026', username: `founder_${id}`, displayName: 'Founder', acceptTerms: true })
     .expect(201);
   const owner = reg.body.data;
-  await api().post('/api/v1/auth/verify-email').send({ token: tokenFromEmail(ownerEmail) }).expect(200);
+  await api()
+    .post('/api/v1/auth/verify-email')
+    .send({ token: tokenFromEmail(ownerEmail) })
+    .expect(200);
 
   const slug = `karura-${id}`;
   const club = await api()
@@ -28,10 +31,17 @@ it('register → verify → create club → discover → request → approve', a
 
   const walkerEmail = `walker_${id}@example.com`;
   const walker = (
-    await api().post('/api/v1/auth/register').send({ email: walkerEmail, password: 'sunrise-walks-2026', username: `walker_${id}`, displayName: 'Walker', acceptTerms: true }).expect(201)
+    await api()
+      .post('/api/v1/auth/register')
+      .send({ email: walkerEmail, password: 'sunrise-walks-2026', username: `walker_${id}`, displayName: 'Walker', acceptTerms: true })
+      .expect(201)
   ).body.data;
 
-  const found = await api().get('/api/v1/clubs').query({ q: `Karura Forest Walkers ${id}` }).set(bearer(walker)).expect(200);
+  const found = await api()
+    .get('/api/v1/clubs')
+    .query({ q: `Karura Forest Walkers ${id}` })
+    .set(bearer(walker))
+    .expect(200);
   expect(found.body.data.map((c: { slug: string }) => c.slug)).toContain(slug);
 
   const join = await api().post(`/api/v1/clubs/${club.body.data.id}/join`).set(bearer(walker)).send({ message: 'Saturday regular!' }).expect(202);

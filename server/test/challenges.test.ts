@@ -15,15 +15,30 @@ async function record(u: TestUser, distanceM: number, opts: { type?: string; spe
   const n = Math.max(3, Math.round(distanceM / (speed * 3)) + 1);
   const t0 = Date.now() - (opts.daysAgo ?? 0) * DAY - n * 3000 - 120_000;
   const dLat = (speed * 3) / 111_195;
-  const a = await api().post('/api/v1/activities').set(bearer(u)).send({ clientId: randomUUID(), type: opts.type ?? 'WALK', startedAt: new Date(t0).toISOString() }).expect(201);
+  const a = await api()
+    .post('/api/v1/activities')
+    .set(bearer(u))
+    .send({ clientId: randomUUID(), type: opts.type ?? 'WALK', startedAt: new Date(t0).toISOString() })
+    .expect(201);
   const pts = Array.from({ length: n }, (_, i) => ({ seq: i, t: t0 + i * 3000, lat: -1.29 + dLat * i, lng: 36.82, accuracy: 5 }));
-  for (let i = 0; i < pts.length; i += 1000) await api().post(`/api/v1/activities/${a.body.data.id}/gps-points`).set(bearer(u)).send({ points: pts.slice(i, i + 1000) }).expect(200);
-  await api().post(`/api/v1/activities/${a.body.data.id}/complete`).set(bearer(u)).send({ endedAt: new Date(t0 + n * 3000).toISOString(), visibility: opts.visibility ?? 'PUBLIC', clubIds: opts.clubIds }).expect(200);
+  for (let i = 0; i < pts.length; i += 1000)
+    await api()
+      .post(`/api/v1/activities/${a.body.data.id}/gps-points`)
+      .set(bearer(u))
+      .send({ points: pts.slice(i, i + 1000) })
+      .expect(200);
+  await api()
+    .post(`/api/v1/activities/${a.body.data.id}/complete`)
+    .set(bearer(u))
+    .send({ endedAt: new Date(t0 + n * 3000).toISOString(), visibility: opts.visibility ?? 'PUBLIC', clubIds: opts.clubIds })
+    .expect(200);
   return a.body.data.id as string;
 }
 
 async function proClub(clubId: string) {
-  const plan = await prisma.subscriptionPlan.create({ data: { code: `ch_${uid()}`, audience: 'CLUB', name: 'Pro', isActive: true, entitlements: { create: [{ key: 'club.challenges', boolValue: true }] } } });
+  const plan = await prisma.subscriptionPlan.create({
+    data: { code: `ch_${uid()}`, audience: 'CLUB', name: 'Pro', isActive: true, entitlements: { create: [{ key: 'club.challenges', boolValue: true }] } },
+  });
   await prisma.$transaction((tx) => activateSubscription({ clubId }, plan.id, tx));
 }
 
@@ -68,7 +83,11 @@ describe('club challenges', () => {
     const owner = await registerUser();
     const club = await createClub(owner);
     await proClub(club.id);
-    const c = await api().post(`/api/v1/clubs/${club.id}/challenges`).set(bearer(owner)).send(challengeBody({ target: null, maxDailyDistanceM: 2000 })).expect(201);
+    const c = await api()
+      .post(`/api/v1/clubs/${club.id}/challenges`)
+      .set(bearer(owner))
+      .send(challengeBody({ target: null, maxDailyDistanceM: 2000 }))
+      .expect(201);
     await api().post(`/api/v1/challenges/${c.body.data.id}/join`).set(bearer(owner)).send({}).expect(200);
     await record(owner, 5000, { speed: 30 }); // impossible "walk" → flagged
     await record(owner, 3000); // capped to 2000 for the day
@@ -81,7 +100,11 @@ describe('club challenges', () => {
     const outsider = await registerUser();
     const club = await createClub(owner);
     await proClub(club.id);
-    const c = await api().post(`/api/v1/clubs/${club.id}/challenges`).set(bearer(owner)).send(challengeBody({ visibility: 'MEMBERS' })).expect(201);
+    const c = await api()
+      .post(`/api/v1/clubs/${club.id}/challenges`)
+      .set(bearer(owner))
+      .send(challengeBody({ visibility: 'MEMBERS' }))
+      .expect(201);
     await api().get(`/api/v1/challenges/${c.body.data.id}`).set(bearer(outsider)).expect(404);
     const pub = await api().post(`/api/v1/clubs/${club.id}/challenges`).set(bearer(owner)).send(challengeBody()).expect(201);
     await api().post(`/api/v1/challenges/${pub.body.data.id}/join`).set(bearer(outsider)).send({}).expect(403);
@@ -125,9 +148,15 @@ describe('platform challenges, club-vs-club, premium and results', () => {
   it('premium challenges require an individual premium subscription (not a club plan)', async () => {
     const admin = await createAdmin();
     const u = await registerUser();
-    const ch = await api().post('/api/v1/platform-admin/challenges').set({ Authorization: `Bearer ${admin.accessToken}` }).send(challengeBody({ scope: 'PLATFORM', isPremium: true })).expect(201);
+    const ch = await api()
+      .post('/api/v1/platform-admin/challenges')
+      .set({ Authorization: `Bearer ${admin.accessToken}` })
+      .send(challengeBody({ scope: 'PLATFORM', isPremium: true }))
+      .expect(201);
     expect((await api().post(`/api/v1/challenges/${ch.body.data.id}/join`).set(bearer(u)).send({}).expect(402)).body.error.code).toBe('PLAN_UPGRADE_REQUIRED');
-    const plan = await prisma.subscriptionPlan.create({ data: { code: `prem_${uid()}`, audience: 'INDIVIDUAL', name: 'Premium', isActive: true, entitlements: { create: [{ key: 'user.premium_challenges', boolValue: true }] } } });
+    const plan = await prisma.subscriptionPlan.create({
+      data: { code: `prem_${uid()}`, audience: 'INDIVIDUAL', name: 'Premium', isActive: true, entitlements: { create: [{ key: 'user.premium_challenges', boolValue: true }] } },
+    });
     await prisma.$transaction((tx) => activateSubscription({ userId: u.id }, plan.id, tx));
     await api().post(`/api/v1/challenges/${ch.body.data.id}/join`).set(bearer(u)).send({}).expect(200);
   });

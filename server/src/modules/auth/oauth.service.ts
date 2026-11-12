@@ -49,9 +49,20 @@ export async function verifyIdToken(provider: Provider, idToken: string): Promis
 }
 
 async function generateUsername(seed: string) {
-  const base = (seed.toLowerCase().replace(/[^a-z0-9_.]/g, '').replace(/^[_.]+|[_.]+$/g, '') || 'walker').slice(0, 20);
+  const base = (
+    seed
+      .toLowerCase()
+      .replace(/[^a-z0-9_.]/g, '')
+      .replace(/^[_.]+|[_.]+$/g, '') || 'walker'
+  ).slice(0, 20);
   for (let i = 0; i < 5; i++) {
-    const candidate = `${base}${i === 0 && base.length >= 3 ? '' : randomToken(3).toLowerCase().replace(/[^a-z0-9]/g, '')}`.slice(0, 30);
+    const candidate = `${base}${
+      i === 0 && base.length >= 3
+        ? ''
+        : randomToken(3)
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '')
+    }`.slice(0, 30);
     if (candidate.length >= 3 && !(await prisma.user.findUnique({ where: { username: candidate }, select: { id: true } }))) return candidate;
   }
   return `walker${Date.now().toString(36)}`;

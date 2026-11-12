@@ -93,8 +93,21 @@ export class TrackingSession {
     this.engine.start(now);
     this.recent = [];
     this.activity = {
-      localId: this.newId(), serverId: null, type: kind, status: 'recording', startedAt: now, endedAt: null, title: null, visibility: null,
-      clubIds: [], engine: this.engine.snapshot, nextSeq: 0, syncedSeq: -1, attempts: 0, syncError: null, mockLocation: false,
+      localId: this.newId(),
+      serverId: null,
+      type: kind,
+      status: 'recording',
+      startedAt: now,
+      endedAt: null,
+      title: null,
+      visibility: null,
+      clubIds: [],
+      engine: this.engine.snapshot,
+      nextSeq: 0,
+      syncedSeq: -1,
+      attempts: 0,
+      syncError: null,
+      mockLocation: false,
     };
     await this.repo.insertActivity(this.activity);
     const { background } = await this.location.start(kind);
@@ -116,7 +129,18 @@ export class TrackingSession {
     for (const f of fixes.sort((a, b) => a.t - b.t)) {
       if (f.mocked) mocked = true;
       const p = this.engine.addPoint(f);
-      if (p) accepted.push({ seq: p.seq, segment: p.segment, t: p.t, lat: p.lat, lng: p.lng, accuracy: p.accuracy ?? null, altitude: p.altitude ?? null, altitudeAccuracy: p.altitudeAccuracy ?? null, speed: p.speed ?? null });
+      if (p)
+        accepted.push({
+          seq: p.seq,
+          segment: p.segment,
+          t: p.t,
+          lat: p.lat,
+          lng: p.lng,
+          accuracy: p.accuracy ?? null,
+          altitude: p.altitude ?? null,
+          altitudeAccuracy: p.altitudeAccuracy ?? null,
+          speed: p.speed ?? null,
+        });
     }
     if (accepted.length) {
       await this.repo.appendPoints(this.activity.localId, accepted);

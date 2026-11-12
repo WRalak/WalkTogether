@@ -12,7 +12,15 @@ export async function canViewActivity(activity: { id: string; userId: string; vi
   if (activity.status !== 'COMPLETED') return viewerId === activity.userId;
   if (viewerId === activity.userId) return true;
   if (viewerId) {
-    const blocked = await prisma.userBlock.findFirst({ where: { OR: [{ blockerId: viewerId, blockedId: activity.userId }, { blockerId: activity.userId, blockedId: viewerId }] }, select: { blockerId: true } });
+    const blocked = await prisma.userBlock.findFirst({
+      where: {
+        OR: [
+          { blockerId: viewerId, blockedId: activity.userId },
+          { blockerId: activity.userId, blockedId: viewerId },
+        ],
+      },
+      select: { blockerId: true },
+    });
     if (blocked) return false;
   }
   if (activity.visibility === 'PUBLIC') return true;

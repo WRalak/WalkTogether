@@ -1,6 +1,15 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { stepsSyncSchema, completeActivitySchema, createActivitySchema, goalSchema, gpsBatchSchema, listActivitiesQuerySchema, statsQuerySchema, updateActivitySchema } from '@walktogether/validation';
+import {
+  stepsSyncSchema,
+  completeActivitySchema,
+  createActivitySchema,
+  goalSchema,
+  gpsBatchSchema,
+  listActivitiesQuerySchema,
+  statsQuerySchema,
+  updateActivitySchema,
+} from '@walktogether/validation';
 import { authUserId, optionalAuth, requireAuth } from '../../middleware/authenticate';
 import { parse } from '../../middleware/validate';
 import { requireFeature } from '../subscriptions/entitlements.service';

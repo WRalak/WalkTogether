@@ -134,5 +134,3 @@ export function rollingPace(points: RawPoint[], windowSec = 45): number | null {
   if (d < 10 || dt <= 0) return null;
   return Math.round(dt / (d / 1000));
 }
-
-

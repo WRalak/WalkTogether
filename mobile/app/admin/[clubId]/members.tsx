@@ -17,11 +17,13 @@ export default function Members() {
   const { clubId, club, can } = useAdminClub();
   const params = useLocalSearchParams<{ status?: Status }>();
   const qc = useQueryClient();
-  const tabs = ([
-    { key: 'ACTIVE', label: 'Active', allowed: can('members.view') },
-    { key: 'PENDING', label: 'Requests', allowed: can('members.approve') },
-    { key: 'SUSPENDED', label: 'Suspended', allowed: can('members.suspend') },
-  ] as const).filter((t) => t.allowed);
+  const tabs = (
+    [
+      { key: 'ACTIVE', label: 'Active', allowed: can('members.view') },
+      { key: 'PENDING', label: 'Requests', allowed: can('members.approve') },
+      { key: 'SUSPENDED', label: 'Suspended', allowed: can('members.suspend') },
+    ] as const
+  ).filter((t) => t.allowed);
   const [status, setStatus] = useState<Status>(params.status ?? 'ACTIVE');
   const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
@@ -52,7 +54,12 @@ export default function Members() {
   });
 
   if (!club) return <Loading />;
-  if (!can('members.view')) return <Screen edges={[]}><NoPermission what="view members" /></Screen>;
+  if (!can('members.view'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="view members" />
+      </Screen>
+    );
   const rows = members.data?.pages.flatMap((p) => p.items) ?? [];
 
   const actions = (m: ClubMember) => {
@@ -63,20 +70,56 @@ export default function Members() {
         {m.status === 'PENDING' && can('members.approve') && (
           <>
             <Button title="Approve" className="min-h-[40px] flex-1" onPress={() => act.mutate(() => api.clubs.review(clubId, m.membershipId, { decision: 'APPROVE' }))} />
-            <Button title="Reject" variant="outline" className="min-h-[40px] flex-1" onPress={() => confirm('Reject request', `Reject ${name}'s request to join?`, () => act.mutate(() => api.clubs.review(clubId, m.membershipId, { decision: 'REJECT' })), 'Reject')} />
+            <Button
+              title="Reject"
+              variant="outline"
+              className="min-h-[40px] flex-1"
+              onPress={() =>
+                confirm('Reject request', `Reject ${name}'s request to join?`, () => act.mutate(() => api.clubs.review(clubId, m.membershipId, { decision: 'REJECT' })), 'Reject')
+              }
+            />
           </>
         )}
         {m.status === 'ACTIVE' && can('members.roles.assign') && roles.data && (
           <Button title="Change role" variant="secondary" className="min-h-[40px]" onPress={() => setEditingRole(editingRole === m.membershipId ? null : m.membershipId)} />
         )}
         {m.status === 'ACTIVE' && can('members.suspend') && (
-          <Button title="Suspend" variant="outline" className="min-h-[40px]" onPress={() => confirm('Suspend member', `Suspend ${name}? They lose access to members-only content.`, () => act.mutate(() => api.clubs.moderate(clubId, m.membershipId, { action: 'SUSPEND' })), 'Suspend')} />
+          <Button
+            title="Suspend"
+            variant="outline"
+            className="min-h-[40px]"
+            onPress={() =>
+              confirm(
+                'Suspend member',
+                `Suspend ${name}? They lose access to members-only content.`,
+                () => act.mutate(() => api.clubs.moderate(clubId, m.membershipId, { action: 'SUSPEND' })),
+                'Suspend',
+              )
+            }
+          />
         )}
         {m.status === 'SUSPENDED' && can('members.suspend') && (
-          <Button title="Reinstate" variant="outline" className="min-h-[40px]" onPress={() => act.mutate(() => api.clubs.moderate(clubId, m.membershipId, { action: 'REINSTATE' }))} />
+          <Button
+            title="Reinstate"
+            variant="outline"
+            className="min-h-[40px]"
+            onPress={() => act.mutate(() => api.clubs.moderate(clubId, m.membershipId, { action: 'REINSTATE' }))}
+          />
         )}
         {m.status !== 'PENDING' && can('members.remove') && (
-          <Button title="Remove" variant="danger" className="min-h-[40px]" onPress={() => confirm('Remove member', `Remove ${name} from ${club.name}? Their personal activities are not affected.`, () => act.mutate(() => api.clubs.moderate(clubId, m.membershipId, { action: 'REMOVE' })), 'Remove')} />
+          <Button
+            title="Remove"
+            variant="danger"
+            className="min-h-[40px]"
+            onPress={() =>
+              confirm(
+                'Remove member',
+                `Remove ${name} from ${club.name}? Their personal activities are not affected.`,
+                () => act.mutate(() => api.clubs.moderate(clubId, m.membershipId, { action: 'REMOVE' })),
+                'Remove',
+              )
+            }
+          />
         )}
       </View>
     );

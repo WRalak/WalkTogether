@@ -19,7 +19,12 @@ export async function revenueOverview() {
   }
   const since30 = new Date(Date.now() - 30 * DAY);
   const [byPurpose, cancellations30d, failed30d, monthly] = await Promise.all([
-    prisma.payment.groupBy({ by: ['purpose', 'currency'], where: { status: { in: ['SUCCEEDED', 'PARTIALLY_REFUNDED'] }, confirmedAt: { gte: since30 } }, _sum: { amountMinor: true, refundedMinor: true }, _count: true }),
+    prisma.payment.groupBy({
+      by: ['purpose', 'currency'],
+      where: { status: { in: ['SUCCEEDED', 'PARTIALLY_REFUNDED'] }, confirmedAt: { gte: since30 } },
+      _sum: { amountMinor: true, refundedMinor: true },
+      _count: true,
+    }),
     prisma.subscription.count({ where: { OR: [{ canceledAt: { gte: since30 } }, { status: 'EXPIRED', updatedAt: { gte: since30 } }] } }),
     prisma.payment.count({ where: { status: 'FAILED', createdAt: { gte: since30 } } }),
     prisma.$queryRaw<{ month: Date; purpose: string; currency: string; total: bigint }[]>`
@@ -31,7 +36,13 @@ export async function revenueOverview() {
     mrr,
     arr: Object.fromEntries(Object.entries(mrr).map(([c, v]) => [c, v * 12])),
     paidSubscriptions: counts,
-    last30d: byPurpose.map((r) => ({ purpose: r.purpose, currency: r.currency, payments: r._count, grossMinor: r._sum.amountMinor ?? 0, refundedMinor: r._sum.refundedMinor ?? 0 })),
+    last30d: byPurpose.map((r) => ({
+      purpose: r.purpose,
+      currency: r.currency,
+      payments: r._count,
+      grossMinor: r._sum.amountMinor ?? 0,
+      refundedMinor: r._sum.refundedMinor ?? 0,
+    })),
     cancellations30d,
     failedPayments30d: failed30d,
     monthly: monthly.map((m) => ({ month: new Date(m.month).toISOString().slice(0, 7), purpose: m.purpose, currency: m.currency, netMinor: Number(m.total) })),

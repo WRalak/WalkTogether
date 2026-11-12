@@ -49,7 +49,15 @@ export default function PhoneAuth() {
 
       {step.kind === 'phone' && (
         <>
-          <TextField label="Phone number" keyboardType="phone-pad" autoComplete="tel" placeholder="0712 345 678" value={phone} onChangeText={setPhone} hint="We’ll send you a 6-digit code by SMS" />
+          <TextField
+            label="Phone number"
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            placeholder="0712 345 678"
+            value={phone}
+            onChangeText={setPhone}
+            hint="We’ll send you a 6-digit code by SMS"
+          />
           <Button
             title="Send code"
             loading={busy}
@@ -68,7 +76,15 @@ export default function PhoneAuth() {
       {step.kind === 'code' && (
         <>
           <Text className="mb-4 text-ink-muted">Enter the code we sent to {step.phone}.</Text>
-          <TextField label="Verification code" keyboardType="number-pad" autoComplete="sms-otp" textContentType="oneTimeCode" maxLength={6} value={code} onChangeText={(t) => setCode(t.replace(/\D/g, ''))} />
+          <TextField
+            label="Verification code"
+            keyboardType="number-pad"
+            autoComplete="sms-otp"
+            textContentType="oneTimeCode"
+            maxLength={6}
+            value={code}
+            onChangeText={(t) => setCode(t.replace(/\D/g, ''))}
+          />
           <Button
             title="Verify"
             disabled={code.length !== 6}
@@ -98,7 +114,13 @@ export default function PhoneAuth() {
               run(async () => {
                 const u = usernameSchema.safeParse(username);
                 if (!u.success) throw new Error(u.error.issues[0]?.message);
-                await api.auth.completePhoneRegistration({ registrationToken: step.registrationToken, username: u.data, displayName: displayName.trim(), acceptTerms: true, device: await deviceInfo() });
+                await api.auth.completePhoneRegistration({
+                  registrationToken: step.registrationToken,
+                  username: u.data,
+                  displayName: displayName.trim(),
+                  acceptTerms: true,
+                  device: await deviceInfo(),
+                });
                 await loadUser();
               })
             }

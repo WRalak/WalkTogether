@@ -41,7 +41,9 @@ export default function MfaChallenge() {
         Two-step verification
       </Text>
       <Text className="mb-6 text-base text-ink-muted">
-        {useRecovery ? 'Enter one of the recovery codes you saved when you turned on two-step verification. Each code works once.' : 'Enter the 6-digit code from your authenticator app.'}
+        {useRecovery
+          ? 'Enter one of the recovery codes you saved when you turned on two-step verification. Each code works once.'
+          : 'Enter the 6-digit code from your authenticator app.'}
       </Text>
       {error ? <ErrorState message={error} /> : null}
       <TextField

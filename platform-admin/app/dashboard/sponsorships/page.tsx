@@ -10,7 +10,9 @@ export default function SponsorshipsAdmin() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Sponsorships</h1>
-          <p className="text-sm text-muted-foreground">Approve sponsors, review and award campaigns. Campaigns go live only once paid and approved; sponsored content is always labelled.</p>
+          <p className="text-sm text-muted-foreground">
+            Approve sponsors, review and award campaigns. Campaigns go live only once paid and approved; sponsored content is always labelled.
+          </p>
         </div>
         <Link href="/dashboard/sponsorships/competitions" className={buttonVariants({ variant: 'outline' })}>
           Competitions & badges

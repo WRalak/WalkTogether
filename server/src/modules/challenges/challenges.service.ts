@@ -39,17 +39,27 @@ export async function createClubChallenge(clubId: string, actorId: string, input
   validateInput(input);
   if (input.isPremium) throw badRequest('Only platform challenges can be premium');
   const c = await prisma.$transaction(async (tx) => {
-    const c = await tx.challenge.create({ data: { ...input, scope: 'CLUB', clubId, createdById: actorId, } });
+    const c = await tx.challenge.create({ data: { ...input, scope: 'CLUB', clubId, createdById: actorId } });
     await audit({ actorType: 'USER', actorId, action: 'challenge.created', targetType: 'challenge', targetId: c.id, clubId }, ctx, tx);
     return c;
   });
   const members = await prisma.clubMembership.findMany({ where: { clubId, status: 'ACTIVE', userId: { not: actorId } }, select: { userId: true }, take: 5000 });
-  await notify({ userIds: members.map((m) => m.userId), type: 'challenge.invitation', title: `New challenge: ${c.title}`, body: 'Join your club’s new challenge.', data: { challengeId: c.id } });
+  await notify({
+    userIds: members.map((m) => m.userId),
+    type: 'challenge.invitation',
+    title: `New challenge: ${c.title}`,
+    body: 'Join your club’s new challenge.',
+    data: { challengeId: c.id },
+  });
   return c;
 }
 
 /** Platform / sponsored / club-vs-club challenges are created by platform admins. */
-export async function createPlatformChallenge(adminId: string, input: ChallengeInput & { scope: 'PLATFORM' | 'CLUB_VS_CLUB' | 'SPONSORED'; clubIds?: string[]; sponsorName?: string | null }, ctx: AuditContext) {
+export async function createPlatformChallenge(
+  adminId: string,
+  input: ChallengeInput & { scope: 'PLATFORM' | 'CLUB_VS_CLUB' | 'SPONSORED'; clubIds?: string[]; sponsorName?: string | null },
+  ctx: AuditContext,
+) {
   validateInput(input);
   if (input.scope === 'CLUB_VS_CLUB' && (input.clubIds?.length ?? 0) < 2) throw badRequest('Club-vs-club challenges need at least two clubs');
   if (input.scope === 'SPONSORED' && !input.sponsorName) throw badRequest('Sponsored challenges must name the sponsor');
@@ -62,7 +72,10 @@ export async function createPlatformChallenge(adminId: string, input: ChallengeI
 }
 
 async function loadVisible(challengeId: string, viewerId?: string) {
-  const c = await prisma.challenge.findUnique({ where: { id: challengeId }, include: { teams: { include: { club: { select: { id: true, name: true, slug: true } } } }, club: { select: { id: true, name: true, slug: true } } } });
+  const c = await prisma.challenge.findUnique({
+    where: { id: challengeId },
+    include: { teams: { include: { club: { select: { id: true, name: true, slug: true } } } }, club: { select: { id: true, name: true, slug: true } } },
+  });
   if (!c || c.status === 'DRAFT') throw notFound('Challenge not found');
   if (c.clubId) {
     const access = await loadClubAccess(c.clubId, viewerId);
@@ -78,7 +91,18 @@ export async function getChallenge(id: string, viewerId?: string) {
     prisma.challengeParticipant.count({ where: { challengeId: id } }),
     viewerId ? prisma.challengeParticipant.findUnique({ where: { challengeId_userId: { challengeId: id, userId: viewerId } } }) : null,
   ]);
-  return { ...c, isSponsored: c.scope === 'SPONSORED', participants, me: me && { progressValue: me.progressValue, completedAt: me.completedAt, teamClubId: me.teamClubId, hideFromLeaderboard: me.hideFromLeaderboard, progress: c.target ? Math.min(1, me.progressValue / c.target) : null } };
+  return {
+    ...c,
+    isSponsored: c.scope === 'SPONSORED',
+    participants,
+    me: me && {
+      progressValue: me.progressValue,
+      completedAt: me.completedAt,
+      teamClubId: me.teamClubId,
+      hideFromLeaderboard: me.hideFromLeaderboard,
+      progress: c.target ? Math.min(1, me.progressValue / c.target) : null,
+    },
+  };
 }
 
 /** Discovery: active public platform/sponsored/club-vs-club challenges + challenges of the viewer's clubs. */
@@ -90,7 +114,11 @@ export async function listChallenges(viewerId: string | undefined, q: { cursor?:
     : {
         status: 'ACTIVE',
         endsAt: { gt: new Date() },
-        OR: [{ clubId: null, visibility: 'PUBLIC' }, { clubId: { in: myClubIds } }, { clubId: { not: null }, visibility: 'PUBLIC', club: { visibility: 'PUBLIC', status: 'ACTIVE' } }],
+        OR: [
+          { clubId: null, visibility: 'PUBLIC' },
+          { clubId: { in: myClubIds } },
+          { clubId: { not: null }, visibility: 'PUBLIC', club: { visibility: 'PUBLIC', status: 'ACTIVE' } },
+        ],
       };
   const rows = await prisma.challenge.findMany({
     where: { ...where, ...(cursor ? { AND: [{ OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }] }] } : {}) },
@@ -153,7 +181,13 @@ export async function recomputeParticipant(challengeId: string, userId: string) 
      GROUP BY 1`;
   const perDay = daily.map((d) => {
     const value =
-      c.metric === 'DISTANCE_M' ? Math.min(Math.round(d.distance), c.maxDailyDistanceM) : c.metric === 'MOVING_SECONDS' ? Number(d.moving) : c.metric === 'ACTIVITIES' ? Number(d.n) : 1; // ACTIVE_DAYS
+      c.metric === 'DISTANCE_M'
+        ? Math.min(Math.round(d.distance), c.maxDailyDistanceM)
+        : c.metric === 'MOVING_SECONDS'
+          ? Number(d.moving)
+          : c.metric === 'ACTIVITIES'
+            ? Number(d.n)
+            : 1; // ACTIVE_DAYS
     return { day: d.day, value };
   });
   const total = perDay.reduce((s, d) => s + d.value, 0);
@@ -167,7 +201,8 @@ export async function recomputeParticipant(challengeId: string, userId: string) 
       data: { progressValue: total, progressUpdatedAt: new Date(), ...(completedNow ? { completedAt: new Date() } : {}), ...(halfway ? { notifiedHalfway: true } : {}) },
     }),
   ]);
-  if (halfway) await notify({ userIds: [userId], type: 'challenge.progress', title: `Halfway there: ${c.title}`, body: 'Keep going — you’re 50% of the way.', data: { challengeId } });
+  if (halfway)
+    await notify({ userIds: [userId], type: 'challenge.progress', title: `Halfway there: ${c.title}`, body: 'Keep going — you’re 50% of the way.', data: { challengeId } });
   if (completedNow) {
     await notify({ userIds: [userId], type: 'challenge.completed', title: `Challenge complete: ${c.title} 🎉`, body: c.rewardDescription ?? 'Great work!', data: { challengeId } });
     await evaluateAchievements(userId, ['challenges_completed']);
@@ -200,7 +235,10 @@ export async function challengeLeaderboard(challengeId: string, viewerId: string
     value: r.progressValue,
     completed: !!r.completedAt,
     teamClubId: r.teamClubId,
-    user: r.hideFromLeaderboard && r.userId !== viewerId ? null : { id: r.user.id, username: r.user.username, displayName: r.user.profile?.displayName ?? r.user.username, avatarUrl: r.user.profile?.avatarUrl ?? null },
+    user:
+      r.hideFromLeaderboard && r.userId !== viewerId
+        ? null
+        : { id: r.user.id, username: r.user.username, displayName: r.user.profile?.displayName ?? r.user.username, avatarUrl: r.user.profile?.avatarUrl ?? null },
     isMe: r.userId === viewerId,
   }));
   let teams: { clubId: string; name: string; participants: number; total: number; average: number; rank: number }[] = [];
@@ -224,16 +262,31 @@ export async function challengeLeaderboard(challengeId: string, viewerId: string
 export async function finalizeEndedChallenges(now = new Date()) {
   const ended = await prisma.challenge.findMany({ where: { status: 'ACTIVE', endsAt: { lte: now } }, take: 50 });
   for (const c of ended) {
-    const participants = await prisma.challengeParticipant.findMany({ where: { challengeId: c.id }, orderBy: [{ progressValue: 'desc' }, { progressUpdatedAt: 'asc' }, { joinedAt: 'asc' }] });
+    const participants = await prisma.challengeParticipant.findMany({
+      where: { challengeId: c.id },
+      orderBy: [{ progressValue: 'desc' }, { progressUpdatedAt: 'asc' }, { joinedAt: 'asc' }],
+    });
     for (const p of participants) await recomputeParticipant(c.id, p.userId);
-    const finalRows = await prisma.challengeParticipant.findMany({ where: { challengeId: c.id }, orderBy: [{ progressValue: 'desc' }, { progressUpdatedAt: 'asc' }, { joinedAt: 'asc' }] });
+    const finalRows = await prisma.challengeParticipant.findMany({
+      where: { challengeId: c.id },
+      orderBy: [{ progressValue: 'desc' }, { progressUpdatedAt: 'asc' }, { joinedAt: 'asc' }],
+    });
     await prisma.$transaction([
-      prisma.challengeResult.createMany({ data: finalRows.map((p, i) => ({ challengeId: c.id, userId: p.userId, rank: i + 1, value: p.progressValue, completed: !!p.completedAt })), skipDuplicates: true }),
+      prisma.challengeResult.createMany({
+        data: finalRows.map((p, i) => ({ challengeId: c.id, userId: p.userId, rank: i + 1, value: p.progressValue, completed: !!p.completedAt })),
+        skipDuplicates: true,
+      }),
       prisma.challenge.update({ where: { id: c.id }, data: { status: 'ENDED' } }),
     ]);
     const winner = finalRows[0];
     if (winner && winner.progressValue > 0) await evaluateAchievements(winner.userId, ['challenge_winner']);
-    await notify({ userIds: finalRows.map((p) => p.userId), type: 'challenge.completed', title: `${c.title} has ended`, body: 'See the final standings.', data: { challengeId: c.id } });
+    await notify({
+      userIds: finalRows.map((p) => p.userId),
+      type: 'challenge.completed',
+      title: `${c.title} has ended`,
+      body: 'See the final standings.',
+      data: { challengeId: c.id },
+    });
   }
   return { finalized: ended.length };
 }
@@ -246,5 +299,15 @@ export async function cancelChallenge(challengeId: string, actor: { userId?: str
     await requireClubPermission(c.clubId, actor.userId, 'challenges.manage');
   }
   await prisma.challenge.update({ where: { id: challengeId }, data: { status: 'CANCELLED' } });
-  await audit({ actorType: actor.adminId ? 'ADMIN' : 'USER', actorId: actor.adminId ?? actor.userId, action: 'challenge.cancelled', targetType: 'challenge', targetId: challengeId, clubId: c.clubId }, ctx);
+  await audit(
+    {
+      actorType: actor.adminId ? 'ADMIN' : 'USER',
+      actorId: actor.adminId ?? actor.userId,
+      action: 'challenge.cancelled',
+      targetType: 'challenge',
+      targetId: challengeId,
+      clubId: c.clubId,
+    },
+    ctx,
+  );
 }

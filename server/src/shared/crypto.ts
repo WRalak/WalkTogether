@@ -16,7 +16,9 @@ export function sha256(value: string): string {
 }
 
 export function numericCode(digits = 6): string {
-  return randomInt(0, 10 ** digits).toString().padStart(digits, '0');
+  return randomInt(0, 10 ** digits)
+    .toString()
+    .padStart(digits, '0');
 }
 
 export function safeEqual(a: string, b: string): boolean {

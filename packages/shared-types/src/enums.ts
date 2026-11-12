@@ -1,16 +1,7 @@
 export const CLUB_VISIBILITY = ['PUBLIC', 'PRIVATE', 'INVITE_ONLY'] as const;
 export type ClubVisibility = (typeof CLUB_VISIBILITY)[number];
 
-export const CLUB_CATEGORIES = [
-  'WALKING',
-  'RUNNING',
-  'HIKING',
-  'MIXED_FITNESS',
-  'CORPORATE_WELLNESS',
-  'CHARITY',
-  'SCHOOL_UNIVERSITY',
-  'OTHER',
-] as const;
+export const CLUB_CATEGORIES = ['WALKING', 'RUNNING', 'HIKING', 'MIXED_FITNESS', 'CORPORATE_WELLNESS', 'CHARITY', 'SCHOOL_UNIVERSITY', 'OTHER'] as const;
 export type ClubCategory = (typeof CLUB_CATEGORIES)[number];
 
 export const MEMBERSHIP_STATUS = ['PENDING', 'ACTIVE', 'SUSPENDED', 'REJECTED', 'LEFT', 'REMOVED', 'BANNED'] as const;

@@ -13,7 +13,10 @@ const idParam = z.object({ id: z.string().uuid() });
 export const challengesRouter = Router();
 
 challengesRouter.get('/', optionalAuth, async (req, res) => {
-  const q = parse(z.object({ cursor: z.string().max(200).optional(), limit: z.coerce.number().int().min(1).max(50).default(20), mine: z.coerce.boolean().default(false) }), req.query);
+  const q = parse(
+    z.object({ cursor: z.string().max(200).optional(), limit: z.coerce.number().int().min(1).max(50).default(20), mine: z.coerce.boolean().default(false) }),
+    req.query,
+  );
   const { items, nextCursor } = await svc.listChallenges(req.auth?.userId, { ...q, mine: q.mine && !!req.auth });
   res.json({ data: items, meta: { nextCursor, limit: items.length } });
 });
@@ -38,7 +41,15 @@ challengesRouter.post('/:id/cancel', requireAuth, async (req, res) => {
 
 export const leaderboardsRouter = Router();
 leaderboardsRouter.get('/', optionalAuth, async (req, res) => {
-  const q = parse(z.object({ scope: z.enum(['GLOBAL', 'CLUB']).default('GLOBAL'), clubId: z.string().uuid().optional(), period: z.enum(['WEEK', 'MONTH']).default('WEEK'), activityType: z.enum(['WALK', 'RUN']).optional() }), req.query);
+  const q = parse(
+    z.object({
+      scope: z.enum(['GLOBAL', 'CLUB']).default('GLOBAL'),
+      clubId: z.string().uuid().optional(),
+      period: z.enum(['WEEK', 'MONTH']).default('WEEK'),
+      activityType: z.enum(['WALK', 'RUN']).optional(),
+    }),
+    req.query,
+  );
   res.json({ data: await lb.getLeaderboard(q, req.auth?.userId) });
 });
 leaderboardsRouter.get('/following', requireAuth, async (req, res) => {

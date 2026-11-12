@@ -249,7 +249,12 @@ async function isSuspiciousLogin(userId: string, ctx: ClientContext) {
  * When the member has turned on two-step verification, the first factor only earns a short-lived
  * MFA challenge; tokens are issued by verifyMfaLogin once the second factor checks out.
  */
-export async function completeLogin(user: { id: string; email: string | null; status: string }, method: AuthMethod, ctx: ClientContext, opts: { mfaVerified?: boolean } = {}): Promise<IssuedTokens | mfa.MfaChallenge> {
+export async function completeLogin(
+  user: { id: string; email: string | null; status: string },
+  method: AuthMethod,
+  ctx: ClientContext,
+  opts: { mfaVerified?: boolean } = {},
+): Promise<IssuedTokens | mfa.MfaChallenge> {
   if (user.status === 'SUSPENDED') {
     await recordLogin({ userId: user.id, method, success: false, failureReason: 'suspended' }, ctx);
     throw forbidden('This account has been suspended. Contact support for help.', 'ACCOUNT_SUSPENDED');
@@ -270,8 +275,8 @@ export async function completeLogin(user: { id: string; email: string | null; st
   });
   await recordLogin({ userId: user.id, method, success: true, suspicious }, ctx);
   if (suspicious && user.email) {
-    await enqueue('email.send', templates.suspiciousLogin(user.email, { ip: ctx.ipAddress, device: ctx.device?.deviceName ?? ctx.userAgent, at: new Date() })).catch(
-      (err) => logger.error({ err }, 'failed to enqueue suspicious login email'),
+    await enqueue('email.send', templates.suspiciousLogin(user.email, { ip: ctx.ipAddress, device: ctx.device?.deviceName ?? ctx.userAgent, at: new Date() })).catch((err) =>
+      logger.error({ err }, 'failed to enqueue suspicious login email'),
     );
   }
   return tokens;

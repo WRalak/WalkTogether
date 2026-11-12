@@ -36,7 +36,14 @@ describe('platform event oversight', () => {
     const ev = await api()
       .post(`/api/v1/clubs/${club.id}/events`)
       .set(bearer(owner))
-      .send({ title, type: 'WALK', visibility: 'PUBLIC', startsAt: new Date(Date.now() + 2 * H).toISOString(), endsAt: new Date(Date.now() + 4 * H).toISOString(), meetingPoint: 'Gate A' })
+      .send({
+        title,
+        type: 'WALK',
+        visibility: 'PUBLIC',
+        startsAt: new Date(Date.now() + 2 * H).toISOString(),
+        endsAt: new Date(Date.now() + 4 * H).toISOString(),
+        meetingPoint: 'Gate A',
+      })
       .expect(201);
     const eventId = ev.body.data.id ?? ev.body.data[0]?.id;
     await api().post(`/api/v1/events/${eventId}/rsvp`).set(bearer(walker)).send({ going: true }).expect(200);

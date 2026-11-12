@@ -36,7 +36,9 @@ export async function requestAccountDeletion(userId: string, password: string | 
 
 /** Irreversibly anonymises one account. Personal data is removed; referential rows are kept anonymous. */
 export async function anonymiseUser(userId: string) {
-  const placeholder = `deleted_${randomToken(9).toLowerCase().replace(/[^a-z0-9]/g, '')}`.slice(0, 30);
+  const placeholder = `deleted_${randomToken(9)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')}`.slice(0, 30);
   await prisma.$transaction(async (tx) => {
     await tx.userSession.deleteMany({ where: { userId } });
     await tx.oAuthAccount.deleteMany({ where: { userId } });

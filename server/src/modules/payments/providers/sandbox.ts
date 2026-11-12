@@ -22,7 +22,12 @@ export class SandboxProvider implements PaymentProvider {
   async initiate(input: InitiateInput) {
     const ref = `sbx_${input.paymentId}`;
     outcomes.set(ref, 'PENDING');
-    return { providerRef: ref, status: 'PENDING' as const, clientAction: { type: 'stk_push' as const, message: 'Sandbox payment created. Confirm it via the sandbox webhook.' }, raw: { ref } };
+    return {
+      providerRef: ref,
+      status: 'PENDING' as const,
+      clientAction: { type: 'stk_push' as const, message: 'Sandbox payment created. Confirm it via the sandbox webhook.' },
+      raw: { ref },
+    };
   }
 
   async parseWebhook(req: import('express').Request) {

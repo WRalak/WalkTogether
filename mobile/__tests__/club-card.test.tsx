@@ -10,7 +10,19 @@ describe('ClubCard', () => {
   it('renders club information accessibly', () => {
     render(
       <ClubCard
-        club={{ id: '1', slug: 'nairobi-sunrise', name: 'Nairobi Sunrise Walkers', description: 'Morning walks', category: 'WALKING', visibility: 'PRIVATE', logoUrl: null, coverUrl: null, city: 'Nairobi', countryCode: 'KE', memberCount: 1 }}
+        club={{
+          id: '1',
+          slug: 'nairobi-sunrise',
+          name: 'Nairobi Sunrise Walkers',
+          description: 'Morning walks',
+          category: 'WALKING',
+          visibility: 'PRIVATE',
+          logoUrl: null,
+          coverUrl: null,
+          city: 'Nairobi',
+          countryCode: 'KE',
+          memberCount: 1,
+        }}
       />,
     );
     expect(screen.getByText('Nairobi Sunrise Walkers')).toBeTruthy();

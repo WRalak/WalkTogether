@@ -18,7 +18,12 @@ export default function EventsAdmin() {
   const events = useInfiniteQuery({
     queryKey: ['admin-events', filters],
     queryFn: ({ pageParam }) =>
-      adminApi.events.list({ cursor: pageParam, q: filters.q || undefined, status: (filters.status || undefined) as 'SCHEDULED' | 'CANCELLED' | undefined, when: filters.when || undefined }),
+      adminApi.events.list({
+        cursor: pageParam,
+        q: filters.q || undefined,
+        status: (filters.status || undefined) as 'SCHEDULED' | 'CANCELLED' | undefined,
+        when: filters.when || undefined,
+      }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.meta.nextCursor ?? undefined,
   });
@@ -47,17 +52,40 @@ export default function EventsAdmin() {
           empty="No events match these filters"
           columns={[
             { label: 'Event', render: (e) => <span className="font-medium">{e.title}</span> },
-            { label: 'Club', render: (e) => <a className="text-primary hover:underline" href={`/dashboard/clubs/${e.club.id}`}>{e.club.name}</a> },
+            {
+              label: 'Club',
+              render: (e) => (
+                <a className="text-primary hover:underline" href={`/dashboard/clubs/${e.club.id}`}>
+                  {e.club.name}
+                </a>
+              ),
+            },
             { label: 'Starts', render: (e) => new Date(e.startsAt).toLocaleString() },
             { label: 'Type', render: (e) => `${e.type.replace('_', ' ').toLowerCase()} · ${e.visibility.toLowerCase()}` },
             { label: 'Going / attended', render: (e) => `${e.goingCount}${e.maxParticipants ? `/${e.maxParticipants}` : ''} · ${e.attended}` },
             { label: 'Sponsor', render: (e) => e.sponsor ?? '—' },
-            { label: 'Status', render: (e) => <span title={e.cancelReason ?? undefined}><StatusBadge value={e.status} /></span> },
+            {
+              label: 'Status',
+              render: (e) => (
+                <span title={e.cancelReason ?? undefined}>
+                  <StatusBadge value={e.status} />
+                </span>
+              ),
+            },
             {
               label: '',
               render: (e) =>
                 e.status === 'SCHEDULED' && can('moderation.manage') ? (
-                  <StatusAction label="Cancel" variant="destructive" onConfirm={(reason) => run(async () => { await adminApi.events.cancel(e.id, reason); void events.refetch(); })} />
+                  <StatusAction
+                    label="Cancel"
+                    variant="destructive"
+                    onConfirm={(reason) =>
+                      run(async () => {
+                        await adminApi.events.cancel(e.id, reason);
+                        void events.refetch();
+                      })
+                    }
+                  />
                 ) : null,
             },
           ]}

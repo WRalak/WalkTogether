@@ -20,9 +20,18 @@ describe('registration & login', () => {
   it('rejects duplicate username and email, and unknown fields', async () => {
     const u = await registerUser();
     const base = { password: 'walk2gether-strong', displayName: 'X', acceptTerms: true };
-    await api().post('/api/v1/auth/register').send({ ...base, email: `n_${uid()}@example.com`, username: u.username }).expect(409);
-    await api().post('/api/v1/auth/register').send({ ...base, email: u.email, username: `n_${uid()}` }).expect(409);
-    const res = await api().post('/api/v1/auth/register').send({ ...base, email: `n_${uid()}@example.com`, username: `n_${uid()}`, role: 'admin' }).expect(422);
+    await api()
+      .post('/api/v1/auth/register')
+      .send({ ...base, email: `n_${uid()}@example.com`, username: u.username })
+      .expect(409);
+    await api()
+      .post('/api/v1/auth/register')
+      .send({ ...base, email: u.email, username: `n_${uid()}` })
+      .expect(409);
+    const res = await api()
+      .post('/api/v1/auth/register')
+      .send({ ...base, email: `n_${uid()}@example.com`, username: `n_${uid()}`, role: 'admin' })
+      .expect(422);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
@@ -30,7 +39,10 @@ describe('registration & login', () => {
     const u = await registerUser();
     await api().post('/api/v1/auth/login').send({ email: u.email, password: u.password }).expect(200);
     const wrong = await api().post('/api/v1/auth/login').send({ email: u.email, password: 'nope-wrong-1' }).expect(401);
-    const missing = await api().post('/api/v1/auth/login').send({ email: `missing_${uid()}@example.com`, password: 'nope-wrong-1' }).expect(401);
+    const missing = await api()
+      .post('/api/v1/auth/login')
+      .send({ email: `missing_${uid()}@example.com`, password: 'nope-wrong-1' })
+      .expect(401);
     expect(wrong.body.error).toMatchObject({ code: 'INVALID_CREDENTIALS' });
     expect(missing.body.error.message).toBe(wrong.body.error.message);
   });
@@ -100,7 +112,10 @@ describe('sessions & logout', () => {
 
   it('lists sessions and can revoke a specific device but never another user’s', async () => {
     const u = await registerUser();
-    const second = await api().post('/api/v1/auth/login').send({ email: u.email, password: u.password, device: { deviceName: 'Tecno Spark', platform: 'android' } }).expect(200);
+    const second = await api()
+      .post('/api/v1/auth/login')
+      .send({ email: u.email, password: u.password, device: { deviceName: 'Tecno Spark', platform: 'android' } })
+      .expect(200);
     const list = await api().get('/api/v1/auth/sessions').set(bearer(u)).expect(200);
     expect(list.body.data).toHaveLength(2);
     expect(list.body.data.filter((s: { current: boolean }) => s.current)).toHaveLength(1);
@@ -122,7 +137,10 @@ describe('sessions & logout', () => {
 
   it('rejects tampered and admin-audience tokens', async () => {
     const u = await registerUser();
-    await api().get('/api/v1/users/me').set({ Authorization: `Bearer ${u.accessToken}x` }).expect(401);
+    await api()
+      .get('/api/v1/users/me')
+      .set({ Authorization: `Bearer ${u.accessToken}x` })
+      .expect(401);
     await api().get('/api/v1/users/me').expect(401);
   });
 });
@@ -140,7 +158,10 @@ describe('email verification and passwords', () => {
   it('resets a password, signs out everywhere and rejects reused links', async () => {
     const u = await registerUser();
     const res = await api().post('/api/v1/auth/forgot-password').send({ email: u.email }).expect(202);
-    const unknown = await api().post('/api/v1/auth/forgot-password').send({ email: `ghost_${uid()}@example.com` }).expect(202);
+    const unknown = await api()
+      .post('/api/v1/auth/forgot-password')
+      .send({ email: `ghost_${uid()}@example.com` })
+      .expect(202);
     expect(unknown.body).toEqual(res.body);
 
     const token = tokenFromEmail(u.email);
@@ -174,7 +195,10 @@ describe('phone OTP', () => {
     const stored = await prisma.phoneVerification.findFirstOrThrow({ where: { phone } });
     expect(stored.codeHash).not.toContain(lastCode(phone));
 
-    const verify = await api().post('/api/v1/auth/phone/verify-otp').send({ phone, purpose: 'LOGIN', code: lastCode(phone) }).expect(200);
+    const verify = await api()
+      .post('/api/v1/auth/phone/verify-otp')
+      .send({ phone, purpose: 'LOGIN', code: lastCode(phone) })
+      .expect(200);
     expect(verify.body.data.status).toBe('registration_required');
     const reg = await api()
       .post('/api/v1/auth/phone/register')
@@ -184,7 +208,10 @@ describe('phone OTP', () => {
 
     await prisma.phoneVerification.updateMany({ where: { phone }, data: { createdAt: new Date(Date.now() - 120_000) } });
     await api().post('/api/v1/auth/phone/request-otp').send({ phone, purpose: 'LOGIN' }).expect(202);
-    const login = await api().post('/api/v1/auth/phone/verify-otp').send({ phone, purpose: 'LOGIN', code: lastCode(phone) }).expect(200);
+    const login = await api()
+      .post('/api/v1/auth/phone/verify-otp')
+      .send({ phone, purpose: 'LOGIN', code: lastCode(phone) })
+      .expect(200);
     expect(login.body.data.status).toBe('authenticated');
   });
 
@@ -204,7 +231,11 @@ describe('phone OTP', () => {
     await api().post('/api/v1/auth/phone/request-otp').send({ phone, purpose: 'VERIFY' }).expect(401);
     const u = await registerUser();
     await api().post('/api/v1/auth/phone/request-otp').set(bearer(u)).send({ phone, purpose: 'VERIFY' }).expect(202);
-    await api().post('/api/v1/auth/phone/verify-otp').set(bearer(u)).send({ phone, purpose: 'VERIFY', code: lastCode(phone) }).expect(200);
+    await api()
+      .post('/api/v1/auth/phone/verify-otp')
+      .set(bearer(u))
+      .send({ phone, purpose: 'VERIFY', code: lastCode(phone) })
+      .expect(200);
     const me = await api().get('/api/v1/users/me').set(bearer(u)).expect(200);
     expect(me.body.data).toMatchObject({ phone, phoneVerified: true });
   });
@@ -212,7 +243,10 @@ describe('phone OTP', () => {
 
 describe('oauth', () => {
   it('reports unconfigured providers instead of pretending to work', async () => {
-    const res = await api().post('/api/v1/auth/oauth').send({ provider: 'google', idToken: 'x'.repeat(40) }).expect(503);
+    const res = await api()
+      .post('/api/v1/auth/oauth')
+      .send({ provider: 'google', idToken: 'x'.repeat(40) })
+      .expect(503);
     expect(res.body.error.code).toBe('PROVIDER_NOT_CONFIGURED');
   });
 });

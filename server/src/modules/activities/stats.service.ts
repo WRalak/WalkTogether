@@ -44,11 +44,14 @@ async function totals(userId: string, from?: Date, to?: Date, type?: ActivityTyp
 
 /** Bucketed series via SQL (no full-history loads). */
 async function series(userId: string, unit: 'week' | 'month', count: number, type?: ActivityType) {
-  const since = unit === 'week' ? new Date(startOfWeek(new Date()).getTime() - (count - 1) * 7 * DAY) : (() => {
-    const d = startOfMonth(new Date());
-    d.setUTCMonth(d.getUTCMonth() - (count - 1));
-    return d;
-  })();
+  const since =
+    unit === 'week'
+      ? new Date(startOfWeek(new Date()).getTime() - (count - 1) * 7 * DAY)
+      : (() => {
+          const d = startOfMonth(new Date());
+          d.setUTCMonth(d.getUTCMonth() - (count - 1));
+          return d;
+        })();
   const rows = await prisma.$queryRaw<{ bucket: Date; activities: bigint; distance_m: number; moving_seconds: bigint; avg_pace: number | null }[]>`
     SELECT date_trunc(${unit}, started_at AT TIME ZONE 'UTC') AS bucket,
            count(*) AS activities, coalesce(sum(distance_m), 0) AS distance_m, coalesce(sum(moving_seconds), 0) AS moving_seconds,
@@ -65,7 +68,13 @@ async function series(userId: string, unit: 'week' | 'month', count: number, typ
     else d.setUTCMonth(since.getUTCMonth() + i);
     const key = d.toISOString().slice(0, 10);
     const r = map.get(key);
-    out.push({ start: key, activities: Number(r?.activities ?? 0), distanceM: Math.round(r?.distance_m ?? 0), movingSeconds: Number(r?.moving_seconds ?? 0), avgPaceSecPerKm: r?.avg_pace ? Math.round(r.avg_pace) : null });
+    out.push({
+      start: key,
+      activities: Number(r?.activities ?? 0),
+      distanceM: Math.round(r?.distance_m ?? 0),
+      movingSeconds: Number(r?.moving_seconds ?? 0),
+      avgPaceSecPerKm: r?.avg_pace ? Math.round(r.avg_pace) : null,
+    });
   }
   return out;
 }
@@ -141,7 +150,11 @@ export async function advancedTrends(userId: string, type?: ActivityType) {
   const early = avg(paces.slice(0, half));
   const late = avg(paces.slice(half));
   return {
-    monthOverMonth: { distancePct: pct(cur.distanceM, prev.distanceM), activitiesPct: pct(cur.activities, prev.activities), movingTimePct: pct(cur.movingSeconds, prev.movingSeconds) },
+    monthOverMonth: {
+      distancePct: pct(cur.distanceM, prev.distanceM),
+      activitiesPct: pct(cur.activities, prev.activities),
+      movingTimePct: pct(cur.movingSeconds, prev.movingSeconds),
+    },
     paceTrend: early && late ? { earlierAvg: Math.round(early), recentAvg: Math.round(late), improvingSecPerKm: Math.round(early - late) } : null,
     weekly,
   };
@@ -151,10 +164,18 @@ export async function publicStats(userId: string) {
   const privacy = await prisma.userPrivacySettings.findUnique({ where: { userId } });
   if (privacy?.showStats === false) return null;
   const t = await totals(userId);
-  return { totalActivities: t.activities, walkingDistanceM: t.byType.WALK?.distanceM ?? 0, runningDistanceM: t.byType.RUN?.distanceM ?? 0, hikingDistanceM: t.byType.HIKE?.distanceM ?? 0 };
+  return {
+    totalActivities: t.activities,
+    walkingDistanceM: t.byType.WALK?.distanceM ?? 0,
+    runningDistanceM: t.byType.RUN?.distanceM ?? 0,
+    hikingDistanceM: t.byType.HIKE?.distanceM ?? 0,
+  };
 }
 
-export async function createGoal(userId: string, input: { metric: 'DISTANCE_M' | 'ACTIVITIES' | 'MOVING_SECONDS'; period: 'WEEK' | 'MONTH' | 'YEAR'; activityType?: ActivityType | null; target: number }) {
+export async function createGoal(
+  userId: string,
+  input: { metric: 'DISTANCE_M' | 'ACTIVITIES' | 'MOVING_SECONDS'; period: 'WEEK' | 'MONTH' | 'YEAR'; activityType?: ActivityType | null; target: number },
+) {
   return prisma.personalGoal.create({ data: { userId, ...input, activityType: input.activityType ?? null } });
 }
 export async function deleteGoal(userId: string, id: string) {

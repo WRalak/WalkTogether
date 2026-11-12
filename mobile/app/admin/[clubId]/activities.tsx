@@ -20,7 +20,12 @@ export default function SharedActivities() {
     enabled: !!club && can('members.view'),
   });
   if (!club) return <Loading />;
-  if (!can('members.view')) return <Screen edges={[]}><NoPermission what="view shared activities" /></Screen>;
+  if (!can('members.view'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="view shared activities" />
+      </Screen>
+    );
   const items = q.data?.pages.flatMap((p) => p.items) ?? [];
   const week = q.data?.pages[0]?.meta.lastSevenDays;
 

@@ -37,7 +37,9 @@ export default function Chat() {
     s.on('connect', join);
     const onNew = (m: MessageDto & { conversationId: string }) => {
       if (m.conversationId !== id) return;
-      setMessages((prev) => (prev.some((x) => x.id === m.id || (m.clientId && x.clientId === m.clientId)) ? prev.map((x) => (x.clientId && x.clientId === m.clientId ? m : x)) : [m, ...prev]));
+      setMessages((prev) =>
+        prev.some((x) => x.id === m.id || (m.clientId && x.clientId === m.clientId)) ? prev.map((x) => (x.clientId && x.clientId === m.clientId ? m : x)) : [m, ...prev],
+      );
       s.emit('conversation:read', { conversationId: id });
     };
     s.on('message:new', onNew);
@@ -95,7 +97,16 @@ export default function Chat() {
         }}
       />
       <View className="flex-row items-end gap-2 border-t border-line bg-surface px-4 py-3">
-        <TextInput accessibilityLabel="Message" placeholder="Message" placeholderTextColor="#8a9a93" value={text} onChangeText={setText} multiline maxLength={4000} className="max-h-28 flex-1 rounded-2xl border border-line px-3 py-2 text-ink" />
+        <TextInput
+          accessibilityLabel="Message"
+          placeholder="Message"
+          placeholderTextColor="#8a9a93"
+          value={text}
+          onChangeText={setText}
+          multiline
+          maxLength={4000}
+          className="max-h-28 flex-1 rounded-2xl border border-line px-3 py-2 text-ink"
+        />
         <Button title="Send" className="min-h-[44px] px-4" disabled={!text.trim()} onPress={() => void send()} />
       </View>
     </KeyboardAvoidingView>

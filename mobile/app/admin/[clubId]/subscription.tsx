@@ -34,8 +34,20 @@ export default function ClubSubscription() {
   });
 
   if (!club) return <Loading />;
-  if (!can('billing.view')) return <Screen edges={[]}><NoPermission what="view billing" /></Screen>;
-  if (billing.isLoading || !billing.data) return billing.error ? <Screen edges={[]}><Notice>{errorMessage(billing.error)}</Notice></Screen> : <Loading />;
+  if (!can('billing.view'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="view billing" />
+      </Screen>
+    );
+  if (billing.isLoading || !billing.data)
+    return billing.error ? (
+      <Screen edges={[]}>
+        <Notice>{errorMessage(billing.error)}</Notice>
+      </Screen>
+    ) : (
+      <Loading />
+    );
   const b = billing.data;
   const paid = plans.data?.filter((p) => !p.isDefault && p.amountMinor > 0) ?? [];
 
@@ -63,7 +75,12 @@ export default function ClubSubscription() {
         </View>
         <Text className="mt-3 text-xs text-ink-muted">Members’ personal tracking and history never depend on the club’s plan. If a plan lapses, nothing is deleted.</Text>
         {b.subscription && !b.subscription.cancelAtPeriodEnd && can('billing.manage') && (
-          <Button title="Cancel at period end" variant="ghost" className="mt-2" onPress={() => confirm('Cancel subscription', 'The plan stays active until the end of the current period.', () => cancel.mutate(), 'Cancel plan')} />
+          <Button
+            title="Cancel at period end"
+            variant="ghost"
+            className="mt-2"
+            onPress={() => confirm('Cancel subscription', 'The plan stays active until the end of the current period.', () => cancel.mutate(), 'Cancel plan')}
+          />
         )}
       </Card>
 
@@ -88,7 +105,10 @@ export default function ClubSubscription() {
                   {buying === p.id ? (
                     <>
                       <TextField label="Promotion code (optional)" value={promo} autoCapitalize="characters" onChangeText={setPromo} />
-                      <PayFlow start={(provider, phone, key) => api.billing.checkout({ planId: p.id, clubId, provider, phone, promotionCode: promo.trim() || undefined }, key)} onDone={refresh} />
+                      <PayFlow
+                        start={(provider, phone, key) => api.billing.checkout({ planId: p.id, clubId, provider, phone, promotionCode: promo.trim() || undefined }, key)}
+                        onDone={refresh}
+                      />
                     </>
                   ) : (
                     <Button title={b.entitlements.planCode === p.code ? 'Renew' : 'Upgrade'} onPress={() => setBuying(p.id)} />

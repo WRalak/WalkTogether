@@ -17,20 +17,35 @@ export default function ChallengesHub() {
     <View className="flex-1 bg-surface-muted">
       <View className="mx-5 my-3 flex-row rounded-2xl bg-surface p-1" accessibilityRole="tablist">
         {(['discover', 'mine', 'boards'] as const).map((t) => (
-          <Pressable key={t} accessibilityRole="tab" accessibilityState={{ selected: tab === t }} onPress={() => setTab(t)} className={`flex-1 items-center rounded-xl py-2.5 ${tab === t ? 'bg-primary' : ''}`}>
+          <Pressable
+            key={t}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === t }}
+            onPress={() => setTab(t)}
+            className={`flex-1 items-center rounded-xl py-2.5 ${tab === t ? 'bg-primary' : ''}`}
+          >
             <Text className={`font-semibold ${tab === t ? 'text-white' : 'text-ink-muted'}`}>{t === 'discover' ? 'Discover' : t === 'mine' ? 'Joined' : 'Leaderboards'}</Text>
           </Pressable>
         ))}
       </View>
       {tab === 'boards' ? (
         <FlatList
-          data={[{ key: 'following', title: 'You & people you follow', q: following }, { key: 'global', title: 'Everyone (public profiles)', q: global }]}
+          data={[
+            { key: 'following', title: 'You & people you follow', q: following },
+            { key: 'global', title: 'Everyone (public profiles)', q: global },
+          ]}
           keyExtractor={(x) => x.key}
           contentContainerClassName="px-5 pb-10"
           ListHeaderComponent={
             <View className="mb-3 flex-row gap-2">
               {(['WEEK', 'MONTH'] as const).map((p) => (
-                <Pressable key={p} onPress={() => setPeriod(p)} accessibilityRole="radio" accessibilityState={{ selected: period === p }} className={`rounded-full border px-4 py-1.5 ${period === p ? 'border-primary bg-primary-soft' : 'border-line'}`}>
+                <Pressable
+                  key={p}
+                  onPress={() => setPeriod(p)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: period === p }}
+                  className={`rounded-full border px-4 py-1.5 ${period === p ? 'border-primary bg-primary-soft' : 'border-line'}`}
+                >
                   <Text className={period === p ? 'font-semibold text-primary' : 'text-ink-muted'}>This {p.toLowerCase()}</Text>
                 </Pressable>
               ))}
@@ -54,7 +69,9 @@ export default function ChallengesHub() {
               )}
             </View>
           )}
-          ListFooterComponent={<Text className="text-center text-xs text-ink-muted">Daily distance is capped and unusual activities are excluded, so leaderboards reward consistency, not risk.</Text>}
+          ListFooterComponent={
+            <Text className="text-center text-xs text-ink-muted">Daily distance is capped and unusual activities are excluded, so leaderboards reward consistency, not risk.</Text>
+          }
         />
       ) : (
         <FlatList

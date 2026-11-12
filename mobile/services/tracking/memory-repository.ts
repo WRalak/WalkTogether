@@ -28,7 +28,10 @@ export function createMemoryRepository(): TrackingRepository & { points: Map<str
     async appendPoints(id, pts) {
       const list = points.get(id) ?? [];
       for (const p of pts) if (!list.some((x) => x.seq === p.seq)) list.push(p);
-      points.set(id, list.sort((a, b) => a.seq - b.seq));
+      points.set(
+        id,
+        list.sort((a, b) => a.seq - b.seq),
+      );
     },
     async pointsAfter(id, after, limit) {
       return (points.get(id) ?? []).filter((p) => p.seq > after).slice(0, limit);

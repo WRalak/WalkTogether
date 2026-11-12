@@ -23,7 +23,12 @@ export default function Analytics() {
   });
 
   if (!club) return <Loading />;
-  if (!can('analytics.view')) return <Screen edges={[]}><NoPermission what="view analytics" /></Screen>;
+  if (!can('analytics.view'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="view analytics" />
+      </Screen>
+    );
   const o = overview.data;
   const upgrade = growth.error instanceof ApiError && growth.error.status === 402;
 
@@ -32,7 +37,11 @@ export default function Analytics() {
       <Stack.Screen options={{ title: 'Analytics' }} />
       {error ? <Notice>{error}</Notice> : null}
       {!o ? (
-        overview.error ? <Notice>{errorMessage(overview.error)}</Notice> : <Loading />
+        overview.error ? (
+          <Notice>{errorMessage(overview.error)}</Notice>
+        ) : (
+          <Loading />
+        )
       ) : (
         <View className="flex-row flex-wrap gap-3">
           <StatTile label="Active members" value={o.members.active} hint={`${o.members.new30d} new in 30 days`} />

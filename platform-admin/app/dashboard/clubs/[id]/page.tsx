@@ -18,7 +18,17 @@ export default function ClubDetail() {
         <StatusBadge value={c.status} />
       </div>
       <Section title="Club">
-        <JsonBlock value={{ slug: c.slug, owner: c.owner, visibility: c.visibility, memberCount: c.memberCount, membershipBreakdown: c.membershipBreakdown, createdAt: c.createdAt, suspensionReason: c.suspensionReason }} />
+        <JsonBlock
+          value={{
+            slug: c.slug,
+            owner: c.owner,
+            visibility: c.visibility,
+            memberCount: c.memberCount,
+            membershipBreakdown: c.membershipBreakdown,
+            createdAt: c.createdAt,
+            suspensionReason: c.suspensionReason,
+          }}
+        />
       </Section>
       <Section title="Audit trail">
         <JsonBlock value={audit.data?.items.map((a) => ({ at: a.createdAt, action: a.action, actor: `${a.actorType}:${a.actorId ?? ''}` }))} />

@@ -94,7 +94,12 @@ export default function NewEvent() {
   });
 
   if (!club) return <Loading />;
-  if (!can('events.manage')) return <Screen edges={[]}><NoPermission what="create events" /></Screen>;
+  if (!can('events.manage'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="create events" />
+      </Screen>
+    );
 
   return (
     <Screen edges={[]}>
@@ -116,12 +121,34 @@ export default function NewEvent() {
       </View>
       <TextField label="Distance (km, optional)" value={f.distanceKm} keyboardType="decimal-pad" onChangeText={(t) => set('distanceKm', t)} />
       <TextField label="Max participants (optional)" value={f.max} keyboardType="number-pad" onChangeText={(t) => set('max', t)} />
-      <Chips label="Difficulty" value={f.difficulty} options={[{ key: 'EASY', label: 'Easy' }, { key: 'MODERATE', label: 'Moderate' }, { key: 'HARD', label: 'Hard' }]} onChange={(d) => set('difficulty', d)} />
-      <Chips label="Who can see it" value={f.visibility} options={[{ key: 'MEMBERS', label: 'Members only' }, { key: 'PUBLIC', label: 'Public' }]} onChange={(v) => set('visibility', v)} />
+      <Chips
+        label="Difficulty"
+        value={f.difficulty}
+        options={[
+          { key: 'EASY', label: 'Easy' },
+          { key: 'MODERATE', label: 'Moderate' },
+          { key: 'HARD', label: 'Hard' },
+        ]}
+        onChange={(d) => set('difficulty', d)}
+      />
+      <Chips
+        label="Who can see it"
+        value={f.visibility}
+        options={[
+          { key: 'MEMBERS', label: 'Members only' },
+          { key: 'PUBLIC', label: 'Public' },
+        ]}
+        onChange={(v) => set('visibility', v)}
+      />
       <Chips
         label="Repeat (Club Pro)"
         value={f.repeat}
-        options={[{ key: 'NONE', label: 'Once' }, { key: 'WEEKLY', label: 'Weekly' }, { key: 'DAILY', label: 'Daily' }, { key: 'MONTHLY', label: 'Monthly' }]}
+        options={[
+          { key: 'NONE', label: 'Once' },
+          { key: 'WEEKLY', label: 'Weekly' },
+          { key: 'DAILY', label: 'Daily' },
+          { key: 'MONTHLY', label: 'Monthly' },
+        ]}
         onChange={(r) => set('repeat', r)}
       />
       {f.repeat !== 'NONE' && <TextField label="Number of occurrences" value={f.count} keyboardType="number-pad" onChangeText={(t) => set('count', t)} />}

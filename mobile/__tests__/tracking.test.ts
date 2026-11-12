@@ -19,7 +19,15 @@ function fakeLocation(): LocationSource & { running: boolean } {
 }
 
 const fixes = (n: number, t0 = Date.now() - n * 3000, from = 0): LocationFix[] =>
-  Array.from({ length: n }, (_, i) => ({ lat: -1.2921 + ((i + from) * 4.2) / 111_195, lng: 36.8219, t: t0 + i * 3000, accuracy: 5, altitude: null, altitudeAccuracy: null, speed: 1.4 }));
+  Array.from({ length: n }, (_, i) => ({
+    lat: -1.2921 + ((i + from) * 4.2) / 111_195,
+    lng: 36.8219,
+    t: t0 + i * 3000,
+    accuracy: 5,
+    altitude: null,
+    altitudeAccuracy: null,
+    speed: 1.4,
+  }));
 
 let id = 0;
 const newId = () => `00000000-0000-4000-8000-${String(++id).padStart(12, '0')}`;

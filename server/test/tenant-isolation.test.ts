@@ -49,19 +49,25 @@ describe('cross-club access is denied', () => {
   it('cannot moderate or re-role a club B member through club A’s route', async () => {
     const bMember = await membershipId(clubB.id, memberB.id);
     await api().post(`/api/v1/clubs/${clubA.id}/members/${bMember}/moderation`).set(bearer(ownerA)).send({ action: 'REMOVE' }).expect(404);
-    await api().put(`/api/v1/clubs/${clubA.id}/members/${bMember}/role`).set(bearer(ownerA)).send({ roleId: await roleId(clubA.id, 'ADMIN') }).expect(404);
+    await api()
+      .put(`/api/v1/clubs/${clubA.id}/members/${bMember}/role`)
+      .set(bearer(ownerA))
+      .send({ roleId: await roleId(clubA.id, 'ADMIN') })
+      .expect(404);
     expect((await prisma.clubMembership.findUniqueOrThrow({ where: { id: bMember } })).status).toBe('ACTIVE');
   });
 
   it('cannot assign a role belonging to another club', async () => {
     const target = await membershipId(clubA.id, memberA.id);
-    await api().put(`/api/v1/clubs/${clubA.id}/members/${target}/role`).set(bearer(ownerA)).send({ roleId: await roleId(clubB.id, 'ADMIN') }).expect(404);
+    await api()
+      .put(`/api/v1/clubs/${clubA.id}/members/${target}/role`)
+      .set(bearer(ownerA))
+      .send({ roleId: await roleId(clubB.id, 'ADMIN') })
+      .expect(404);
   });
 
   it('the database rejects a membership whose role belongs to a different club', async () => {
-    await expect(
-      prisma.clubMembership.update({ where: { id: await membershipId(clubA.id, memberA.id) }, data: { roleId: await roleId(clubB.id, 'ADMIN') } }),
-    ).rejects.toThrow();
+    await expect(prisma.clubMembership.update({ where: { id: await membershipId(clubA.id, memberA.id) }, data: { roleId: await roleId(clubB.id, 'ADMIN') } })).rejects.toThrow();
   });
 
   it('cannot create or list invitations for another club', async () => {
@@ -80,8 +86,16 @@ describe('cross-club access is denied', () => {
 describe('role hierarchy and privilege escalation', () => {
   it('ordinary members cannot change roles, approve, invite or edit the club', async () => {
     const target = await membershipId(clubA.id, adminA.id);
-    await api().put(`/api/v1/clubs/${clubA.id}/members/${target}/role`).set(bearer(memberA)).send({ roleId: await roleId(clubA.id, 'MEMBER') }).expect(403);
-    await api().put(`/api/v1/clubs/${clubA.id}/members/${await membershipId(clubA.id, memberA.id)}/role`).set(bearer(memberA)).send({ roleId: await roleId(clubA.id, 'ADMIN') }).expect(403);
+    await api()
+      .put(`/api/v1/clubs/${clubA.id}/members/${target}/role`)
+      .set(bearer(memberA))
+      .send({ roleId: await roleId(clubA.id, 'MEMBER') })
+      .expect(403);
+    await api()
+      .put(`/api/v1/clubs/${clubA.id}/members/${await membershipId(clubA.id, memberA.id)}/role`)
+      .set(bearer(memberA))
+      .send({ roleId: await roleId(clubA.id, 'ADMIN') })
+      .expect(403);
     await api().post(`/api/v1/clubs/${clubA.id}/invitations`).set(bearer(memberA)).send({}).expect(403);
     await api().patch(`/api/v1/clubs/${clubA.id}`).set(bearer(memberA)).send({ name: 'Nope' }).expect(403);
   });
@@ -95,23 +109,39 @@ describe('role hierarchy and privilege escalation', () => {
 
   it('nobody can assign the OWNER role or modify the owner', async () => {
     const ownerRole = await roleId(clubA.id, 'OWNER');
-    const res = await api().put(`/api/v1/clubs/${clubA.id}/members/${await membershipId(clubA.id, memberA.id)}/role`).set(bearer(ownerA)).send({ roleId: ownerRole }).expect(403);
+    const res = await api()
+      .put(`/api/v1/clubs/${clubA.id}/members/${await membershipId(clubA.id, memberA.id)}/role`)
+      .set(bearer(ownerA))
+      .send({ roleId: ownerRole })
+      .expect(403);
     expect(res.body.error.code).toBe('OWNER_ROLE_NOT_ASSIGNABLE');
     const ownerMembership = await membershipId(clubA.id, ownerA.id);
-    const demote = await api().put(`/api/v1/clubs/${clubA.id}/members/${ownerMembership}/role`).set(bearer(adminA)).send({ roleId: await roleId(clubA.id, 'MEMBER') }).expect(403);
+    const demote = await api()
+      .put(`/api/v1/clubs/${clubA.id}/members/${ownerMembership}/role`)
+      .set(bearer(adminA))
+      .send({ roleId: await roleId(clubA.id, 'MEMBER') })
+      .expect(403);
     expect(demote.body.error.code).toBe('OWNER_PROTECTED');
     await api().post(`/api/v1/clubs/${clubA.id}/members/${ownerMembership}/moderation`).set(bearer(adminA)).send({ action: 'REMOVE' }).expect(403);
   });
 
   it('members cannot act on themselves', async () => {
-    const res = await api().put(`/api/v1/clubs/${clubA.id}/members/${await membershipId(clubA.id, adminA.id)}/role`).set(bearer(adminA)).send({ roleId: await roleId(clubA.id, 'ADMIN') }).expect(403);
+    const res = await api()
+      .put(`/api/v1/clubs/${clubA.id}/members/${await membershipId(clubA.id, adminA.id)}/role`)
+      .set(bearer(adminA))
+      .send({ roleId: await roleId(clubA.id, 'ADMIN') })
+      .expect(403);
     expect(res.body.error.code).toBe('SELF_ACTION');
   });
 
   it('a moderator cannot suspend an admin (target has more permissions)', async () => {
     const mod = await registerUser();
     await addMember(clubA.id, mod.id, 'MODERATOR');
-    const res = await api().post(`/api/v1/clubs/${clubA.id}/members/${await membershipId(clubA.id, adminA.id)}/moderation`).set(bearer(mod)).send({ action: 'SUSPEND' }).expect(403);
+    const res = await api()
+      .post(`/api/v1/clubs/${clubA.id}/members/${await membershipId(clubA.id, adminA.id)}/moderation`)
+      .set(bearer(mod))
+      .send({ action: 'SUSPEND' })
+      .expect(403);
     expect(res.body.error.code).toBe('INSUFFICIENT_RANK');
   });
 
@@ -119,7 +149,11 @@ describe('role hierarchy and privilege escalation', () => {
     const powerful = await prisma.clubRole.create({
       data: { clubId: clubA.id, name: 'Treasurer', permissions: { create: [{ permissionKey: 'billing.manage' }] } },
     });
-    const res = await api().put(`/api/v1/clubs/${clubA.id}/members/${await membershipId(clubA.id, memberA.id)}/role`).set(bearer(adminA)).send({ roleId: powerful.id }).expect(403);
+    const res = await api()
+      .put(`/api/v1/clubs/${clubA.id}/members/${await membershipId(clubA.id, memberA.id)}/role`)
+      .set(bearer(adminA))
+      .send({ roleId: powerful.id })
+      .expect(403);
     expect(res.body.error.code).toBe('PRIVILEGE_ESCALATION');
     const inv = await api().post(`/api/v1/clubs/${clubA.id}/invitations`).set(bearer(adminA)).send({ roleId: powerful.id }).expect(403);
     expect(inv.body.error.code).toBe('PRIVILEGE_ESCALATION');
@@ -129,7 +163,11 @@ describe('role hierarchy and privilege escalation', () => {
     const helper = await registerUser();
     await addMember(clubA.id, helper.id, 'ADMIN');
     await api().get(`/api/v1/clubs/${clubA.id}/members`).set(bearer(helper)).expect(200);
-    await api().post(`/api/v1/clubs/${clubA.id}/members/${await membershipId(clubA.id, helper.id)}/moderation`).set(bearer(ownerA)).send({ action: 'SUSPEND' }).expect(200);
+    await api()
+      .post(`/api/v1/clubs/${clubA.id}/members/${await membershipId(clubA.id, helper.id)}/moderation`)
+      .set(bearer(ownerA))
+      .send({ action: 'SUSPEND' })
+      .expect(200);
     await api().get(`/api/v1/clubs/${clubA.id}/members`).set(bearer(helper)).expect(403);
   });
 
@@ -154,7 +192,18 @@ describe('club activity feed', () => {
     const { randomUUID } = await import('node:crypto');
     const now = new Date();
     const shared = await prisma.activity.create({
-      data: { userId: memberA.id, clientId: randomUUID(), type: 'WALK', status: 'COMPLETED', startedAt: now, endedAt: now, distanceM: 3200, movingSeconds: 2400, routePolyline: 'secret', clubShares: { create: { clubId: clubA.id } } },
+      data: {
+        userId: memberA.id,
+        clientId: randomUUID(),
+        type: 'WALK',
+        status: 'COMPLETED',
+        startedAt: now,
+        endedAt: now,
+        distanceM: 3200,
+        movingSeconds: 2400,
+        routePolyline: 'secret',
+        clubShares: { create: { clubId: clubA.id } },
+      },
     });
     const notShared = await prisma.activity.create({
       data: { userId: memberA.id, clientId: randomUUID(), type: 'RUN', status: 'COMPLETED', startedAt: now, endedAt: now, distanceM: 5000, movingSeconds: 1500 },
@@ -166,7 +215,13 @@ describe('club activity feed', () => {
     expect(JSON.stringify(res.body)).not.toContain('secret');
     expect(res.body.meta.lastSevenDays.activities).toBeGreaterThanOrEqual(1);
 
-    await api().get(`/api/v1/clubs/${clubA.id}/activities`).set(bearer(memberB)).expect((r) => expect([403, 404]).toContain(r.status));
-    await api().get(`/api/v1/clubs/${clubB.id}/activities`).set(bearer(adminA)).expect((r) => expect([403, 404]).toContain(r.status));
+    await api()
+      .get(`/api/v1/clubs/${clubA.id}/activities`)
+      .set(bearer(memberB))
+      .expect((r) => expect([403, 404]).toContain(r.status));
+    await api()
+      .get(`/api/v1/clubs/${clubB.id}/activities`)
+      .set(bearer(adminA))
+      .expect((r) => expect([403, 404]).toContain(r.status));
   });
 });

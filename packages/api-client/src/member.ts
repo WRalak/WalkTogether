@@ -155,7 +155,11 @@ export interface ParticipantsDto {
   going: number;
   waitlisted: number;
   attended: number;
-  rows: { user: { id: string; username: string; displayName: string }; registration: string | null; attendance: { method: string; checkedInAt: string; distanceFromMeetingM: number | null } | null }[];
+  rows: {
+    user: { id: string; username: string; displayName: string };
+    registration: string | null;
+    attendance: { method: string; checkedInAt: string; distanceFromMeetingM: number | null } | null;
+  }[];
 }
 
 export interface ClubOverviewDto {
@@ -274,7 +278,14 @@ export interface ChallengeDto {
 
 export interface ChallengeLeaderboardDto {
   challenge: { id: string; title: string; metric: string; target: number | null; status: string };
-  entries: { rank: number; value: number; completed: boolean; teamClubId: string | null; isMe: boolean; user: { id: string; username: string; displayName: string; avatarUrl: string | null } | null }[];
+  entries: {
+    rank: number;
+    value: number;
+    completed: boolean;
+    teamClubId: string | null;
+    isMe: boolean;
+    user: { id: string; username: string; displayName: string; avatarUrl: string | null } | null;
+  }[];
   teams: { clubId: string; name: string; participants: number; total: number; average: number; rank: number }[];
 }
 
@@ -411,8 +422,10 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
   return {
     http,
     auth: {
-      register: async (body: In<typeof v.registerSchema>) => storeTokens(await http.request<AuthTokens & { userId: string }>('/api/v1/auth/register', { method: 'POST', body, auth: false })),
-      login: async (body: In<typeof v.loginSchema>) => storeUnlessChallenge(await http.request<AuthTokens | MfaChallengeDto>('/api/v1/auth/login', { method: 'POST', body, auth: false })),
+      register: async (body: In<typeof v.registerSchema>) =>
+        storeTokens(await http.request<AuthTokens & { userId: string }>('/api/v1/auth/register', { method: 'POST', body, auth: false })),
+      login: async (body: In<typeof v.loginSchema>) =>
+        storeUnlessChallenge(await http.request<AuthTokens | MfaChallengeDto>('/api/v1/auth/login', { method: 'POST', body, auth: false })),
       /** Second step of sign-in: an authenticator code or a single-use recovery code. */
       verifyMfa: async (body: In<typeof v.mfaVerifySchema>) => storeTokens(await http.request<AuthTokens>('/api/v1/auth/mfa/verify', { method: 'POST', body, auth: false })),
       mfa: {
@@ -446,22 +459,25 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
       requestPhoneOtp: (body: In<typeof v.phoneOtpRequestSchema>) => http.request<{ sent: true }>('/api/v1/auth/phone/request-otp', { method: 'POST', body }),
       verifyPhoneOtp: async (body: In<typeof v.phoneOtpVerifySchema>) => {
         const res = await http.request<
-          (AuthTokens & { status: 'authenticated' }) | (MfaChallengeDto & { status: 'mfa_required' }) | { status: 'registration_required'; registrationToken: string } | { verified: true }
-        >(
-          '/api/v1/auth/phone/verify-otp',
-          { method: 'POST', body },
-        );
+          | (AuthTokens & { status: 'authenticated' })
+          | (MfaChallengeDto & { status: 'mfa_required' })
+          | { status: 'registration_required'; registrationToken: string }
+          | { verified: true }
+        >('/api/v1/auth/phone/verify-otp', { method: 'POST', body });
         if ('status' in res && res.status === 'authenticated') await storeTokens(res);
         return res;
       },
       completePhoneRegistration: async (body: In<typeof v.phoneRegistrationSchema>) =>
         storeTokens(await http.request<AuthTokens>('/api/v1/auth/phone/register', { method: 'POST', body, auth: false })),
       oauth: async (body: In<typeof v.oauthLoginSchema>) =>
-        storeUnlessChallenge(await http.request<(AuthTokens & { created: boolean }) | (MfaChallengeDto & { created: boolean })>('/api/v1/auth/oauth', { method: 'POST', body, auth: false })),
+        storeUnlessChallenge(
+          await http.request<(AuthTokens & { created: boolean }) | (MfaChallengeDto & { created: boolean })>('/api/v1/auth/oauth', { method: 'POST', body, auth: false }),
+        ),
     },
     activities: {
       create: (body: In<typeof v.createActivitySchema>) => http.request<ActivityDto>('/api/v1/activities', { method: 'POST', body }),
-      addPoints: (id: string, points: In<typeof v.gpsPointSchema>[]) => http.request<{ accepted: number; ignored: number }>(`/api/v1/activities/${id}/gps-points`, { method: 'POST', body: { points } }),
+      addPoints: (id: string, points: In<typeof v.gpsPointSchema>[]) =>
+        http.request<{ accepted: number; ignored: number }>(`/api/v1/activities/${id}/gps-points`, { method: 'POST', body: { points } }),
       complete: (id: string, body: In<typeof v.completeActivitySchema>) => http.request<ActivityDto>(`/api/v1/activities/${id}/complete`, { method: 'POST', body }),
       discard: (id: string) => http.request<void>(`/api/v1/activities/${id}/discard`, { method: 'POST', body: {} }),
       list: (query: Partial<In<typeof v.listActivitiesQuerySchema>> = {}) => http.page<ActivityDto>('/api/v1/activities', { query: query as Record<string, string> }),
@@ -478,7 +494,8 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
     },
     events: {
       discover: (query: { near?: string; radiusKm?: number; type?: string; cursor?: string; limit?: number } = {}) => http.page<EventDto>('/api/v1/events', { query, auth: false }),
-      ofClub: (clubId: string, query: { from?: string; to?: string; includeCancelled?: boolean; cursor?: string; limit?: number } = {}) => http.page<EventDto>(`/api/v1/clubs/${clubId}/events`, { query }),
+      ofClub: (clubId: string, query: { from?: string; to?: string; includeCancelled?: boolean; cursor?: string; limit?: number } = {}) =>
+        http.page<EventDto>(`/api/v1/clubs/${clubId}/events`, { query }),
       create: (clubId: string, body: In<typeof v.createEventSchema>) => http.request<EventDto>(`/api/v1/clubs/${clubId}/events`, { method: 'POST', body }),
       get: (id: string) => http.request<EventDto>(`/api/v1/events/${id}`),
       update: (id: string, body: Record<string, unknown>) => http.request<EventDto>(`/api/v1/events/${id}`, { method: 'PATCH', body }),
@@ -486,7 +503,8 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
       rsvp: (id: string, going: boolean) => http.request<{ status: string }>(`/api/v1/events/${id}/rsvp`, { method: 'POST', body: { going } }),
       participants: (id: string) => http.request<ParticipantsDto>(`/api/v1/events/${id}/participants`),
       checkInCode: (id: string) => http.request<{ code: string; expiresAt: string; deepLink: string }>(`/api/v1/events/${id}/check-in-code`),
-      checkIn: (id: string, body: In<typeof v.checkInSchema>) => http.request<{ checkedInAt: string; method: string; distanceFromMeetingM: number | null }>(`/api/v1/events/${id}/check-in`, { method: 'POST', body }),
+      checkIn: (id: string, body: In<typeof v.checkInSchema>) =>
+        http.request<{ checkedInAt: string; method: string; distanceFromMeetingM: number | null }>(`/api/v1/events/${id}/check-in`, { method: 'POST', body }),
       markAttendance: (id: string, userId: string, present: boolean) => http.request<void>(`/api/v1/events/${id}/attendance`, { method: 'POST', body: { userId, present } }),
       attendanceCsv: (id: string) => http.text(`/api/v1/events/${id}/attendance.csv`),
     },
@@ -494,7 +512,10 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
       overview: (clubId: string) => http.request<ClubOverviewDto>(`/api/v1/clubs/${clubId}/analytics`),
       growth: (clubId: string) => http.request<ClubGrowthDto>(`/api/v1/clubs/${clubId}/analytics/growth`),
       attendance: (clubId: string, range: { from?: string; to?: string } = {}) =>
-        http.request<{ id: string; title: string; startsAt: string; status: string; going: number; capacity: number | null; attended: number; rate: number | null }[]>(`/api/v1/clubs/${clubId}/reports/attendance`, { query: range }),
+        http.request<{ id: string; title: string; startsAt: string; status: string; going: number; capacity: number | null; attended: number; rate: number | null }[]>(
+          `/api/v1/clubs/${clubId}/reports/attendance`,
+          { query: range },
+        ),
       /** Activities members chose to share with the club (summary only, never routes). */
       activities: async (clubId: string, cursor?: string) => {
         const page = await http.page<ClubActivityDto>(`/api/v1/clubs/${clubId}/activities`, { query: { cursor } });
@@ -526,7 +547,8 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
       complete: (id: string) => http.request<MediaDto>(`/api/v1/media/${id}/complete`, { method: 'POST' }),
       get: (id: string) => http.request<MediaDto>(`/api/v1/media/${id}`),
       setAvatar: (mediaId: string) => http.request<MeUser>('/api/v1/users/me/avatar', { method: 'PUT', body: { mediaId } }),
-      setClubBranding: (clubId: string, body: { logoMediaId?: string; coverMediaId?: string }) => http.request<unknown>(`/api/v1/clubs/${clubId}/branding`, { method: 'PUT', body }),
+      setClubBranding: (clubId: string, body: { logoMediaId?: string; coverMediaId?: string }) =>
+        http.request<unknown>(`/api/v1/clubs/${clubId}/branding`, { method: 'PUT', body }),
     },
     messaging: {
       list: () => http.request<ConversationSummaryDto[]>('/api/v1/conversations'),
@@ -540,19 +562,22 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
     },
     moderation: {
       clubReports: (clubId: string, status = 'OPEN') => http.page<ReportDto>(`/api/v1/clubs/${clubId}/reports`, { query: { status } }),
-      resolveClubReport: (clubId: string, reportId: string, action: 'DISMISS' | 'HIDE', note?: string) => http.request<void>(`/api/v1/clubs/${clubId}/reports/${reportId}/resolve`, { method: 'POST', body: { action, note } }),
+      resolveClubReport: (clubId: string, reportId: string, action: 'DISMISS' | 'HIDE', note?: string) =>
+        http.request<void>(`/api/v1/clubs/${clubId}/reports/${reportId}/resolve`, { method: 'POST', body: { action, note } }),
     },
     challenges: {
       list: (query: { cursor?: string; mine?: boolean } = {}) => http.page<ChallengeDto>('/api/v1/challenges', { query }),
       get: (id: string) => http.request<ChallengeDto>(`/api/v1/challenges/${id}`),
-      join: (id: string, body: { teamClubId?: string; hideFromLeaderboard?: boolean; acceptTerms?: boolean } = {}) => http.request<ChallengeDto>(`/api/v1/challenges/${id}/join`, { method: 'POST', body }),
+      join: (id: string, body: { teamClubId?: string; hideFromLeaderboard?: boolean; acceptTerms?: boolean } = {}) =>
+        http.request<ChallengeDto>(`/api/v1/challenges/${id}/join`, { method: 'POST', body }),
       leave: (id: string) => http.request<void>(`/api/v1/challenges/${id}/leave`, { method: 'POST' }),
       leaderboard: (id: string) => http.request<ChallengeLeaderboardDto>(`/api/v1/challenges/${id}/leaderboard`),
       createForClub: (clubId: string, body: In<typeof v.createChallengeSchema>) => http.request<ChallengeDto>(`/api/v1/clubs/${clubId}/challenges`, { method: 'POST', body }),
       cancel: (id: string) => http.request<void>(`/api/v1/challenges/${id}/cancel`, { method: 'POST' }),
     },
     leaderboards: {
-      get: (query: { scope?: 'GLOBAL' | 'CLUB'; clubId?: string; period?: 'WEEK' | 'MONTH'; activityType?: 'WALK' | 'RUN' } = {}) => http.request<LeaderboardDto>('/api/v1/leaderboards', { query }),
+      get: (query: { scope?: 'GLOBAL' | 'CLUB'; clubId?: string; period?: 'WEEK' | 'MONTH'; activityType?: 'WALK' | 'RUN' } = {}) =>
+        http.request<LeaderboardDto>('/api/v1/leaderboards', { query }),
       following: (period: 'WEEK' | 'MONTH' = 'WEEK') => http.request<LeaderboardDto>('/api/v1/leaderboards/following', { query: { period } }),
     },
     achievements: {
@@ -561,7 +586,8 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
     },
     billing: {
       providers: () => http.request<{ id: string; currencies: string[] }[]>('/api/v1/subscriptions/providers', { auth: false }),
-      checkout: (body: In<typeof v.checkoutSchema>, idempotencyKey: string) => http.request<CheckoutResultDto>('/api/v1/subscriptions/checkout', { method: 'POST', body, headers: { 'Idempotency-Key': idempotencyKey } }),
+      checkout: (body: In<typeof v.checkoutSchema>, idempotencyKey: string) =>
+        http.request<CheckoutResultDto>('/api/v1/subscriptions/checkout', { method: 'POST', body, headers: { 'Idempotency-Key': idempotencyKey } }),
       payment: (id: string) => http.request<CheckoutResultDto>(`/api/v1/payments/${id}`),
       myPayments: () => http.request<PaymentRowDto[]>('/api/v1/payments/me'),
       clubPayments: (clubId: string) => http.request<PaymentRowDto[]>(`/api/v1/payments/clubs/${clubId}`),
@@ -573,10 +599,20 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
       apply: (body: In<typeof v.sponsorSchema>) => http.request<SponsorDto>('/api/v1/sponsors', { method: 'POST', body }),
       createCampaign: (sponsorId: string, body: In<typeof v.campaignSchema>) => http.request<CampaignDto>(`/api/v1/sponsors/${sponsorId}/campaigns`, { method: 'POST', body }),
       submit: (campaignId: string) => http.request<CampaignDto>(`/api/v1/campaigns/${campaignId}/submit`, { method: 'POST' }),
-      checkout: (campaignId: string, body: In<typeof v.campaignCheckoutSchema>, idempotencyKey: string) => http.request<CheckoutResultDto>(`/api/v1/payments/campaigns/${campaignId}/checkout`, { method: 'POST', body, headers: { 'Idempotency-Key': idempotencyKey } }),
+      checkout: (campaignId: string, body: In<typeof v.campaignCheckoutSchema>, idempotencyKey: string) =>
+        http.request<CheckoutResultDto>(`/api/v1/payments/campaigns/${campaignId}/checkout`, { method: 'POST', body, headers: { 'Idempotency-Key': idempotencyKey } }),
       report: (campaignId: string) => http.request<Record<string, unknown>>(`/api/v1/campaigns/${campaignId}/report`),
-      clubOffers: (clubId: string) => http.request<{ eventId: string; acceptedAt: string | null; event: { id: string; title: string; startsAt: string }; campaign: { id: string; name: string; terms: string; prizeDescription: string | null; sponsor: { name: string; logoUrl: string | null; websiteUrl: string | null } } }[]>(`/api/v1/clubs/${clubId}/sponsorship-offers`),
-      respondOffer: (clubId: string, eventId: string, accept: boolean) => http.request<void>(`/api/v1/clubs/${clubId}/sponsorship-offers/${eventId}`, { method: 'POST', body: { accept } }),
+      clubOffers: (clubId: string) =>
+        http.request<
+          {
+            eventId: string;
+            acceptedAt: string | null;
+            event: { id: string; title: string; startsAt: string };
+            campaign: { id: string; name: string; terms: string; prizeDescription: string | null; sponsor: { name: string; logoUrl: string | null; websiteUrl: string | null } };
+          }[]
+        >(`/api/v1/clubs/${clubId}/sponsorship-offers`),
+      respondOffer: (clubId: string, eventId: string, accept: boolean) =>
+        http.request<void>(`/api/v1/clubs/${clubId}/sponsorship-offers/${eventId}`, { method: 'POST', body: { accept } }),
     },
     notifications: {
       list: (query: { cursor?: string; limit?: number } = {}) => http.requestWithMeta<AppNotification[]>('/api/v1/notifications', { query }),
@@ -598,37 +634,57 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
       deleteAccount: (body: In<typeof v.deleteAccountSchema>) => http.request<{ scheduledAt: string }>('/api/v1/users/me', { method: 'DELETE', body }),
     },
     clubs: {
-      list: (query: Partial<In<typeof v.listClubsQuerySchema>> = {}) => http.page<ClubSummary>('/api/v1/clubs', { query: query as Record<string, string | number | undefined>, auth: true }),
+      list: (query: Partial<In<typeof v.listClubsQuerySchema>> = {}) =>
+        http.page<ClubSummary>('/api/v1/clubs', { query: query as Record<string, string | number | undefined>, auth: true }),
       get: (slugOrId: string) => http.request<ClubWithCoords>(`/api/v1/clubs/${encodeURIComponent(slugOrId)}`),
       create: (body: In<typeof v.createClubSchema>) => http.request<ClubWithCoords>('/api/v1/clubs', { method: 'POST', body }),
       update: (clubId: string, body: In<typeof v.updateClubSchema>) => http.request<ClubWithCoords>(`/api/v1/clubs/${clubId}`, { method: 'PATCH', body }),
-      join: (clubId: string, body: In<typeof v.joinClubSchema> = {}) => http.request<{ membershipId: string; status: string }>(`/api/v1/clubs/${clubId}/join`, { method: 'POST', body }),
+      join: (clubId: string, body: In<typeof v.joinClubSchema> = {}) =>
+        http.request<{ membershipId: string; status: string }>(`/api/v1/clubs/${clubId}/join`, { method: 'POST', body }),
       leave: (clubId: string) => http.request<void>(`/api/v1/clubs/${clubId}/leave`, { method: 'POST' }),
-      members: (clubId: string, query: Partial<In<typeof v.listMembersQuerySchema>> = {}) => http.page<ClubMember>(`/api/v1/clubs/${clubId}/members`, { query: query as Record<string, string | number | undefined> }),
+      members: (clubId: string, query: Partial<In<typeof v.listMembersQuerySchema>> = {}) =>
+        http.page<ClubMember>(`/api/v1/clubs/${clubId}/members`, { query: query as Record<string, string | number | undefined> }),
       review: (clubId: string, membershipId: string, body: In<typeof v.reviewMembershipSchema>) =>
         http.request<{ status: string }>(`/api/v1/clubs/${clubId}/members/${membershipId}/review`, { method: 'POST', body }),
-      assignRole: (clubId: string, membershipId: string, roleId: string) => http.request<unknown>(`/api/v1/clubs/${clubId}/members/${membershipId}/role`, { method: 'PUT', body: { roleId } }),
+      assignRole: (clubId: string, membershipId: string, roleId: string) =>
+        http.request<unknown>(`/api/v1/clubs/${clubId}/members/${membershipId}/role`, { method: 'PUT', body: { roleId } }),
       moderate: (clubId: string, membershipId: string, body: In<typeof v.memberModerationSchema>) =>
         http.request<{ status: string }>(`/api/v1/clubs/${clubId}/members/${membershipId}/moderation`, { method: 'POST', body }),
       roles: (clubId: string) => http.request<ClubRoleInfo[]>(`/api/v1/clubs/${clubId}/roles`),
       createInvitation: (clubId: string, body: In<typeof v.createInvitationSchema>) =>
         http.request<{ id: string; code: string; expiresAt: string; maxUses: number }>(`/api/v1/clubs/${clubId}/invitations`, { method: 'POST', body }),
       invitations: (clubId: string) =>
-        http.request<{ id: string; codeHint: string; email: string | null; phone: string | null; maxUses: number; useCount: number; expiresAt: string; revokedAt: string | null; createdAt: string }[]>(
-          `/api/v1/clubs/${clubId}/invitations`,
-        ),
+        http.request<
+          {
+            id: string;
+            codeHint: string;
+            email: string | null;
+            phone: string | null;
+            maxUses: number;
+            useCount: number;
+            expiresAt: string;
+            revokedAt: string | null;
+            createdAt: string;
+          }[]
+        >(`/api/v1/clubs/${clubId}/invitations`),
       revokeInvitation: (clubId: string, invitationId: string) => http.request<void>(`/api/v1/clubs/${clubId}/invitations/${invitationId}`, { method: 'DELETE' }),
       createRole: (clubId: string, body: In<typeof v.roleInputSchema>) => http.request<ClubRoleInfo>(`/api/v1/clubs/${clubId}/roles`, { method: 'POST', body }),
-      updateRole: (clubId: string, roleId: string, body: In<typeof v.updateRoleSchema>) => http.request<unknown>(`/api/v1/clubs/${clubId}/roles/${roleId}`, { method: 'PATCH', body }),
+      updateRole: (clubId: string, roleId: string, body: In<typeof v.updateRoleSchema>) =>
+        http.request<unknown>(`/api/v1/clubs/${clubId}/roles/${roleId}`, { method: 'PATCH', body }),
       deleteRole: (clubId: string, roleId: string) => http.request<void>(`/api/v1/clubs/${clubId}/roles/${roleId}`, { method: 'DELETE' }),
-      transferOwnership: (clubId: string, membershipId: string, password?: string) => http.request<{ ownerId: string }>(`/api/v1/clubs/${clubId}/transfer-ownership`, { method: 'POST', body: { membershipId, password } }),
+      transferOwnership: (clubId: string, membershipId: string, password?: string) =>
+        http.request<{ ownerId: string }>(`/api/v1/clubs/${clubId}/transfer-ownership`, { method: 'POST', body: { membershipId, password } }),
       announcements: (clubId: string, query: { cursor?: string; limit?: number } = {}) => http.page<Announcement>(`/api/v1/clubs/${clubId}/announcements`, { query }),
       createAnnouncement: (clubId: string, body: In<typeof v.announcementSchema>) => http.request<Announcement>(`/api/v1/clubs/${clubId}/announcements`, { method: 'POST', body }),
-      updateAnnouncement: (clubId: string, id: string, body: In<typeof v.updateAnnouncementSchema>) => http.request<Announcement>(`/api/v1/clubs/${clubId}/announcements/${id}`, { method: 'PATCH', body }),
+      updateAnnouncement: (clubId: string, id: string, body: In<typeof v.updateAnnouncementSchema>) =>
+        http.request<Announcement>(`/api/v1/clubs/${clubId}/announcements/${id}`, { method: 'PATCH', body }),
       deleteAnnouncement: (clubId: string, id: string) => http.request<void>(`/api/v1/clubs/${clubId}/announcements/${id}`, { method: 'DELETE' }),
       billing: (clubId: string) => http.request<BillingInfo>(`/api/v1/subscriptions/clubs/${clubId}`),
       cancelSubscription: (clubId: string) => http.request<unknown>(`/api/v1/subscriptions/clubs/${clubId}/cancel`, { method: 'POST', body: {} }),
-      previewInvitation: (code: string) => http.request<{ club: { id: string; slug: string; name: string; logoUrl: string | null }; expiresAt: string }>(`/api/v1/clubs/invitations/${encodeURIComponent(code)}`, { auth: false }),
+      previewInvitation: (code: string) =>
+        http.request<{ club: { id: string; slug: string; name: string; logoUrl: string | null }; expiresAt: string }>(`/api/v1/clubs/invitations/${encodeURIComponent(code)}`, {
+          auth: false,
+        }),
     },
   };
 }

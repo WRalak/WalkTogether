@@ -59,9 +59,17 @@ export default function Subscription() {
           <Text className="text-lg font-bold text-ink">{sub?.entitlements.planName ?? 'WalkTogether Free'}</Text>
           <Badge label={sub?.entitlements.status.toLowerCase() ?? 'free'} tone="primary" />
         </View>
-        {sub?.subscription && <Text className="mt-1 text-ink-muted">{sub.subscription.cancelAtPeriodEnd ? 'Ends' : 'Renews'} {new Date(sub.subscription.currentPeriodEnd).toLocaleDateString()}</Text>}
-        <Text className="mt-2 text-sm text-ink-muted">GPS tracking, history and clubs are free forever. Premium adds deeper insights. A club’s plan never changes your personal features.</Text>
-        {sub?.subscription && !sub.subscription.cancelAtPeriodEnd && <Button title="Cancel at period end" variant="ghost" onPress={() => void api.subscriptions.cancelMine().then(() => mine.refetch())} />}
+        {sub?.subscription && (
+          <Text className="mt-1 text-ink-muted">
+            {sub.subscription.cancelAtPeriodEnd ? 'Ends' : 'Renews'} {new Date(sub.subscription.currentPeriodEnd).toLocaleDateString()}
+          </Text>
+        )}
+        <Text className="mt-2 text-sm text-ink-muted">
+          GPS tracking, history and clubs are free forever. Premium adds deeper insights. A club’s plan never changes your personal features.
+        </Text>
+        {sub?.subscription && !sub.subscription.cancelAtPeriodEnd && (
+          <Button title="Cancel at period end" variant="ghost" onPress={() => void api.subscriptions.cancelMine().then(() => mine.refetch())} />
+        )}
       </Card>
       {error && (
         <View className="mt-4">

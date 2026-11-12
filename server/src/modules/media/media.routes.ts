@@ -11,7 +11,20 @@ export const mediaRouter = Router();
 const idParam = z.object({ id: z.string().uuid() });
 
 mediaRouter.post('/', requireAuth, async (req, res) => {
-  const body = parse(z.object({ purpose: z.enum(['AVATAR', 'CLUB_LOGO', 'CLUB_COVER', 'POST', 'EVENT_COVER']), mimeType: z.string().max(100), sizeBytes: z.number().int().positive().max(200 * 1024 * 1024) }).strict(), req.body);
+  const body = parse(
+    z
+      .object({
+        purpose: z.enum(['AVATAR', 'CLUB_LOGO', 'CLUB_COVER', 'POST', 'EVENT_COVER']),
+        mimeType: z.string().max(100),
+        sizeBytes: z
+          .number()
+          .int()
+          .positive()
+          .max(200 * 1024 * 1024),
+      })
+      .strict(),
+    req.body,
+  );
   res.status(201).json({ data: await svc.requestUpload(authUserId(req), body) });
 });
 mediaRouter.post('/:id/complete', requireAuth, async (req, res) => {

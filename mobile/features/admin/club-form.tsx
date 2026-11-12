@@ -26,7 +26,12 @@ const VISIBILITY_HINT: Record<(typeof CLUB_VISIBILITY)[number], string> = {
   INVITE_ONLY: 'Hidden; joining requires an invitation.',
 };
 
-const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50);
+const slugify = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50);
 const blank = (s: string) => (s.trim() ? s.trim() : null);
 
 /** Builds the API payload; validated with the same Zod schemas the server uses. */
@@ -120,15 +125,48 @@ export function ClubForm({
           }}
         />
       )}
-      <TextField label="Description" value={v.description} multiline numberOfLines={4} error={errors.description} onChangeText={(t) => set('description', t)} style={{ minHeight: 100, textAlignVertical: 'top' }} />
+      <TextField
+        label="Description"
+        value={v.description}
+        multiline
+        numberOfLines={4}
+        error={errors.description}
+        onChangeText={(t) => set('description', t)}
+        style={{ minHeight: 100, textAlignVertical: 'top' }}
+      />
       <Chips label="Category" value={v.category} options={CLUB_CATEGORIES.map((c) => ({ key: c, label: categoryLabel(c) }))} onChange={(c) => set('category', c)} />
       <Chips label="Visibility" value={v.visibility} options={CLUB_VISIBILITY.map((c) => ({ key: c, label: VISIBILITY[c] }))} onChange={(c) => set('visibility', c)} />
       <Notice tone="info">{VISIBILITY_HINT[v.visibility]}</Notice>
-      {v.visibility === 'PUBLIC' && <Toggle label="Approve new members" hint="New members wait for an admin to approve them." value={v.requiresApproval} onChange={(b) => set('requiresApproval', b)} />}
+      {v.visibility === 'PUBLIC' && (
+        <Toggle label="Approve new members" hint="New members wait for an admin to approve them." value={v.requiresApproval} onChange={(b) => set('requiresApproval', b)} />
+      )}
       <TextField label="City / area" value={v.city} error={errors.city} onChangeText={(t) => set('city', t)} />
-      <TextField label="Country code" value={v.countryCode} maxLength={2} autoCapitalize="characters" error={errors.countryCode} hint="Two letters, e.g. KE" onChangeText={(t) => set('countryCode', t)} />
-      <TextField label="Website" value={v.websiteUrl} keyboardType="url" autoCapitalize="none" placeholder="https://" error={errors.websiteUrl} onChangeText={(t) => set('websiteUrl', t)} />
-      <TextField label="Contact email" value={v.contactEmail} keyboardType="email-address" autoCapitalize="none" error={errors.contactEmail} onChangeText={(t) => set('contactEmail', t)} />
+      <TextField
+        label="Country code"
+        value={v.countryCode}
+        maxLength={2}
+        autoCapitalize="characters"
+        error={errors.countryCode}
+        hint="Two letters, e.g. KE"
+        onChangeText={(t) => set('countryCode', t)}
+      />
+      <TextField
+        label="Website"
+        value={v.websiteUrl}
+        keyboardType="url"
+        autoCapitalize="none"
+        placeholder="https://"
+        error={errors.websiteUrl}
+        onChangeText={(t) => set('websiteUrl', t)}
+      />
+      <TextField
+        label="Contact email"
+        value={v.contactEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        error={errors.contactEmail}
+        onChangeText={(t) => set('contactEmail', t)}
+      />
       <Button title={submitLabel} loading={busy} onPress={() => void submit()} />
     </>
   );

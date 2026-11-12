@@ -25,7 +25,10 @@ describe('platform administration', () => {
     expect(sys).toMatchObject({ status: 'ok', database: { ok: true }, redis: { ok: true } });
     // The health page reports the newest applied migration.
     const { readdirSync } = await import('node:fs');
-    const newest = readdirSync('prisma/migrations').filter((d) => /^\d{14}_/.test(d)).sort().at(-1);
+    const newest = readdirSync('prisma/migrations')
+      .filter((d) => /^\d{14}_/.test(d))
+      .sort()
+      .at(-1);
     expect(sys.latestMigration.migration_name).toBe(newest);
     const u = await registerUser();
     await api().post('/api/v1/auth/login').send({ email: u.email, password: 'wrong-pass-123' }).expect(401);
@@ -48,11 +51,18 @@ describe('platform administration', () => {
     const email = `newadmin_${uid()}@walktogether.test`;
     await api().post('/api/v1/platform-admin/admins').set(auth(support)).send({ email, displayName: 'New', roleKey: 'FINANCE', password: 'finance-admin-pass-1' }).expect(403);
     await api().post('/api/v1/platform-admin/admins').set(auth(root)).send({ email, displayName: 'New', roleKey: 'FINANCE', password: 'short-pass-1' }).expect(422);
-    const created = await api().post('/api/v1/platform-admin/admins').set(auth(root)).send({ email, displayName: 'New', roleKey: 'FINANCE', password: 'finance-admin-pass-1' }).expect(201);
+    const created = await api()
+      .post('/api/v1/platform-admin/admins')
+      .set(auth(root))
+      .send({ email, displayName: 'New', roleKey: 'FINANCE', password: 'finance-admin-pass-1' })
+      .expect(201);
     const login = await api().post('/api/v1/platform-admin/auth/login').send({ email, password: 'finance-admin-pass-1' }).expect(200);
     expect(login.body.data.mfaSetupRequired).toBe(true);
     const setup = await api().post('/api/v1/platform-admin/auth/mfa/setup').send({ mfaToken: login.body.data.mfaToken }).expect(200);
-    const s = await api().post('/api/v1/platform-admin/auth/mfa/verify').send({ mfaToken: login.body.data.mfaToken, code: authenticator.generate(setup.body.data.secret) }).expect(200);
+    const s = await api()
+      .post('/api/v1/platform-admin/auth/mfa/verify')
+      .send({ mfaToken: login.body.data.mfaToken, code: authenticator.generate(setup.body.data.secret) })
+      .expect(200);
     await api().get('/api/v1/platform-admin/revenue').set(auth(s.body.data)).expect(200); // FINANCE may view revenue
     await api().get('/api/v1/platform-admin/admins').set(auth(s.body.data)).expect(403);
     await api().post(`/api/v1/platform-admin/admins/${created.body.data.id}/status`).set(auth(root)).send({ status: 'SUSPENDED' }).expect(204);
@@ -61,8 +71,16 @@ describe('platform administration', () => {
 
   it('admins configure achievements with validated rules', async () => {
     const admin = await createAdmin();
-    await api().put('/api/v1/platform-admin/achievements/marathon').set(auth(admin)).send({ name: 'Marathoner', description: 'Ran 42.2 km in one go', rule: { type: 'nonsense' } }).expect(422);
-    await api().put('/api/v1/platform-admin/achievements/marathon').set(auth(admin)).send({ name: 'Marathoner', description: 'Ran 42.2 km in one go', icon: '🏃', rule: { type: 'single_distance', minM: 42195, activityType: 'RUN' } }).expect(200);
+    await api()
+      .put('/api/v1/platform-admin/achievements/marathon')
+      .set(auth(admin))
+      .send({ name: 'Marathoner', description: 'Ran 42.2 km in one go', rule: { type: 'nonsense' } })
+      .expect(422);
+    await api()
+      .put('/api/v1/platform-admin/achievements/marathon')
+      .set(auth(admin))
+      .send({ name: 'Marathoner', description: 'Ran 42.2 km in one go', icon: '🏃', rule: { type: 'single_distance', minM: 42195, activityType: 'RUN' } })
+      .expect(200);
     const u = await registerUser();
     expect((await api().get('/api/v1/achievements/me').set(bearer(u))).body.data.some((a: { code: string }) => a.code === 'marathon')).toBe(true);
   });

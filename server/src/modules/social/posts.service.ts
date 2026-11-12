@@ -16,7 +16,9 @@ const MENTION = /(^|[^\w.])@([a-z0-9][a-z0-9_.]{1,28}[a-z0-9])/gi;
 const postInclude = {
   author: { select: { id: true, username: true, profile: { select: { displayName: true, avatarUrl: true } } } },
   club: { select: { id: true, slug: true, name: true } },
-  activity: { select: { id: true, type: true, title: true, distanceM: true, movingSeconds: true, avgPaceSecPerKm: true, startedAt: true, visibility: true, status: true, userId: true } },
+  activity: {
+    select: { id: true, type: true, title: true, distanceM: true, movingSeconds: true, avgPaceSecPerKm: true, startedAt: true, visibility: true, status: true, userId: true },
+  },
   media: { orderBy: { position: 'asc' }, include: { media: true } },
 } satisfies Prisma.PostInclude;
 type PostRow = Prisma.PostGetPayload<{ include: typeof postInclude }>;
@@ -26,10 +28,26 @@ function serialize(p: PostRow, viewer: { liked: Set<string>; bookmarked: Set<str
     id: p.id,
     author: { id: p.author.id, username: p.author.username, displayName: p.author.profile?.displayName ?? p.author.username, avatarUrl: p.author.profile?.avatarUrl ?? null },
     club: p.club,
-    activity: p.activity && { id: p.activity.id, type: p.activity.type, title: p.activity.title, distanceM: p.activity.distanceM, movingSeconds: p.activity.movingSeconds, avgPaceSecPerKm: p.activity.avgPaceSecPerKm, startedAt: p.activity.startedAt },
+    activity: p.activity && {
+      id: p.activity.id,
+      type: p.activity.type,
+      title: p.activity.title,
+      distanceM: p.activity.distanceM,
+      movingSeconds: p.activity.movingSeconds,
+      avgPaceSecPerKm: p.activity.avgPaceSecPerKm,
+      startedAt: p.activity.startedAt,
+    },
     body: p.body,
     visibility: p.visibility,
-    media: p.media.filter((m) => m.media.status === 'READY').map((m) => ({ id: m.media.id, kind: m.media.kind, width: m.media.width, height: m.media.height, urls: Object.fromEntries(Object.entries(m.media.variants as Record<string, string>).map(([k, key]) => [k, storage.publicUrl(key)])) })),
+    media: p.media
+      .filter((m) => m.media.status === 'READY')
+      .map((m) => ({
+        id: m.media.id,
+        kind: m.media.kind,
+        width: m.media.width,
+        height: m.media.height,
+        urls: Object.fromEntries(Object.entries(m.media.variants as Record<string, string>).map(([k, key]) => [k, storage.publicUrl(key)])),
+      })),
     likeCount: p.likeCount,
     commentCount: p.commentCount,
     likedByMe: viewer.liked.has(p.id),
@@ -48,7 +66,19 @@ async function viewerState(viewerId: string | undefined, postIds: string[]) {
   return { liked: new Set(likes.map((l) => l.postId)), bookmarked: new Set(marks.map((b) => b.postId)) };
 }
 
-export async function canViewPost(p: { id: string; authorId: string; clubId: string | null; activityId: string | null; visibility: Vis; deletedAt: Date | null; hiddenAt: Date | null; activity?: { id: string; userId: string; visibility: string; status: string } | null }, viewerId: string | undefined) {
+export async function canViewPost(
+  p: {
+    id: string;
+    authorId: string;
+    clubId: string | null;
+    activityId: string | null;
+    visibility: Vis;
+    deletedAt: Date | null;
+    hiddenAt: Date | null;
+    activity?: { id: string; userId: string; visibility: string; status: string } | null;
+  },
+  viewerId: string | undefined,
+) {
   if (p.deletedAt) return false;
   if (viewerId === p.authorId) return true;
   if (p.hiddenAt) return false;
@@ -59,7 +89,8 @@ export async function canViewPost(p: { id: string; authorId: string; clubId: str
     return !!(await prisma.clubMembership.findFirst({ where: { clubId: p.clubId, userId: viewerId, status: 'ACTIVE', club: { status: 'ACTIVE' } }, select: { id: true } }));
   }
   if (p.visibility === 'PUBLIC') return true;
-  if (p.visibility === 'FOLLOWERS' && viewerId) return !!(await prisma.follow.findFirst({ where: { followerId: viewerId, followeeId: p.authorId, status: 'ACCEPTED' }, select: { status: true } }));
+  if (p.visibility === 'FOLLOWERS' && viewerId)
+    return !!(await prisma.follow.findFirst({ where: { followerId: viewerId, followeeId: p.authorId, status: 'ACCEPTED' }, select: { status: true } }));
   return false;
 }
 
@@ -92,7 +123,13 @@ export async function createPost(authorId: string, input: { body?: string | null
   if (media.length !== new Set(input.mediaIds).size) throw notFound('Media not found');
   if (media.some((m) => m.status !== 'READY')) throw conflict('Media is still processing', 'MEDIA_NOT_READY');
   const post = await prisma.post.create({
-    data: { authorId, body: input.body?.trim() || null, visibility: input.visibility, clubId: input.clubId ?? null, media: { create: input.mediaIds.map((mediaId, position) => ({ mediaId, position })) } },
+    data: {
+      authorId,
+      body: input.body?.trim() || null,
+      visibility: input.visibility,
+      clubId: input.clubId ?? null,
+      media: { create: input.mediaIds.map((mediaId, position) => ({ mediaId, position })) },
+    },
     include: postInclude,
   });
   if (post.body) await notifyMentions(post.body, authorId, post.id, post.clubId);
@@ -173,7 +210,13 @@ export async function feed(viewerId: string, q: { cursor?: string; limit: number
 export async function userPosts(authorId: string, viewerId: string | undefined, q: { cursor?: string; limit: number }) {
   const cursor = decodeCursor(q.cursor);
   const rows = await prisma.post.findMany({
-    where: { authorId, deletedAt: null, clubId: null, ...(viewerId === authorId ? {} : { hiddenAt: null, visibility: { not: 'PRIVATE' } }), ...(cursor ? { OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }] } : {}) },
+    where: {
+      authorId,
+      deletedAt: null,
+      clubId: null,
+      ...(viewerId === authorId ? {} : { hiddenAt: null, visibility: { not: 'PRIVATE' } }),
+      ...(cursor ? { OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }] } : {}),
+    },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: q.limit * 2,
     include: postInclude,
@@ -222,7 +265,10 @@ export async function bookmarks(userId: string, q: { cursor?: string; limit: num
   });
   const visible = [];
   for (const r of rows.slice(0, q.limit)) if (await canViewPost(r.post, userId)) visible.push(r);
-  const state = await viewerState(userId, visible.map((v) => v.postId));
+  const state = await viewerState(
+    userId,
+    visible.map((v) => v.postId),
+  );
   const last = rows.slice(0, q.limit).at(-1);
   return { items: visible.map((v) => serialize(v.post, state)), nextCursor: rows.length > q.limit && last ? encodeCursor({ createdAt: last.createdAt, id: last.postId }) : null };
 }
@@ -277,7 +323,10 @@ export async function deleteComment(commentId: string, actorId: string) {
   if (!c || c.deletedAt) throw notFound('Comment not found');
   // Authors can delete their comments; post authors can remove comments on their posts.
   if (c.authorId !== actorId && c.post.authorId !== actorId) throw forbidden();
-  await prisma.$transaction([prisma.comment.update({ where: { id: commentId }, data: { deletedAt: new Date() } }), prisma.post.update({ where: { id: c.postId }, data: { commentCount: { decrement: 1 } } })]);
+  await prisma.$transaction([
+    prisma.comment.update({ where: { id: commentId }, data: { deletedAt: new Date() } }),
+    prisma.post.update({ where: { id: c.postId }, data: { commentCount: { decrement: 1 } } }),
+  ]);
 }
 
 export async function likeComment(commentId: string, userId: string, like: boolean) {
@@ -285,14 +334,23 @@ export async function likeComment(commentId: string, userId: string, like: boole
   if (!c || c.deletedAt) throw notFound('Comment not found');
   await loadVisible(c.postId, userId);
   await prisma.$transaction(async (tx) => {
-    const r = like ? await tx.commentReaction.createMany({ data: [{ commentId, userId }], skipDuplicates: true }) : await tx.commentReaction.deleteMany({ where: { commentId, userId } });
+    const r = like
+      ? await tx.commentReaction.createMany({ data: [{ commentId, userId }], skipDuplicates: true })
+      : await tx.commentReaction.deleteMany({ where: { commentId, userId } });
     if (r.count) await tx.comment.update({ where: { id: commentId }, data: { likeCount: { increment: like ? 1 : -1 } } });
   });
 }
 
 // Club moderation ----------------------------------------------------------------------------
 
-export async function moderateClubContent(clubId: string, actorId: string, target: { type: 'POST' | 'COMMENT'; id: string }, hide: boolean, reason: string | undefined, ctx: AuditContext) {
+export async function moderateClubContent(
+  clubId: string,
+  actorId: string,
+  target: { type: 'POST' | 'COMMENT'; id: string },
+  hide: boolean,
+  reason: string | undefined,
+  ctx: AuditContext,
+) {
   await requireClubPermission(clubId, actorId, 'community.moderate');
   if (target.type === 'POST') {
     const p = await prisma.post.findFirst({ where: { id: target.id, clubId } });
@@ -303,5 +361,16 @@ export async function moderateClubContent(clubId: string, actorId: string, targe
     if (!c) throw notFound('Comment not found');
     await prisma.comment.update({ where: { id: c.id }, data: { hiddenAt: hide ? new Date() : null } });
   }
-  await audit({ actorType: 'USER', actorId, action: hide ? 'moderation.hidden' : 'moderation.unhidden', targetType: target.type.toLowerCase(), targetId: target.id, clubId, metadata: { reason } }, ctx);
+  await audit(
+    {
+      actorType: 'USER',
+      actorId,
+      action: hide ? 'moderation.hidden' : 'moderation.unhidden',
+      targetType: target.type.toLowerCase(),
+      targetId: target.id,
+      clubId,
+      metadata: { reason },
+    },
+    ctx,
+  );
 }

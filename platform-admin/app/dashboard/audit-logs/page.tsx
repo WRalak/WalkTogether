@@ -29,7 +29,13 @@ export default function AuditLogsPage() {
           setFilters({ action: action.trim(), actorType });
         }}
       >
-        <Input aria-label="Action prefix" placeholder="Action prefix, e.g. admin. or membership." value={action} onChange={(e) => setAction(e.target.value)} className="sm:max-w-sm" />
+        <Input
+          aria-label="Action prefix"
+          placeholder="Action prefix, e.g. admin. or membership."
+          value={action}
+          onChange={(e) => setAction(e.target.value)}
+          className="sm:max-w-sm"
+        />
         <Select aria-label="Actor type" value={actorType} onChange={(e) => setActorType(e.target.value)} className="sm:w-40">
           <option value="">All actors</option>
           <option value="ADMIN">Admin</option>

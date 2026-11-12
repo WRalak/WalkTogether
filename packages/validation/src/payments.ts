@@ -5,7 +5,13 @@ import { emailSchema, phoneSchema, urlSchema } from './common';
 const date = z.union([z.string().max(40), z.number(), z.date()]).pipe(z.coerce.date());
 
 export const checkoutSchema = z
-  .object({ planId: z.string().uuid(), clubId: z.string().uuid().optional(), provider: z.string().min(2).max(20), phone: phoneSchema.optional(), promotionCode: z.string().trim().max(40).optional() })
+  .object({
+    planId: z.string().uuid(),
+    clubId: z.string().uuid().optional(),
+    provider: z.string().min(2).max(20),
+    phone: phoneSchema.optional(),
+    promotionCode: z.string().trim().max(40).optional(),
+  })
   .strict();
 
 export const campaignCheckoutSchema = z.object({ provider: z.string().min(2).max(20), phone: phoneSchema.optional() }).strict();
@@ -13,8 +19,14 @@ export const campaignCheckoutSchema = z.object({ provider: z.string().min(2).max
 export const sponsorSchema = z
   .object({
     name: z.string().trim().min(2).max(120),
-    // eslint-disable-next-line security/detect-unsafe-regex -- linear: anchored, alternatives cannot overlap (≈1 ms on 100 KB input, see security/GAP_ANALYSIS.md)
-    slug: z.string().trim().toLowerCase().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).min(3).max(60),
+    slug: z
+      .string()
+      .trim()
+      .toLowerCase()
+      // eslint-disable-next-line security/detect-unsafe-regex -- linear: anchored, alternatives cannot overlap (≈1 ms on 100 KB input, see security/GAP_ANALYSIS.md)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+      .min(3)
+      .max(60),
     description: z.string().trim().max(2000).nullable().optional(),
     websiteUrl: urlSchema.nullable().optional(),
     logoUrl: urlSchema.nullable().optional(),
@@ -50,7 +62,11 @@ export const campaignSchema = z
 
 export const promotionSchema = z
   .object({
-    code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,40}$/),
+    code: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z0-9_-]{3,40}$/),
     description: z.string().trim().max(200).optional(),
     percentOff: z.number().int().min(1).max(100).nullable().optional(),
     amountOffMinor: z.number().int().min(1).nullable().optional(),

@@ -21,7 +21,12 @@ export default function Attendance() {
     enabled: !!club && can('analytics.view'),
   });
   if (!club) return <Loading />;
-  if (!can('analytics.view')) return <Screen edges={[]}><NoPermission what="view attendance reports" /></Screen>;
+  if (!can('analytics.view'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="view attendance reports" />
+      </Screen>
+    );
   const rows = report.data ?? [];
   const totals = rows.reduce((a, r) => ({ going: a.going + r.going, attended: a.attended + r.attended }), { going: 0, attended: 0 });
 

@@ -108,7 +108,12 @@ export async function removeDevice(userId: string, deviceId: string) {
 
 export async function isBlockedEitherWay(a: string, b: string) {
   const row = await prisma.userBlock.findFirst({
-    where: { OR: [{ blockerId: a, blockedId: b }, { blockerId: b, blockedId: a }] },
+    where: {
+      OR: [
+        { blockerId: a, blockedId: b },
+        { blockerId: b, blockedId: a },
+      ],
+    },
     select: { blockerId: true },
   });
   return !!row;
@@ -139,7 +144,12 @@ export async function getPublicProfile(username: string, viewerId?: string) {
     isPrivate: !full,
     suspended: user.status === 'SUSPENDED',
   };
-  if (!full) return { ...base, ...(await followCounts(user.id)), viewerFollows: viewerId ? ((await prisma.follow.findUnique({ where: { followerId_followeeId: { followerId: viewerId, followeeId: user.id } } }))?.status ?? null) : null };
+  if (!full)
+    return {
+      ...base,
+      ...(await followCounts(user.id)),
+      viewerFollows: viewerId ? ((await prisma.follow.findUnique({ where: { followerId_followeeId: { followerId: viewerId, followeeId: user.id } } }))?.status ?? null) : null,
+    };
 
   const showClubs = isSelf || privacy?.showClubs !== false;
   const clubs = showClubs
@@ -166,7 +176,10 @@ export async function getPublicProfile(username: string, viewerId?: string) {
     clubs: clubs.map((c) => c.club),
     stats: await publicStats(user.id),
     ...(await followCounts(user.id)),
-    viewerFollows: viewerId && viewerId !== user.id ? ((await prisma.follow.findUnique({ where: { followerId_followeeId: { followerId: viewerId, followeeId: user.id } } }))?.status ?? null) : null,
+    viewerFollows:
+      viewerId && viewerId !== user.id
+        ? ((await prisma.follow.findUnique({ where: { followerId_followeeId: { followerId: viewerId, followeeId: user.id } } }))?.status ?? null)
+        : null,
   };
 }
 
@@ -192,7 +205,13 @@ export async function listBlocked(userId: string) {
     take: 200,
     select: { createdAt: true, blocked: { select: { id: true, username: true, profile: { select: { displayName: true, avatarUrl: true } } } } },
   });
-  return rows.map((r) => ({ id: r.blocked.id, username: r.blocked.username, displayName: r.blocked.profile?.displayName, avatarUrl: r.blocked.profile?.avatarUrl, blockedAt: r.createdAt }));
+  return rows.map((r) => ({
+    id: r.blocked.id,
+    username: r.blocked.username,
+    displayName: r.blocked.profile?.displayName,
+    avatarUrl: r.blocked.profile?.avatarUrl,
+    blockedAt: r.createdAt,
+  }));
 }
 
 /** Data-subject access / portability (Kenya DPA s.26, GDPR art. 15/20). */
@@ -209,7 +228,10 @@ export async function exportMyData(userId: string) {
       loginEvents: { select: { method: true, success: true, ipAddress: true, userAgent: true, createdAt: true }, orderBy: { createdAt: 'desc' }, take: 500 },
       memberships: { select: { status: true, joinedAt: true, createdAt: true, club: { select: { name: true, slug: true } }, role: { select: { name: true } } } },
       blocking: { select: { blockedId: true, createdAt: true } },
-      activities: { select: { id: true, type: true, title: true, startedAt: true, endedAt: true, distanceM: true, movingSeconds: true, visibility: true }, orderBy: { startedAt: 'desc' } },
+      activities: {
+        select: { id: true, type: true, title: true, startedAt: true, endedAt: true, distanceM: true, movingSeconds: true, visibility: true },
+        orderBy: { startedAt: 'desc' },
+      },
       goals: true,
     },
   });

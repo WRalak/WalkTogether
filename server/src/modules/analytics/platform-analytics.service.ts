@@ -23,7 +23,12 @@ export async function platformActivity(days = 30) {
       FROM activities
      WHERE status = 'COMPLETED' AND started_at >= ${since}
      GROUP BY 1 ORDER BY 1`;
-  const byType = await prisma.activity.groupBy({ by: ['type'], where: { status: 'COMPLETED', startedAt: { gte: since }, flagged: false }, _count: true, _sum: { distanceM: true } });
+  const byType = await prisma.activity.groupBy({
+    by: ['type'],
+    where: { status: 'COMPLETED', startedAt: { gte: since }, flagged: false },
+    _count: true,
+    _sum: { distanceM: true },
+  });
   const [activeUsers, clubShares, steps] = await Promise.all([
     prisma.activity.findMany({ where: { status: 'COMPLETED', startedAt: { gte: since } }, distinct: ['userId'], select: { userId: true } }).then((r) => r.length),
     prisma.activityClubShare.count({ where: { createdAt: { gte: since } } }),
@@ -35,7 +40,13 @@ export async function platformActivity(days = 30) {
     clubShares,
     stepSyncDays: steps,
     byType: byType.map((t) => ({ type: t.type, activities: t._count, distanceM: t._sum.distanceM ?? 0 })),
-    daily: daily.map((d) => ({ day: d.day.toISOString().slice(0, 10), activities: Number(d.activities), distanceM: Math.round(d.distance_m ?? 0), activeUsers: Number(d.active_users), flagged: Number(d.flagged) })),
+    daily: daily.map((d) => ({
+      day: d.day.toISOString().slice(0, 10),
+      activities: Number(d.activities),
+      distanceM: Math.round(d.distance_m ?? 0),
+      activeUsers: Number(d.active_users),
+      flagged: Number(d.flagged),
+    })),
   };
 }
 
@@ -52,7 +63,16 @@ export async function platformEvents(q: { cursor?: string; limit: number; status
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: q.limit + 1,
     select: {
-      id: true, title: true, type: true, status: true, visibility: true, startsAt: true, goingCount: true, maxParticipants: true, cancelReason: true, createdAt: true,
+      id: true,
+      title: true,
+      type: true,
+      status: true,
+      visibility: true,
+      startsAt: true,
+      goingCount: true,
+      maxParticipants: true,
+      cancelReason: true,
+      createdAt: true,
       club: { select: { id: true, name: true, slug: true } },
       sponsorship: { select: { acceptedAt: true, campaign: { select: { name: true, sponsor: { select: { name: true } } } } } },
       _count: { select: { attendance: true } },
@@ -76,7 +96,13 @@ export async function adminCancelEvent(adminId: string, eventId: string, reason:
     await audit({ actorType: 'ADMIN', actorId: adminId, action: 'admin.event_cancelled', targetType: 'event', targetId: e.id, clubId: e.clubId, metadata: { reason } }, ctx, tx);
   });
   const regs = await prisma.eventRegistration.findMany({ where: { eventId: e.id, status: { in: ['GOING', 'WAITLISTED'] } }, select: { userId: true } });
-  await notify({ userIds: regs.map((r) => r.userId), type: 'event.cancelled', title: `Cancelled: ${e.title}`, body: `${e.startsAt.toUTCString()} — ${reason}`, data: { eventId: e.id } });
+  await notify({
+    userIds: regs.map((r) => r.userId),
+    type: 'event.cancelled',
+    title: `Cancelled: ${e.title}`,
+    body: `${e.startsAt.toUTCString()} — ${reason}`,
+    data: { eventId: e.id },
+  });
 }
 
 export const REPORT_KINDS = ['users', 'clubs', 'payments', 'activity'] as const;
@@ -88,23 +114,70 @@ export async function platformReportCsv(kind: ReportKind, from: Date, to: Date) 
   const range = { gte: from, lte: to };
   switch (kind) {
     case 'users': {
-      const rows = await prisma.user.findMany({ where: { createdAt: range }, orderBy: { createdAt: 'asc' }, take: MAX_ROWS, select: { id: true, username: true, status: true, emailVerifiedAt: true, createdAt: true, _count: { select: { memberships: { where: { status: 'ACTIVE' } } } } } });
-      return toCsv(['user_id', 'username', 'status', 'email_verified', 'active_clubs', 'joined_at'], rows.map((u) => [u.id, u.username, u.status, u.emailVerifiedAt ? 'yes' : 'no', u._count.memberships, u.createdAt.toISOString()]));
+      const rows = await prisma.user.findMany({
+        where: { createdAt: range },
+        orderBy: { createdAt: 'asc' },
+        take: MAX_ROWS,
+        select: { id: true, username: true, status: true, emailVerifiedAt: true, createdAt: true, _count: { select: { memberships: { where: { status: 'ACTIVE' } } } } },
+      });
+      return toCsv(
+        ['user_id', 'username', 'status', 'email_verified', 'active_clubs', 'joined_at'],
+        rows.map((u) => [u.id, u.username, u.status, u.emailVerifiedAt ? 'yes' : 'no', u._count.memberships, u.createdAt.toISOString()]),
+      );
     }
     case 'clubs': {
-      const rows = await prisma.club.findMany({ where: { createdAt: range }, orderBy: { createdAt: 'asc' }, take: MAX_ROWS, select: { id: true, name: true, slug: true, status: true, visibility: true, category: true, city: true, countryCode: true, memberCount: true, createdAt: true } });
-      return toCsv(['club_id', 'name', 'slug', 'status', 'visibility', 'category', 'city', 'country', 'members', 'created_at'], rows.map((c) => [c.id, c.name, c.slug, c.status, c.visibility, c.category, c.city, c.countryCode, c.memberCount, c.createdAt.toISOString()]));
+      const rows = await prisma.club.findMany({
+        where: { createdAt: range },
+        orderBy: { createdAt: 'asc' },
+        take: MAX_ROWS,
+        select: { id: true, name: true, slug: true, status: true, visibility: true, category: true, city: true, countryCode: true, memberCount: true, createdAt: true },
+      });
+      return toCsv(
+        ['club_id', 'name', 'slug', 'status', 'visibility', 'category', 'city', 'country', 'members', 'created_at'],
+        rows.map((c) => [c.id, c.name, c.slug, c.status, c.visibility, c.category, c.city, c.countryCode, c.memberCount, c.createdAt.toISOString()]),
+      );
     }
     case 'payments': {
-      const rows = await prisma.payment.findMany({ where: { createdAt: range }, orderBy: { createdAt: 'asc' }, take: MAX_ROWS, select: { id: true, createdAt: true, purpose: true, amountMinor: true, currency: true, provider: true, status: true, providerReceipt: true, invoice: { select: { number: true } } } });
-      return toCsv(['payment_id', 'created_at', 'purpose', 'amount', 'currency', 'provider', 'status', 'receipt', 'invoice'], rows.map((p) => [p.id, p.createdAt.toISOString(), p.purpose, (p.amountMinor / 100).toFixed(2), p.currency, p.provider, p.status, p.providerReceipt, p.invoice?.number ?? null]));
+      const rows = await prisma.payment.findMany({
+        where: { createdAt: range },
+        orderBy: { createdAt: 'asc' },
+        take: MAX_ROWS,
+        select: {
+          id: true,
+          createdAt: true,
+          purpose: true,
+          amountMinor: true,
+          currency: true,
+          provider: true,
+          status: true,
+          providerReceipt: true,
+          invoice: { select: { number: true } },
+        },
+      });
+      return toCsv(
+        ['payment_id', 'created_at', 'purpose', 'amount', 'currency', 'provider', 'status', 'receipt', 'invoice'],
+        rows.map((p) => [
+          p.id,
+          p.createdAt.toISOString(),
+          p.purpose,
+          (p.amountMinor / 100).toFixed(2),
+          p.currency,
+          p.provider,
+          p.status,
+          p.providerReceipt,
+          p.invoice?.number ?? null,
+        ]),
+      );
     }
     case 'activity': {
       const days = await prisma.$queryRaw<{ day: Date; activities: bigint; distance_m: number | null; active_users: bigint; flagged: bigint }[]>`
         SELECT date_trunc('day', started_at) AS day, count(*) FILTER (WHERE NOT flagged) AS activities, sum(distance_m) FILTER (WHERE NOT flagged) AS distance_m,
                count(DISTINCT user_id) AS active_users, count(*) FILTER (WHERE flagged) AS flagged
           FROM activities WHERE status = 'COMPLETED' AND started_at BETWEEN ${from} AND ${to} GROUP BY 1 ORDER BY 1`;
-      return toCsv(['day', 'activities', 'distance_km', 'active_users', 'flagged'], days.map((d) => [d.day.toISOString().slice(0, 10), Number(d.activities), ((d.distance_m ?? 0) / 1000).toFixed(1), Number(d.active_users), Number(d.flagged)]));
+      return toCsv(
+        ['day', 'activities', 'distance_km', 'active_users', 'flagged'],
+        days.map((d) => [d.day.toISOString().slice(0, 10), Number(d.activities), ((d.distance_m ?? 0) / 1000).toFixed(1), Number(d.active_users), Number(d.flagged)]),
+      );
     }
   }
 }

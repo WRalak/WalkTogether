@@ -101,8 +101,22 @@ export async function resolveClubReport(clubId: string, reportId: string, actorI
   if (!r) throw notFound('Report not found');
   if (r.status !== 'OPEN') throw conflict('Report already resolved', 'ALREADY_RESOLVED');
   if (action === 'HIDE') await hideTarget(r.targetType, r.targetId, note ?? 'Hidden by club moderators');
-  await prisma.contentReport.update({ where: { id: r.id }, data: { status: action === 'HIDE' ? 'ACTIONED' : 'DISMISSED', resolution: note, reviewedBy: actorId, reviewedAt: new Date() } });
-  await audit({ actorType: 'USER', actorId, action: `moderation.report_${action.toLowerCase()}`, targetType: 'report', targetId: r.id, clubId, metadata: { target: `${r.targetType}:${r.targetId}` } }, ctx);
+  await prisma.contentReport.update({
+    where: { id: r.id },
+    data: { status: action === 'HIDE' ? 'ACTIONED' : 'DISMISSED', resolution: note, reviewedBy: actorId, reviewedAt: new Date() },
+  });
+  await audit(
+    {
+      actorType: 'USER',
+      actorId,
+      action: `moderation.report_${action.toLowerCase()}`,
+      targetType: 'report',
+      targetId: r.id,
+      clubId,
+      metadata: { target: `${r.targetType}:${r.targetId}` },
+    },
+    ctx,
+  );
 }
 
 export async function platformReports(q: { cursor?: string; limit: number; status?: 'OPEN' | 'ACTIONED' | 'DISMISSED' }) {
@@ -123,8 +137,21 @@ export async function resolvePlatformReport(adminId: string, reportId: string, a
     }
   }
   // Resolve all open reports for the same target together.
-  await prisma.contentReport.updateMany({ where: { targetType: r.targetType, targetId: r.targetId, status: 'OPEN' }, data: { status: action === 'DISMISS' ? 'DISMISSED' : 'ACTIONED', resolution: note, reviewedBy: adminId, reviewedAt: new Date() } });
-  await audit({ actorType: 'ADMIN', actorId: adminId, action: `admin.report_${action.toLowerCase()}`, targetType: 'report', targetId: r.id, metadata: { target: `${r.targetType}:${r.targetId}`, note } }, ctx);
+  await prisma.contentReport.updateMany({
+    where: { targetType: r.targetType, targetId: r.targetId, status: 'OPEN' },
+    data: { status: action === 'DISMISS' ? 'DISMISSED' : 'ACTIONED', resolution: note, reviewedBy: adminId, reviewedAt: new Date() },
+  });
+  await audit(
+    {
+      actorType: 'ADMIN',
+      actorId: adminId,
+      action: `admin.report_${action.toLowerCase()}`,
+      targetType: 'report',
+      targetId: r.id,
+      metadata: { target: `${r.targetType}:${r.targetId}`, note },
+    },
+    ctx,
+  );
 }
 
 async function resolveTargetAsAdmin(type: ReportTarget, id: string) {

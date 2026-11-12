@@ -34,7 +34,18 @@ export default function AdminsPage() {
             <Input type="password" autoComplete="new-password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
           </Field>
         </div>
-        <Button loading={busy} onClick={() => run(async () => { await adminApi.admins.create(f); setF({ email: '', displayName: '', roleKey: 'SUPPORT', password: '' }); void q.refetch(); })}>Create</Button>
+        <Button
+          loading={busy}
+          onClick={() =>
+            run(async () => {
+              await adminApi.admins.create(f);
+              setF({ email: '', displayName: '', roleKey: 'SUPPORT', password: '' });
+              void q.refetch();
+            })
+          }
+        >
+          Create
+        </Button>
       </Section>
       <Section title="Team">
         <DataTable
@@ -48,7 +59,16 @@ export default function AdminsPage() {
             {
               label: '',
               render: (a) => (
-                <Button size="sm" variant="outline" onClick={() => run(async () => { await adminApi.admins.setStatus(String(a.id), a.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE'); void q.refetch(); })}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    run(async () => {
+                      await adminApi.admins.setStatus(String(a.id), a.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE');
+                      void q.refetch();
+                    })
+                  }
+                >
                   {a.status === 'ACTIVE' ? 'Suspend' : 'Reactivate'}
                 </Button>
               ),

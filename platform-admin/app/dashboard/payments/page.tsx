@@ -14,9 +14,7 @@ export default function PaymentsAdmin() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Payments</h1>
-      <p className="text-sm text-muted-foreground">
-        Payments are confirmed only by verified provider callbacks. M-Pesa refunds are reversals and complete asynchronously.
-      </p>
+      <p className="text-sm text-muted-foreground">Payments are confirmed only by verified provider callbacks. M-Pesa refunds are reversals and complete asynchronously.</p>
       <ErrorBox />
       <Field id="pay-status" label="Status">
         <Select value={status} onChange={(e) => setStatus(e.target.value)} className="max-w-xs">
@@ -42,7 +40,18 @@ export default function PaymentsAdmin() {
               label: '',
               render: (p) =>
                 p.status === 'SUCCEEDED' ? (
-                  <Button size="sm" variant="outline" onClick={() => { const reason = window.prompt('Refund reason'); if (reason) void run(async () => { await adminApi.payments.refund(String(p.id), Number(p.amountMinor), reason); void payments.refetch(); }); }}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const reason = window.prompt('Refund reason');
+                      if (reason)
+                        void run(async () => {
+                          await adminApi.payments.refund(String(p.id), Number(p.amountMinor), reason);
+                          void payments.refetch();
+                        });
+                    }}
+                  >
                     Refund
                   </Button>
                 ) : null,

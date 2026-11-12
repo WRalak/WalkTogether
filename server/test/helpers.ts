@@ -100,7 +100,13 @@ export async function createAdmin(roleKey = 'SUPER_ADMIN') {
   const code = authenticator.generate(setup.body.data.secret);
   const verify = await api().post('/api/v1/platform-admin/auth/mfa/verify').send({ mfaToken: login.body.data.mfaToken, code }).expect(200);
   const admin = await prisma.adminUser.findUniqueOrThrow({ where: { email } });
-  return { email, password, accessToken: verify.body.data.accessToken as string, refreshToken: verify.body.data.refreshToken as string, totpSecret: decrypt(admin.mfaSecretEncrypted!) };
+  return {
+    email,
+    password,
+    accessToken: verify.body.data.accessToken as string,
+    refreshToken: verify.body.data.refreshToken as string,
+    totpSecret: decrypt(admin.mfaSecretEncrypted!),
+  };
 }
 
 export async function teardown() {

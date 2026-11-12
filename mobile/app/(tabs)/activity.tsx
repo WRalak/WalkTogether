@@ -111,7 +111,7 @@ export default function Record() {
       <View className="mt-6 flex-row">
         <Stat label="Time" value={formatDuration(Math.floor(s.elapsedMs / 1000))} />
         <Stat label="Pace /km" value={recording ? formatPace(s.currentPaceSecPerKm) : '--:--'} />
-        <Stat label="Avg pace" value={formatPace(s.distanceM > 50 ? (s.movingMs / 1000) / (s.distanceM / 1000) : null)} />
+        <Stat label="Avg pace" value={formatPace(s.distanceM > 50 ? s.movingMs / 1000 / (s.distanceM / 1000) : null)} />
       </View>
       <View className="mt-8 flex-row gap-3">
         {recording ? (

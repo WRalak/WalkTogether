@@ -51,7 +51,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {NAV.filter((n) => can(n.permission)).map((n) => {
             const active = pathname.startsWith(n.href);
             return (
-              <Link key={n.href} href={n.href} aria-current={active ? 'page' : undefined} className={cn('whitespace-nowrap rounded-md px-3 py-2 text-sm', active ? 'bg-background/15 font-semibold' : 'text-background/70 hover:bg-background/10')}>
+              <Link
+                key={n.href}
+                href={n.href}
+                aria-current={active ? 'page' : undefined}
+                className={cn('whitespace-nowrap rounded-md px-3 py-2 text-sm', active ? 'bg-background/15 font-semibold' : 'text-background/70 hover:bg-background/10')}
+              >
                 {n.label}
               </Link>
             );

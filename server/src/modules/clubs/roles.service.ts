@@ -30,15 +30,30 @@ export async function createRole(clubId: string, actorId: string, input: { name:
   if (await prisma.clubRole.findUnique({ where: { clubId_name: { clubId, name: input.name } } })) throw conflict('A role with that name already exists', 'ROLE_EXISTS');
   return prisma.$transaction(async (tx) => {
     const role = await tx.clubRole.create({
-      data: { clubId, name: input.name, description: input.description ?? null, permissions: { create: [...new Set(input.permissions)].map((permissionKey) => ({ permissionKey })) } },
+      data: {
+        clubId,
+        name: input.name,
+        description: input.description ?? null,
+        permissions: { create: [...new Set(input.permissions)].map((permissionKey) => ({ permissionKey })) },
+      },
       include: { permissions: true },
     });
-    await audit({ actorType: 'USER', actorId, action: 'role.created', targetType: 'role', targetId: role.id, clubId, metadata: { name: role.name, permissions: input.permissions } }, ctx, tx);
+    await audit(
+      { actorType: 'USER', actorId, action: 'role.created', targetType: 'role', targetId: role.id, clubId, metadata: { name: role.name, permissions: input.permissions } },
+      ctx,
+      tx,
+    );
     return role;
   });
 }
 
-export async function updateRole(clubId: string, roleId: string, actorId: string, input: { name?: string; description?: string | null; permissions?: ClubPermissionKey[] }, ctx: AuditContext) {
+export async function updateRole(
+  clubId: string,
+  roleId: string,
+  actorId: string,
+  input: { name?: string; description?: string | null; permissions?: ClubPermissionKey[] },
+  ctx: AuditContext,
+) {
   const actor = await requireClubPermission(clubId, actorId, 'roles.manage');
   const role = await prisma.clubRole.findFirst({ where: { id: roleId, clubId }, include: { permissions: true } });
   if (!role) throw notFound('Role not found');
@@ -56,12 +71,19 @@ export async function updateRole(clubId: string, roleId: string, actorId: string
     if (holders) await requireWithinLimit({ clubId }, 'club.max_admins', (await countAdminSeats(clubId)) + holders - 1);
   }
   return prisma.$transaction(async (tx) => {
-    await tx.clubRole.update({ where: { id: roleId }, data: { ...(input.name ? { name: input.name } : {}), ...(input.description !== undefined ? { description: input.description } : {}) } });
+    await tx.clubRole.update({
+      where: { id: roleId },
+      data: { ...(input.name ? { name: input.name } : {}), ...(input.description !== undefined ? { description: input.description } : {}) },
+    });
     if (input.permissions) {
       await tx.clubRolePermission.deleteMany({ where: { roleId } });
       await tx.clubRolePermission.createMany({ data: [...new Set(input.permissions)].map((permissionKey) => ({ roleId, permissionKey })) });
     }
-    await audit({ actorType: 'USER', actorId, action: 'role.updated', targetType: 'role', targetId: roleId, clubId, metadata: { from: current, to: input.permissions ?? current } }, ctx, tx);
+    await audit(
+      { actorType: 'USER', actorId, action: 'role.updated', targetType: 'role', targetId: roleId, clubId, metadata: { from: current, to: input.permissions ?? current } },
+      ctx,
+      tx,
+    );
     return tx.clubRole.findUniqueOrThrow({ where: { id: roleId }, include: { permissions: true } });
   });
 }
@@ -71,7 +93,14 @@ export async function deleteRole(clubId: string, roleId: string, actorId: string
   const role = await prisma.clubRole.findFirst({ where: { id: roleId, clubId }, include: { permissions: true, _count: { select: { memberships: true, invitations: true } } } });
   if (!role) throw notFound('Role not found');
   if (role.systemKey) throw forbidden('System roles cannot be deleted', 'SYSTEM_ROLE');
-  if (!actor.role?.isOwner && !isSubset(role.permissions.map((p) => p.permissionKey), actor.permissions)) throw forbidden(undefined, 'INSUFFICIENT_RANK');
+  if (
+    !actor.role?.isOwner &&
+    !isSubset(
+      role.permissions.map((p) => p.permissionKey),
+      actor.permissions,
+    )
+  )
+    throw forbidden(undefined, 'INSUFFICIENT_RANK');
   if (role._count.memberships || role._count.invitations) throw conflict('Reassign members and invitations using this role first', 'ROLE_IN_USE');
   await prisma.$transaction(async (tx) => {
     await tx.clubRole.delete({ where: { id: roleId } });
@@ -100,7 +129,11 @@ export async function transferOwnership(clubId: string, actorId: string, members
     await tx.clubMembership.update({ where: { id: actor.membership!.id }, data: { roleId: adminRole.id } });
     await tx.clubMembership.update({ where: { id: target.id }, data: { roleId: ownerRole.id } });
     await tx.club.update({ where: { id: clubId }, data: { ownerId: target.userId } });
-    await audit({ actorType: 'USER', actorId, action: 'club.ownership_transferred', targetType: 'club', targetId: clubId, clubId, metadata: { from: actorId, to: target.userId } }, ctx, tx);
+    await audit(
+      { actorType: 'USER', actorId, action: 'club.ownership_transferred', targetType: 'club', targetId: clubId, clubId, metadata: { from: actorId, to: target.userId } },
+      ctx,
+      tx,
+    );
   });
   return { ownerId: target.userId };
 }

@@ -3,8 +3,28 @@ import { CLUB_CATEGORIES, CLUB_VISIBILITY } from '@walktogether/shared-types';
 import { countryCodeSchema, cursorPaginationSchema, emailSchema, latitudeSchema, longitudeSchema, phoneSchema, urlSchema } from './common';
 
 export const RESERVED_CLUB_SLUGS = [
-  'admin', 'api', 'app', 'new', 'create', 'clubs', 'club', 'events', 'challenges', 'settings', 'login', 'register',
-  'walktogether', 'support', 'help', 'pricing', 'about', 'www', 'static', 'assets', 'platform', 'me',
+  'admin',
+  'api',
+  'app',
+  'new',
+  'create',
+  'clubs',
+  'club',
+  'events',
+  'challenges',
+  'settings',
+  'login',
+  'register',
+  'walktogether',
+  'support',
+  'help',
+  'pricing',
+  'about',
+  'www',
+  'static',
+  'assets',
+  'platform',
+  'me',
 ];
 
 export const clubSlugSchema = z
@@ -119,12 +139,8 @@ export const createInvitationSchema = z
   })
   .strict();
 
-export const reviewMembershipSchema = z
-  .object({ decision: z.enum(['APPROVE', 'REJECT']), reason: z.string().trim().max(300).optional() })
-  .strict();
+export const reviewMembershipSchema = z.object({ decision: z.enum(['APPROVE', 'REJECT']), reason: z.string().trim().max(300).optional() }).strict();
 
 export const assignRoleSchema = z.object({ roleId: z.string().uuid() }).strict();
 
-export const memberModerationSchema = z
-  .object({ action: z.enum(['SUSPEND', 'REINSTATE', 'REMOVE', 'BAN']), reason: z.string().trim().max(300).optional() })
-  .strict();
+export const memberModerationSchema = z.object({ action: z.enum(['SUSPEND', 'REINSTATE', 'REMOVE', 'BAN']), reason: z.string().trim().max(300).optional() }).strict();

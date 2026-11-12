@@ -61,7 +61,12 @@ describe('statistics', () => {
 
   it('ignores GPS drift while stationary and teleport spikes', () => {
     const base = { lat: -1.2921, lng: 36.8219 };
-    const jitter: RawPoint[] = Array.from({ length: 100 }, (_, i) => ({ lat: base.lat + (i % 2 ? 0.00002 : -0.00002), lng: base.lng, t: 1_700_000_000_000 + i * 3000, accuracy: 8 }));
+    const jitter: RawPoint[] = Array.from({ length: 100 }, (_, i) => ({
+      lat: base.lat + (i % 2 ? 0.00002 : -0.00002),
+      lng: base.lng,
+      t: 1_700_000_000_000 + i * 3000,
+      accuracy: 8,
+    }));
     expect(computeStats([{ points: jitter }], 'WALK', { now: Infinity as never }).distanceM).toBeLessThan(10);
     const pts = track(100, 1.4);
     pts.splice(50, 0, { lat: -1.0, lng: 36.5, t: pts[49]!.t + 1000, accuracy: 5 });

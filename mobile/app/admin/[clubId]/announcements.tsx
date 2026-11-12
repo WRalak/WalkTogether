@@ -31,10 +31,19 @@ export default function Announcements() {
     onError: (e) => setError(errorMessage(e)),
   });
   const del = useMutation({ mutationFn: (id: string) => api.clubs.deleteAnnouncement(clubId, id), onSuccess: refresh, onError: (e) => setError(errorMessage(e)) });
-  const pin = useMutation({ mutationFn: (a: { id: string; pinned: boolean }) => api.clubs.updateAnnouncement(clubId, a.id, { pinned: !a.pinned }), onSuccess: refresh, onError: (e) => setError(errorMessage(e)) });
+  const pin = useMutation({
+    mutationFn: (a: { id: string; pinned: boolean }) => api.clubs.updateAnnouncement(clubId, a.id, { pinned: !a.pinned }),
+    onSuccess: refresh,
+    onError: (e) => setError(errorMessage(e)),
+  });
 
   if (!club) return <Loading />;
-  if (!can('club.view_private')) return <Screen edges={[]}><NoPermission what="view announcements" /></Screen>;
+  if (!can('club.view_private'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="view announcements" />
+      </Screen>
+    );
   const items = list.data?.items ?? [];
 
   return (
@@ -66,11 +75,18 @@ export default function Announcements() {
                 {a.pinned ? <Badge tone="primary" label="Pinned" /> : null}
               </View>
               <Text className="mt-1 text-sm text-ink">{a.body}</Text>
-              <Text className="mt-2 text-xs text-ink-muted">{a.author.profile?.displayName ?? a.author.username} · {new Date(a.publishedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</Text>
+              <Text className="mt-2 text-xs text-ink-muted">
+                {a.author.profile?.displayName ?? a.author.username} · {new Date(a.publishedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+              </Text>
               {can('announcements.manage') && (
                 <View className="mt-3 flex-row gap-2">
                   <Button title={a.pinned ? 'Unpin' : 'Pin'} variant="outline" className="min-h-[40px] flex-1" onPress={() => pin.mutate({ id: a.id, pinned: a.pinned })} />
-                  <Button title="Delete" variant="danger" className="min-h-[40px] flex-1" onPress={() => confirm('Delete announcement', `Delete “${a.title}”?`, () => del.mutate(a.id), 'Delete')} />
+                  <Button
+                    title="Delete"
+                    variant="danger"
+                    className="min-h-[40px] flex-1"
+                    onPress={() => confirm('Delete announcement', `Delete “${a.title}”?`, () => del.mutate(a.id), 'Delete')}
+                  />
                 </View>
               )}
             </Card>

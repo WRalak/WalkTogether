@@ -243,7 +243,10 @@ export async function updateClub(clubId: string, userId: string, input: UpdateCl
         targetType: 'club',
         targetId: clubId,
         clubId,
-        metadata: { fields: Object.keys(input), ...(input.visibility && input.visibility !== before.visibility ? { visibility: { from: before.visibility, to: input.visibility } } : {}) },
+        metadata: {
+          fields: Object.keys(input),
+          ...(input.visibility && input.visibility !== before.visibility ? { visibility: { from: before.visibility, to: input.visibility } } : {}),
+        },
       },
       ctx,
       tx,
@@ -257,7 +260,15 @@ export async function listRoles(clubId: string, userId: string) {
   const roles = await prisma.clubRole.findMany({
     where: { clubId },
     orderBy: { createdAt: 'asc' },
-    select: { id: true, name: true, systemKey: true, isOwner: true, description: true, permissions: { select: { permissionKey: true } }, _count: { select: { memberships: { where: { status: 'ACTIVE' } } } } },
+    select: {
+      id: true,
+      name: true,
+      systemKey: true,
+      isOwner: true,
+      description: true,
+      permissions: { select: { permissionKey: true } },
+      _count: { select: { memberships: { where: { status: 'ACTIVE' } } } },
+    },
   });
   return roles.map((r) => ({
     id: r.id,

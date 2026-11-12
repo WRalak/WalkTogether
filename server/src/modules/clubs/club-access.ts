@@ -43,9 +43,7 @@ export async function loadClubAccess(clubId: string, userId: string | undefined)
     },
   });
   const isActiveMember = membership?.status === 'ACTIVE';
-  const permissions = new Set<ClubPermissionKey>(
-    isActiveMember ? membership!.role.permissions.map((p) => p.permissionKey as ClubPermissionKey) : [],
-  );
+  const permissions = new Set<ClubPermissionKey>(isActiveMember ? membership!.role.permissions.map((p) => p.permissionKey as ClubPermissionKey) : []);
   return {
     club,
     membership: membership ? { id: membership.id, status: membership.status, roleId: membership.roleId } : null,
@@ -67,12 +65,7 @@ export function canSeeClub(access: ClubAccess, platformVisible = true): boolean 
  * Loads access and asserts a permission. Callers who cannot see the club get 404 (not 403),
  * so club ids cannot be probed. Mutations on suspended/archived clubs are refused.
  */
-export async function requireClubPermission(
-  clubId: string,
-  userId: string,
-  permission: ClubPermissionKey,
-  opts: { allowInactiveClub?: boolean } = {},
-): Promise<ClubAccess> {
+export async function requireClubPermission(clubId: string, userId: string, permission: ClubPermissionKey, opts: { allowInactiveClub?: boolean } = {}): Promise<ClubAccess> {
   const access = await loadClubAccess(clubId, userId);
   if (!canSeeClub(access)) throw notFound('Club not found');
   if (!access.permissions.has(permission)) throw forbidden();

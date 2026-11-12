@@ -20,7 +20,9 @@ export async function requestUpload(ownerId: string, input: { purpose: MediaPurp
   const pending = await prisma.mediaAsset.count({ where: { ownerId, status: 'PENDING_UPLOAD', createdAt: { gt: new Date(Date.now() - 3600_000) } } });
   if (pending > 30) throw conflict('Too many unfinished uploads', 'UPLOAD_LIMIT');
   const key = `uploads/${ownerId}/${randomToken(12)}`;
-  const asset = await prisma.mediaAsset.create({ data: { ownerId, purpose: input.purpose, kind: rule.kind, mimeType: input.mimeType, sizeBytes: input.sizeBytes, storageKey: key } });
+  const asset = await prisma.mediaAsset.create({
+    data: { ownerId, purpose: input.purpose, kind: rule.kind, mimeType: input.mimeType, sizeBytes: input.sizeBytes, storageKey: key },
+  });
   return { mediaId: asset.id, upload: await storage.presignUpload(key, input.mimeType, input.sizeBytes) };
 }
 
@@ -65,7 +67,10 @@ export async function processMedia(mediaId: string) {
       await storage.write(posterKey, await sharp(out.poster).resize({ width: 1280, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer(), 'image/webp');
       // Remove the original: it may carry location metadata.
       await storage.remove(asset.storageKey);
-      await prisma.mediaAsset.update({ where: { id: asset.id }, data: { status: 'READY', variants: { video: videoKey, poster: posterKey }, width: out.width, height: out.height } });
+      await prisma.mediaAsset.update({
+        where: { id: asset.id },
+        data: { status: 'READY', variants: { video: videoKey, poster: posterKey }, width: out.width, height: out.height },
+      });
     } catch (err) {
       logger.warn({ err, mediaId }, 'video processing failed');
       await reject(asset.id, asset.storageKey, (err as Error).message === 'video too long' ? 'too_long' : 'unreadable_video');
@@ -76,7 +81,10 @@ export async function processMedia(mediaId: string) {
     const img = sharp(buf, { failOn: 'error', limitInputPixels: 50_000_000 }).rotate();
     const meta = await img.metadata();
     const variants: Record<string, string> = {};
-    for (const [name, width] of [['medium', 1280], ['thumb', 320]] as const) {
+    for (const [name, width] of [
+      ['medium', 1280],
+      ['thumb', 320],
+    ] as const) {
       const out = await img.clone().resize({ width, withoutEnlargement: true }).webp({ quality: 82 }).toBuffer(); // metadata dropped by default
       const key = `media/${asset.id}/${name}.webp`;
       await storage.write(key, out, 'image/webp');
@@ -85,7 +93,10 @@ export async function processMedia(mediaId: string) {
     // Remove the original: it may contain EXIF GPS coordinates.
     await storage.remove(asset.storageKey);
     const portrait = (meta.orientation ?? 1) >= 5;
-    await prisma.mediaAsset.update({ where: { id: asset.id }, data: { status: 'READY', variants, width: portrait ? meta.height : meta.width, height: portrait ? meta.width : meta.height } });
+    await prisma.mediaAsset.update({
+      where: { id: asset.id },
+      data: { status: 'READY', variants, width: portrait ? meta.height : meta.width, height: portrait ? meta.width : meta.height },
+    });
   } catch (err) {
     logger.warn({ err, mediaId }, 'image processing failed');
     await reject(asset.id, asset.storageKey, 'unreadable_image');

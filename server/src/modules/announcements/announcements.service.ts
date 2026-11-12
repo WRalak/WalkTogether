@@ -6,7 +6,16 @@ import { audit, type AuditContext } from '../audit/audit.service';
 import { canSeeClub, loadClubAccess, requireClubPermission } from '../clubs/club-access';
 import { notify } from '../notifications/notifications.service';
 
-const select = { id: true, clubId: true, title: true, body: true, pinned: true, publishedAt: true, updatedAt: true, author: { select: { id: true, username: true, profile: { select: { displayName: true } } } } } as const;
+const select = {
+  id: true,
+  clubId: true,
+  title: true,
+  body: true,
+  pinned: true,
+  publishedAt: true,
+  updatedAt: true,
+  author: { select: { id: true, username: true, profile: { select: { displayName: true } } } },
+} as const;
 
 export async function createAnnouncement(clubId: string, actorId: string, input: { title: string; body: string; pinned: boolean; notify: boolean }, ctx: AuditContext) {
   await requireClubPermission(clubId, actorId, 'announcements.manage');
@@ -34,7 +43,13 @@ export async function fanOutAnnouncement(announcementId: string) {
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
     if (!batch.length) break;
-    sent += await notify({ userIds: batch.map((b) => b.userId), type: 'club.announcement', title: `${a.club.name}: ${a.title}`, body: a.body.slice(0, 200), data: { clubId: a.clubId, slug: a.club.slug, announcementId: a.id } });
+    sent += await notify({
+      userIds: batch.map((b) => b.userId),
+      type: 'club.announcement',
+      title: `${a.club.name}: ${a.title}`,
+      body: a.body.slice(0, 200),
+      data: { clubId: a.clubId, slug: a.club.slug, announcementId: a.id },
+    });
     cursor = batch[batch.length - 1]!.id;
   }
   return sent;

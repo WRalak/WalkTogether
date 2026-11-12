@@ -7,7 +7,11 @@ afterAll(teardown);
 describe('club creation', () => {
   it('requires a verified email or phone', async () => {
     const u = await registerUser({ verified: false });
-    const res = await api().post('/api/v1/clubs').set(bearer(u)).send({ name: 'Unverified Club', slug: `c-${uid()}`, category: 'WALKING', visibility: 'PUBLIC' }).expect(403);
+    const res = await api()
+      .post('/api/v1/clubs')
+      .set(bearer(u))
+      .send({ name: 'Unverified Club', slug: `c-${uid()}`, category: 'WALKING', visibility: 'PUBLIC' })
+      .expect(403);
     expect(res.body.error.code).toBe('VERIFICATION_REQUIRED');
   });
 
@@ -34,7 +38,11 @@ describe('club creation', () => {
     const owner = await registerUser();
     await prisma.platformSetting.upsert({ where: { key: 'clubs.maxOwnedPerUser' }, create: { key: 'clubs.maxOwnedPerUser', value: 5 }, update: {} });
     for (let i = 0; i < 5; i++) await createClub(owner);
-    const res = await api().post('/api/v1/clubs').set(bearer(owner)).send({ name: 'Too many', slug: `c-${uid()}`, category: 'RUNNING', visibility: 'PUBLIC' }).expect(403);
+    const res = await api()
+      .post('/api/v1/clubs')
+      .set(bearer(owner))
+      .send({ name: 'Too many', slug: `c-${uid()}`, category: 'RUNNING', visibility: 'PUBLIC' })
+      .expect(403);
     expect(res.body.error.code).toBe('CLUB_LIMIT_REACHED');
   });
 });
@@ -46,7 +54,10 @@ describe('club discovery', () => {
     const pub = await createClub(owner, { name: `Disc ${tag} Public` });
     const priv = await createClub(owner, { name: `Disc ${tag} Private`, visibility: 'PRIVATE' });
     const hidden = await createClub(owner, { name: `Disc ${tag} Hidden`, visibility: 'INVITE_ONLY' });
-    const res = await api().get('/api/v1/clubs').query({ q: `Disc ${tag}` }).expect(200);
+    const res = await api()
+      .get('/api/v1/clubs')
+      .query({ q: `Disc ${tag}` })
+      .expect(200);
     const ids = res.body.data.map((c: { id: string }) => c.id);
     expect(ids).toContain(pub.id);
     expect(ids).toContain(priv.id);
@@ -65,10 +76,16 @@ describe('club discovery', () => {
     const near = await createClub(owner, { name: `Geo ${tag} near`, latitude: -0.0917, longitude: 34.768 });
     const mid = await createClub(owner, { name: `Geo ${tag} mid`, latitude: -0.12, longitude: 34.8 });
     await createClub(owner, { name: `Geo ${tag} far`, latitude: -1.2921, longitude: 36.8219 });
-    const page1 = await api().get('/api/v1/clubs').query({ near: '-0.0917,34.768', radiusKm: 20, limit: 1, q: `Geo ${tag}` }).expect(200);
+    const page1 = await api()
+      .get('/api/v1/clubs')
+      .query({ near: '-0.0917,34.768', radiusKm: 20, limit: 1, q: `Geo ${tag}` })
+      .expect(200);
     expect(page1.body.data[0].id).toBe(near.id);
     expect(page1.body.data[0].distanceKm).toBeLessThan(0.1);
-    const page2 = await api().get('/api/v1/clubs').query({ near: '-0.0917,34.768', radiusKm: 20, limit: 1, q: `Geo ${tag}`, cursor: page1.body.meta.nextCursor }).expect(200);
+    const page2 = await api()
+      .get('/api/v1/clubs')
+      .query({ near: '-0.0917,34.768', radiusKm: 20, limit: 1, q: `Geo ${tag}`, cursor: page1.body.meta.nextCursor })
+      .expect(200);
     expect(page2.body.data[0].id).toBe(mid.id);
     expect(page2.body.meta.nextCursor).toBeNull();
   });
@@ -77,8 +94,14 @@ describe('club discovery', () => {
     const owner = await registerUser();
     const tag = uid();
     for (let i = 0; i < 3; i++) await createClub(owner, { name: `Page ${tag} ${i}` });
-    const p1 = await api().get('/api/v1/clubs').query({ q: `Page ${tag}`, limit: 2 }).expect(200);
-    const p2 = await api().get('/api/v1/clubs').query({ q: `Page ${tag}`, limit: 2, cursor: p1.body.meta.nextCursor }).expect(200);
+    const p1 = await api()
+      .get('/api/v1/clubs')
+      .query({ q: `Page ${tag}`, limit: 2 })
+      .expect(200);
+    const p2 = await api()
+      .get('/api/v1/clubs')
+      .query({ q: `Page ${tag}`, limit: 2, cursor: p1.body.meta.nextCursor })
+      .expect(200);
     expect(p1.body.data).toHaveLength(2);
     expect(p2.body.data).toHaveLength(1);
     expect(new Set([...p1.body.data, ...p2.body.data].map((c: { id: string }) => c.id)).size).toBe(3);
@@ -116,9 +139,21 @@ describe('membership lifecycle', () => {
     expect(pending.body.data).toHaveLength(2);
     expect(pending.body.data.find((m: { user: { id: string } }) => m.user.id === a.id).requestMessage).toBe('I walk daily');
 
-    await api().post(`/api/v1/clubs/${club.id}/members/${await membershipId(club.id, a.id)}/review`).set(bearer(owner)).send({ decision: 'APPROVE' }).expect(200);
-    await api().post(`/api/v1/clubs/${club.id}/members/${await membershipId(club.id, b.id)}/review`).set(bearer(owner)).send({ decision: 'REJECT' }).expect(200);
-    await api().post(`/api/v1/clubs/${club.id}/members/${await membershipId(club.id, a.id)}/review`).set(bearer(owner)).send({ decision: 'APPROVE' }).expect(409);
+    await api()
+      .post(`/api/v1/clubs/${club.id}/members/${await membershipId(club.id, a.id)}/review`)
+      .set(bearer(owner))
+      .send({ decision: 'APPROVE' })
+      .expect(200);
+    await api()
+      .post(`/api/v1/clubs/${club.id}/members/${await membershipId(club.id, b.id)}/review`)
+      .set(bearer(owner))
+      .send({ decision: 'REJECT' })
+      .expect(200);
+    await api()
+      .post(`/api/v1/clubs/${club.id}/members/${await membershipId(club.id, a.id)}/review`)
+      .set(bearer(owner))
+      .send({ decision: 'APPROVE' })
+      .expect(409);
 
     await api().get(`/api/v1/clubs/${club.id}/members`).set(bearer(a)).expect(200);
     const myClubs = await api().get('/api/v1/users/me/clubs').set(bearer(a)).expect(200);
@@ -177,7 +212,11 @@ describe('membership lifecycle', () => {
     const club = await createClub(owner);
     const u = await registerUser();
     await addMember(club.id, u.id);
-    await api().post(`/api/v1/clubs/${club.id}/members/${await membershipId(club.id, u.id)}/moderation`).set(bearer(owner)).send({ action: 'BAN' }).expect(200);
+    await api()
+      .post(`/api/v1/clubs/${club.id}/members/${await membershipId(club.id, u.id)}/moderation`)
+      .set(bearer(owner))
+      .send({ action: 'BAN' })
+      .expect(200);
     const res = await api().post(`/api/v1/clubs/${club.id}/join`).set(bearer(u)).send({}).expect(403);
     expect(res.body.error.code).toBe('BANNED');
   });

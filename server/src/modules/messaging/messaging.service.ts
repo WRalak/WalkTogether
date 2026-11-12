@@ -68,8 +68,18 @@ export async function getConversation(id: string, userId: string) {
   await assertMember(id, userId);
   const conv = await prisma.conversation.findUniqueOrThrow({ where: { id }, include: { members: { select: memberSelect, take: 50 } } });
   const me = conv.members.find((m) => m.userId === userId);
-  const unread = await prisma.message.count({ where: { conversationId: id, deletedAt: null, senderId: { not: userId }, ...(me?.lastReadAt ? { createdAt: { gt: me.lastReadAt } } : {}) } });
-  return { id: conv.id, kind: conv.kind, title: conv.title, clubId: conv.clubId, lastMessageAt: conv.lastMessageAt, members: conv.members.map((m) => ({ ...m.user, lastReadAt: m.lastReadAt })), unread };
+  const unread = await prisma.message.count({
+    where: { conversationId: id, deletedAt: null, senderId: { not: userId }, ...(me?.lastReadAt ? { createdAt: { gt: me.lastReadAt } } : {}) },
+  });
+  return {
+    id: conv.id,
+    kind: conv.kind,
+    title: conv.title,
+    clubId: conv.clubId,
+    lastMessageAt: conv.lastMessageAt,
+    members: conv.members.map((m) => ({ ...m.user, lastReadAt: m.lastReadAt })),
+    unread,
+  };
 }
 
 export async function listConversations(userId: string) {
@@ -77,7 +87,9 @@ export async function listConversations(userId: string) {
     where: { userId },
     orderBy: { conversation: { lastMessageAt: { sort: 'desc', nulls: 'last' } } },
     take: 100,
-    include: { conversation: { include: { members: { select: memberSelect, take: 3 }, messages: { where: { deletedAt: null, hiddenAt: null }, orderBy: { createdAt: 'desc' }, take: 1 } } } },
+    include: {
+      conversation: { include: { members: { select: memberSelect, take: 3 }, messages: { where: { deletedAt: null, hiddenAt: null }, orderBy: { createdAt: 'desc' }, take: 1 } } },
+    },
   });
   return rows.map((r) => ({
     id: r.conversationId,
@@ -85,7 +97,9 @@ export async function listConversations(userId: string) {
     title: r.conversation.title,
     clubId: r.conversation.clubId,
     lastMessageAt: r.conversation.lastMessageAt,
-    lastMessage: r.conversation.messages[0] ? { body: r.conversation.messages[0].body, senderId: r.conversation.messages[0].senderId, createdAt: r.conversation.messages[0].createdAt } : null,
+    lastMessage: r.conversation.messages[0]
+      ? { body: r.conversation.messages[0].body, senderId: r.conversation.messages[0].senderId, createdAt: r.conversation.messages[0].createdAt }
+      : null,
     members: r.conversation.members.map((m) => m.user),
     unread: !!(r.conversation.messages[0] && r.conversation.messages[0].senderId !== userId && (!r.lastReadAt || r.conversation.messages[0].createdAt > r.lastReadAt)),
   }));
@@ -130,7 +144,14 @@ export async function sendMessage(conversationId: string, senderId: string, body
   // Push to members who have not muted the conversation (and are not the sender).
   const recipients = await prisma.conversationMember.findMany({ where: { conversationId, userId: { not: senderId }, mutedAt: null }, select: { userId: true } });
   const sender = await prisma.user.findUniqueOrThrow({ where: { id: senderId }, select: { username: true } });
-  await notify({ userIds: recipients.map((r) => r.userId), type: 'message.new', title: conv.kind === 'DIRECT' ? `@${sender.username}` : `${conv.title ?? 'Group'} · @${sender.username}`, body: body.slice(0, 120), data: { conversationId }, pushOnly: true });
+  await notify({
+    userIds: recipients.map((r) => r.userId),
+    type: 'message.new',
+    title: conv.kind === 'DIRECT' ? `@${sender.username}` : `${conv.title ?? 'Group'} · @${sender.username}`,
+    body: body.slice(0, 120),
+    data: { conversationId },
+    pushOnly: true,
+  });
   return payload;
 }
 

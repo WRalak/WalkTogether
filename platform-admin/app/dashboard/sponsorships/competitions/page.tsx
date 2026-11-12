@@ -9,7 +9,17 @@ export default function ChallengesAdmin() {
   const list = useQuery({ queryKey: ['admin-challenges'], queryFn: () => adminApi.challenges.list() });
   const achievements = useQuery({ queryKey: ['admin-achievements'], queryFn: () => adminApi.achievements.list() });
   const { run, busy, ErrorBox } = useAction();
-  const [f, setF] = useState({ scope: 'PLATFORM', title: '', targetKm: '50', start: new Date().toISOString().slice(0, 10), end: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10), clubIds: '', premium: false, capKm: '42', rules: '' });
+  const [f, setF] = useState({
+    scope: 'PLATFORM',
+    title: '',
+    targetKm: '50',
+    start: new Date().toISOString().slice(0, 10),
+    end: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
+    clubIds: '',
+    premium: false,
+    capKm: '42',
+    rules: '',
+  });
   const [ach, setAch] = useState({ code: '', name: '', description: '', icon: '🏅', rule: '{"type":"total_distance","minM":250000}' });
   return (
     <div className="space-y-6">
@@ -70,7 +80,14 @@ export default function ChallengesAdmin() {
                 maxDailyDistanceM: Math.round(Number(f.capKm) * 1000),
                 rules: f.rules || null,
                 isPremium: f.premium,
-                ...(f.scope === 'CLUB_VS_CLUB' ? { clubIds: f.clubIds.split(',').map((s) => s.trim()).filter(Boolean) } : {}),
+                ...(f.scope === 'CLUB_VS_CLUB'
+                  ? {
+                      clubIds: f.clubIds
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                    }
+                  : {}),
               });
               void list.refetch();
             })
@@ -88,12 +105,39 @@ export default function ChallengesAdmin() {
             { label: 'Club', render: (c) => (c.club as { name: string } | null)?.name ?? '—' },
             { label: 'Participants', render: (c) => (c._count as { participants: number }).participants },
             { label: 'Status', render: (c) => <StatusBadge value={String(c.status)} /> },
-            { label: '', render: (c) => (c.status === 'ACTIVE' ? <Button size="sm" variant="outline" onClick={() => window.confirm('Cancel this challenge?') && run(async () => { await adminApi.challenges.cancel(String(c.id)); void list.refetch(); })}>Cancel</Button> : null) },
+            {
+              label: '',
+              render: (c) =>
+                c.status === 'ACTIVE' ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      window.confirm('Cancel this challenge?') &&
+                      run(async () => {
+                        await adminApi.challenges.cancel(String(c.id));
+                        void list.refetch();
+                      })
+                    }
+                  >
+                    Cancel
+                  </Button>
+                ) : null,
+            },
           ]}
         />
       </Section>
       <Section title="Achievements">
-        <DataTable rows={achievements.data} columns={[{ label: '', render: (a) => String(a.icon) }, { label: 'Name', render: (a) => String(a.name) }, { label: 'Rule', render: (a) => <code className="text-xs">{JSON.stringify(a.rule)}</code> }, { label: 'Awarded', render: (a) => (a._count as { awards: number }).awards }, { label: 'Active', render: (a) => (a.active ? 'yes' : 'no') }]} />
+        <DataTable
+          rows={achievements.data}
+          columns={[
+            { label: '', render: (a) => String(a.icon) },
+            { label: 'Name', render: (a) => String(a.name) },
+            { label: 'Rule', render: (a) => <code className="text-xs">{JSON.stringify(a.rule)}</code> },
+            { label: 'Awarded', render: (a) => (a._count as { awards: number }).awards },
+            { label: 'Active', render: (a) => (a.active ? 'yes' : 'no') },
+          ]}
+        />
         <div className="grid gap-3 md:grid-cols-5">
           <Field id="a-code" label="Code">
             <Input value={ach.code} onChange={(e) => setAch({ ...ach, code: e.target.value })} />
@@ -107,11 +151,24 @@ export default function ChallengesAdmin() {
           <Field id="a-icon" label="Icon">
             <Input value={ach.icon} onChange={(e) => setAch({ ...ach, icon: e.target.value })} />
           </Field>
-          <Field id="a-rule" label="Rule (JSON)" hint="types: first_activity, single_distance, total_distance, activity_count, streak_days, challenges_completed, challenge_winner, events_attended, posts">
+          <Field
+            id="a-rule"
+            label="Rule (JSON)"
+            hint="types: first_activity, single_distance, total_distance, activity_count, streak_days, challenges_completed, challenge_winner, events_attended, posts"
+          >
             <Input value={ach.rule} onChange={(e) => setAch({ ...ach, rule: e.target.value })} />
           </Field>
         </div>
-        <Button onClick={() => run(async () => { await adminApi.achievements.save(ach.code, { name: ach.name, description: ach.description, icon: ach.icon, rule: JSON.parse(ach.rule) }); void achievements.refetch(); })}>Save achievement</Button>
+        <Button
+          onClick={() =>
+            run(async () => {
+              await adminApi.achievements.save(ach.code, { name: ach.name, description: ach.description, icon: ach.icon, rule: JSON.parse(ach.rule) });
+              void achievements.refetch();
+            })
+          }
+        >
+          Save achievement
+        </Button>
       </Section>
     </div>
   );

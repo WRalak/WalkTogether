@@ -45,7 +45,15 @@ export default function ActivityDetail() {
     <Screen edges={[]}>
       <Stack.Screen options={{ title: a.title ?? typeLabel(a.type) }} />
       <Text className="text-sm text-ink-muted">{new Date(a.startedAt).toLocaleString()}</Text>
-      <View className="mt-3">{a.routePolyline ? <RouteMap points={decodePolyline(a.routePolyline)} /> : <Card><Text className="text-ink-muted">No route to show.</Text></Card>}</View>
+      <View className="mt-3">
+        {a.routePolyline ? (
+          <RouteMap points={decodePolyline(a.routePolyline)} />
+        ) : (
+          <Card>
+            <Text className="text-ink-muted">No route to show.</Text>
+          </Card>
+        )}
+      </View>
       <Card className="mt-4">
         {stats.map(([k, v]) => (
           <View key={k} className="flex-row justify-between border-b border-line py-2.5 last:border-b-0">
@@ -54,7 +62,9 @@ export default function ActivityDetail() {
           </View>
         ))}
       </Card>
-      {a.flagged ? <Text className="mt-3 text-sm text-accent">This activity looked unusual (e.g. GPS jumps) and won’t count toward leaderboards. It stays in your history.</Text> : null}
+      {a.flagged ? (
+        <Text className="mt-3 text-sm text-accent">This activity looked unusual (e.g. GPS jumps) and won’t count toward leaderboards. It stays in your history.</Text>
+      ) : null}
       {me?.id === a.userId && (
         <Button
           title="Delete activity"
@@ -62,7 +72,12 @@ export default function ActivityDetail() {
           textClassName="text-danger"
           className="mt-4"
           loading={del.isPending}
-          onPress={() => Alert.alert('Delete activity?', 'This permanently deletes the activity and its route.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => del.mutate() }])}
+          onPress={() =>
+            Alert.alert('Delete activity?', 'This permanently deletes the activity and its route.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: () => del.mutate() },
+            ])
+          }
         />
       )}
     </Screen>

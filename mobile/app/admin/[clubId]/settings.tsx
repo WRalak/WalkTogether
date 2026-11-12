@@ -34,7 +34,12 @@ export default function ClubSettings() {
   });
 
   if (!club) return <Loading />;
-  if (!can('club.settings.update')) return <Screen edges={[]}><NoPermission what="edit club settings" /></Screen>;
+  if (!can('club.settings.update'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="edit club settings" />
+      </Screen>
+    );
 
   return (
     <Screen edges={[]}>

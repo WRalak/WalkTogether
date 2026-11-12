@@ -79,12 +79,18 @@ export async function joinClub(clubId: string, userId: string, input: { invitati
       reviewedAt: null,
       reviewedById: null,
     };
-    const m = existing
-      ? await tx.clubMembership.update({ where: { id: existing.id }, data })
-      : await tx.clubMembership.create({ data: { clubId, userId, ...data } });
+    const m = existing ? await tx.clubMembership.update({ where: { id: existing.id }, data }) : await tx.clubMembership.create({ data: { clubId, userId, ...data } });
     if (status === 'ACTIVE') await tx.club.update({ where: { id: clubId }, data: { memberCount: { increment: 1 } } });
     await audit(
-      { actorType: 'USER', actorId: userId, action: status === 'ACTIVE' ? 'membership.joined' : 'membership.requested', targetType: 'membership', targetId: m.id, clubId, metadata: invitation ? { invitationId: invitation.id } : {} },
+      {
+        actorType: 'USER',
+        actorId: userId,
+        action: status === 'ACTIVE' ? 'membership.joined' : 'membership.requested',
+        targetType: 'membership',
+        targetId: m.id,
+        clubId,
+        metadata: invitation ? { invitationId: invitation.id } : {},
+      },
       ctx,
       tx,
     );
@@ -153,10 +159,7 @@ export async function listMembers(clubId: string, userId: string, query: ListMem
     ...(query.q
       ? {
           user: {
-            OR: [
-              { username: { contains: query.q.toLowerCase() } },
-              { profile: { displayName: { contains: query.q, mode: 'insensitive' } } },
-            ],
+            OR: [{ username: { contains: query.q.toLowerCase() } }, { profile: { displayName: { contains: query.q, mode: 'insensitive' } } }],
           },
         }
       : {}),
@@ -212,7 +215,13 @@ async function loadTargetMembership(clubId: string, membershipId: string) {
 function assertCanManage(actor: ClubAccess, actorId: string, target: Awaited<ReturnType<typeof loadTargetMembership>>) {
   if (target.userId === actorId) throw forbidden('You cannot perform this action on your own membership', 'SELF_ACTION');
   if (target.role.isOwner) throw forbidden('The club owner cannot be modified', 'OWNER_PROTECTED');
-  if (!actor.role?.isOwner && !isSubset(target.role.permissions.map((p) => p.permissionKey), actor.permissions)) {
+  if (
+    !actor.role?.isOwner &&
+    !isSubset(
+      target.role.permissions.map((p) => p.permissionKey),
+      actor.permissions,
+    )
+  ) {
     throw forbidden('You cannot manage a member with more permissions than you', 'INSUFFICIENT_RANK');
   }
 }
@@ -229,7 +238,19 @@ export async function reviewMembership(clubId: string, membershipId: string, act
     });
     if (updated.count !== 1) throw conflict('This membership request is not pending', 'NOT_PENDING');
     if (approved) await tx.club.update({ where: { id: clubId }, data: { memberCount: { increment: 1 } } });
-    await audit({ actorType: 'USER', actorId, action: approved ? 'membership.approved' : 'membership.rejected', targetType: 'membership', targetId: target.id, clubId, metadata: { userId: target.userId } }, ctx, tx);
+    await audit(
+      {
+        actorType: 'USER',
+        actorId,
+        action: approved ? 'membership.approved' : 'membership.rejected',
+        targetType: 'membership',
+        targetId: target.id,
+        clubId,
+        metadata: { userId: target.userId },
+      },
+      ctx,
+      tx,
+    );
   });
   return { membershipId: target.id, status: approved ? 'ACTIVE' : 'REJECTED' };
 }
@@ -244,18 +265,47 @@ export async function assignRole(clubId: string, membershipId: string, actorId: 
   const role = await prisma.clubRole.findFirst({ where: { id: roleId, clubId }, include: { permissions: { select: { permissionKey: true } } } });
   if (!role) throw notFound('Role not found');
   if (role.isOwner) throw forbidden('Ownership must be transferred, not assigned', 'OWNER_ROLE_NOT_ASSIGNABLE');
-  if (!actor.role?.isOwner && !isSubset(role.permissions.map((p) => p.permissionKey), actor.permissions)) {
+  if (
+    !actor.role?.isOwner &&
+    !isSubset(
+      role.permissions.map((p) => p.permissionKey),
+      actor.permissions,
+    )
+  ) {
     throw forbidden('You cannot assign a role with more permissions than your own', 'PRIVILEGE_ESCALATION');
   }
-  await assertAdminSeatAvailable(clubId, role.permissions.map((p) => p.permissionKey), target.role.permissions.map((p) => p.permissionKey));
+  await assertAdminSeatAvailable(
+    clubId,
+    role.permissions.map((p) => p.permissionKey),
+    target.role.permissions.map((p) => p.permissionKey),
+  );
   await prisma.$transaction(async (tx) => {
     await tx.clubMembership.update({ where: { id: target.id }, data: { roleId: role.id } });
-    await audit({ actorType: 'USER', actorId, action: 'membership.role_assigned', targetType: 'membership', targetId: target.id, clubId, metadata: { userId: target.userId, from: target.roleId, to: role.id } }, ctx, tx);
+    await audit(
+      {
+        actorType: 'USER',
+        actorId,
+        action: 'membership.role_assigned',
+        targetType: 'membership',
+        targetId: target.id,
+        clubId,
+        metadata: { userId: target.userId, from: target.roleId, to: role.id },
+      },
+      ctx,
+      tx,
+    );
   });
   return { membershipId: target.id, roleId: role.id, role: role.name };
 }
 
-export async function moderateMember(clubId: string, membershipId: string, actorId: string, action: 'SUSPEND' | 'REINSTATE' | 'REMOVE' | 'BAN', reason: string | undefined, ctx: AuditContext) {
+export async function moderateMember(
+  clubId: string,
+  membershipId: string,
+  actorId: string,
+  action: 'SUSPEND' | 'REINSTATE' | 'REMOVE' | 'BAN',
+  reason: string | undefined,
+  ctx: AuditContext,
+) {
   const permission = action === 'SUSPEND' || action === 'REINSTATE' ? 'members.suspend' : 'members.remove';
   const actor = await requireClubPermission(clubId, actorId, permission);
   const target = await loadTargetMembership(clubId, membershipId);
@@ -275,7 +325,19 @@ export async function moderateMember(clubId: string, membershipId: string, actor
   await prisma.$transaction(async (tx) => {
     await tx.clubMembership.update({ where: { id: target.id }, data: { status: t.to, statusReason: reason ?? null, reviewedById: actorId, reviewedAt: new Date() } });
     if (wasActive !== isActive) await tx.club.update({ where: { id: clubId }, data: { memberCount: { increment: isActive ? 1 : -1 } } });
-    await audit({ actorType: 'USER', actorId, action: `membership.${action.toLowerCase()}`, targetType: 'membership', targetId: target.id, clubId, metadata: { userId: target.userId, reason } }, ctx, tx);
+    await audit(
+      {
+        actorType: 'USER',
+        actorId,
+        action: `membership.${action.toLowerCase()}`,
+        targetType: 'membership',
+        targetId: target.id,
+        clubId,
+        metadata: { userId: target.userId, reason },
+      },
+      ctx,
+      tx,
+    );
   });
   return { membershipId: target.id, status: t.to };
 }
@@ -305,11 +367,20 @@ export async function createInvitation(
     const role = await prisma.clubRole.findFirst({ where: { id: input.roleId, clubId }, include: { permissions: { select: { permissionKey: true } } } });
     if (!role) throw notFound('Role not found');
     if (role.isOwner) throw forbidden('Ownership cannot be granted by invitation', 'OWNER_ROLE_NOT_ASSIGNABLE');
-    if (!actor.role?.isOwner && !isSubset(role.permissions.map((p) => p.permissionKey), actor.permissions)) {
+    if (
+      !actor.role?.isOwner &&
+      !isSubset(
+        role.permissions.map((p) => p.permissionKey),
+        actor.permissions,
+      )
+    ) {
       throw forbidden('You cannot invite people into a role with more permissions than your own', 'PRIVILEGE_ESCALATION');
     }
     if (!actor.permissions.has('members.roles.assign')) throw forbidden('You cannot invite people into a specific role');
-    await assertAdminSeatAvailable(clubId, role.permissions.map((p) => p.permissionKey));
+    await assertAdminSeatAvailable(
+      clubId,
+      role.permissions.map((p) => p.permissionKey),
+    );
   }
 
   const code = randomToken(12);
@@ -327,7 +398,19 @@ export async function createInvitation(
         createdById: actorId,
       },
     });
-    await audit({ actorType: 'USER', actorId, action: 'invitation.created', targetType: 'invitation', targetId: inv.id, clubId, metadata: { maxUses: input.maxUses, roleId: input.roleId ?? null } }, ctx, tx);
+    await audit(
+      {
+        actorType: 'USER',
+        actorId,
+        action: 'invitation.created',
+        targetType: 'invitation',
+        targetId: inv.id,
+        clubId,
+        metadata: { maxUses: input.maxUses, roleId: input.roleId ?? null },
+      },
+      ctx,
+      tx,
+    );
     return inv;
   });
   // The plain code is returned exactly once; only its hash is stored.
@@ -340,7 +423,19 @@ export async function listInvitations(clubId: string, actorId: string) {
     where: { clubId },
     orderBy: { createdAt: 'desc' },
     take: 100,
-    select: { id: true, codeHint: true, email: true, phone: true, roleId: true, maxUses: true, useCount: true, expiresAt: true, revokedAt: true, createdAt: true, createdById: true },
+    select: {
+      id: true,
+      codeHint: true,
+      email: true,
+      phone: true,
+      roleId: true,
+      maxUses: true,
+      useCount: true,
+      expiresAt: true,
+      revokedAt: true,
+      createdAt: true,
+      createdById: true,
+    },
   });
 }
 
@@ -355,7 +450,13 @@ export async function revokeInvitation(clubId: string, invitationId: string, act
 export async function previewInvitation(code: string) {
   const inv = await prisma.clubInvitation.findUnique({
     where: { codeHash: hashToken(code) },
-    select: { expiresAt: true, revokedAt: true, useCount: true, maxUses: true, club: { select: { id: true, slug: true, name: true, logoUrl: true, status: true, deletedAt: true } } },
+    select: {
+      expiresAt: true,
+      revokedAt: true,
+      useCount: true,
+      maxUses: true,
+      club: { select: { id: true, slug: true, name: true, logoUrl: true, status: true, deletedAt: true } },
+    },
   });
   if (!inv || inv.revokedAt || inv.expiresAt < new Date() || inv.useCount >= inv.maxUses || inv.club.status !== 'ACTIVE' || inv.club.deletedAt) {
     throw notFound('Invitation not found or expired');

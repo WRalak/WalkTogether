@@ -22,12 +22,19 @@ export default function SponsorshipOffers() {
     onError: (e) => setError(errorMessage(e)),
   });
   if (!club) return <Loading />;
-  if (!can('events.manage')) return <Screen edges={[]}><NoPermission what="manage events" /></Screen>;
+  if (!can('events.manage'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="manage events" />
+      </Screen>
+    );
 
   return (
     <Screen edges={[]} refreshing={offers.isRefetching} onRefresh={() => void offers.refetch()}>
       <Stack.Screen options={{ title: 'Sponsorship offers' }} />
-      <Text className="mb-3 text-sm text-ink-muted">Sponsors only appear on your events after you accept. Sponsored events are always labelled, and no member data is shared with sponsors.</Text>
+      <Text className="mb-3 text-sm text-ink-muted">
+        Sponsors only appear on your events after you accept. Sponsored events are always labelled, and no member data is shared with sponsors.
+      </Text>
       {error ? <Notice>{error}</Notice> : null}
       {offers.isLoading ? (
         <Loading />

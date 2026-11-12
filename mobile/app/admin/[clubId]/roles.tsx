@@ -11,7 +11,6 @@ import { api } from '@/services/api';
 import { errorMessage } from '@/utils/errors';
 import { PERMISSION_LABELS } from '@/features/admin/permissions';
 
-
 export default function Roles() {
   const { clubId, club, can } = useAdminClub();
   const router = useRouter();
@@ -52,7 +51,12 @@ export default function Roles() {
   });
 
   if (!club) return <Loading />;
-  if (!can('roles.manage')) return <Screen edges={[]}><NoPermission what="manage roles" /></Screen>;
+  if (!can('roles.manage'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="manage roles" />
+      </Screen>
+    );
   const editingSystem = !!roles.data?.find((r) => r.id === editing?.id)?.systemKey;
 
   return (
@@ -90,11 +94,20 @@ export default function Roles() {
                 <Text className="text-base font-semibold text-ink">{r.name}</Text>
                 <Badge label={`${r.memberCount} members`} />
               </View>
-              <Text className="mt-2 text-xs text-ink-muted">{r.isOwner ? 'All permissions' : r.permissions.map((p) => PERMISSION_LABELS[p as ClubPermissionKey] ?? p).join(' · ')}</Text>
+              <Text className="mt-2 text-xs text-ink-muted">
+                {r.isOwner ? 'All permissions' : r.permissions.map((p) => PERMISSION_LABELS[p as ClubPermissionKey] ?? p).join(' · ')}
+              </Text>
               {!r.isOwner && (
                 <View className="mt-3 flex-row gap-2">
                   <Button title="Edit" variant="outline" className="min-h-[40px] flex-1" onPress={() => setEditing({ id: r.id, name: r.name, permissions: r.permissions })} />
-                  {!r.systemKey && <Button title="Delete" variant="danger" className="min-h-[40px] flex-1" onPress={() => confirm('Delete role', `Delete ${r.name}? Members with it become regular members.`, () => remove.mutate(r.id), 'Delete')} />}
+                  {!r.systemKey && (
+                    <Button
+                      title="Delete"
+                      variant="danger"
+                      className="min-h-[40px] flex-1"
+                      onPress={() => confirm('Delete role', `Delete ${r.name}? Members with it become regular members.`, () => remove.mutate(r.id), 'Delete')}
+                    />
+                  )}
                 </View>
               )}
             </Card>

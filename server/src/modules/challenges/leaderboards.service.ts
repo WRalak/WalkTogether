@@ -34,7 +34,14 @@ async function rankDistance(from: Date, to: Date, cap: number, type: ActivityTyp
     SELECT user_id, round(sum(d))::int AS value FROM daily GROUP BY 1 HAVING sum(d) > 0 ORDER BY 2 DESC, 1 LIMIT ${limit}`;
 }
 
-async function store(scope: 'GLOBAL' | 'CLUB', clubId: string | null, period: LeaderboardPeriod, start: Date, type: ActivityType | null, rows: { user_id: string; value: number }[]) {
+async function store(
+  scope: 'GLOBAL' | 'CLUB',
+  clubId: string | null,
+  period: LeaderboardPeriod,
+  start: Date,
+  type: ActivityType | null,
+  rows: { user_id: string; value: number }[],
+) {
   await prisma.$transaction(async (tx) => {
     const existing = await tx.leaderboard.findFirst({ where: { scope, clubId, period, periodStart: start, activityType: type } });
     const lb = existing
@@ -54,14 +61,28 @@ export async function computeLeaderboards(now = new Date()) {
     const end = periodEnd(period, start);
     for (const type of [null, 'WALK', 'RUN'] as const) {
       // Global: only people with public profiles who show their stats.
-      const global = await rankDistance(start, end, cap, type, Prisma.sql`AND EXISTS (SELECT 1 FROM user_privacy_settings ps JOIN users u ON u.id = ps.user_id WHERE ps.user_id = a.user_id AND ps.profile_visibility = 'PUBLIC' AND ps.show_stats AND u.status = 'ACTIVE') AND a.visibility = 'PUBLIC'`);
+      const global = await rankDistance(
+        start,
+        end,
+        cap,
+        type,
+        Prisma.sql`AND EXISTS (SELECT 1 FROM user_privacy_settings ps JOIN users u ON u.id = ps.user_id WHERE ps.user_id = a.user_id AND ps.profile_visibility = 'PUBLIC' AND ps.show_stats AND u.status = 'ACTIVE') AND a.visibility = 'PUBLIC'`,
+      );
       await store('GLOBAL', null, period, start, type, global);
       computed++;
     }
     // Clubs: only activities members explicitly shared with that club.
-    const clubs = await prisma.$queryRaw<{ club_id: string }[]>`SELECT DISTINCT s.club_id FROM activity_club_shares s JOIN activities a ON a.id = s.activity_id WHERE a.started_at >= ${start} AND a.started_at < ${end}`;
+    const clubs = await prisma.$queryRaw<
+      { club_id: string }[]
+    >`SELECT DISTINCT s.club_id FROM activity_club_shares s JOIN activities a ON a.id = s.activity_id WHERE a.started_at >= ${start} AND a.started_at < ${end}`;
     for (const { club_id } of clubs) {
-      const rows = await rankDistance(start, end, cap, null, Prisma.sql`AND EXISTS (SELECT 1 FROM activity_club_shares s JOIN club_memberships m ON m.club_id = s.club_id AND m.user_id = a.user_id AND m.status = 'ACTIVE' WHERE s.activity_id = a.id AND s.club_id = ${club_id}::uuid)`);
+      const rows = await rankDistance(
+        start,
+        end,
+        cap,
+        null,
+        Prisma.sql`AND EXISTS (SELECT 1 FROM activity_club_shares s JOIN club_memberships m ON m.club_id = s.club_id AND m.user_id = a.user_id AND m.status = 'ACTIVE' WHERE s.activity_id = a.id AND s.club_id = ${club_id}::uuid)`,
+      );
       await store('CLUB', club_id, period, start, null, rows);
       computed++;
     }
@@ -70,11 +91,19 @@ export async function computeLeaderboards(now = new Date()) {
 }
 
 async function withUsers(entries: { rank: number; userId: string; value: number }[], viewerId?: string) {
-  const users = await prisma.user.findMany({ where: { id: { in: entries.map((e) => e.userId) } }, select: { id: true, username: true, profile: { select: { displayName: true, avatarUrl: true } } } });
+  const users = await prisma.user.findMany({
+    where: { id: { in: entries.map((e) => e.userId) } },
+    select: { id: true, username: true, profile: { select: { displayName: true, avatarUrl: true } } },
+  });
   const byId = new Map(users.map((u) => [u.id, u]));
   return entries.map((e) => {
     const u = byId.get(e.userId);
-    return { rank: e.rank, valueM: e.value, isMe: e.userId === viewerId, user: u ? { id: u.id, username: u.username, displayName: u.profile?.displayName ?? u.username, avatarUrl: u.profile?.avatarUrl ?? null } : null };
+    return {
+      rank: e.rank,
+      valueM: e.value,
+      isMe: e.userId === viewerId,
+      user: u ? { id: u.id, username: u.username, displayName: u.profile?.displayName ?? u.username, avatarUrl: u.profile?.avatarUrl ?? null } : null,
+    };
   });
 }
 
@@ -103,5 +132,12 @@ export async function followingLeaderboard(viewerId: string, period: Leaderboard
     Prisma.sql`AND (a.user_id = ${viewerId}::uuid OR (a.visibility IN ('PUBLIC','FOLLOWERS') AND EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = ${viewerId}::uuid AND f.followee_id = a.user_id AND f.status = 'ACCEPTED')))`,
     200,
   );
-  return { period, periodStart: start, entries: await withUsers(rows.map((r, i) => ({ rank: i + 1, userId: r.user_id, value: r.value })), viewerId) };
+  return {
+    period,
+    periodStart: start,
+    entries: await withUsers(
+      rows.map((r, i) => ({ rank: i + 1, userId: r.user_id, value: r.value })),
+      viewerId,
+    ),
+  };
 }

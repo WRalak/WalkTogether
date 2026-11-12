@@ -50,5 +50,4 @@ export async function verifyToken<T extends Record<string, unknown>>(type: Token
   }
 }
 
-export const signAccessToken = (userId: string, sessionId: string) =>
-  signToken('access', userId, { sid: sessionId }, env.ACCESS_TOKEN_TTL_SECONDS);
+export const signAccessToken = (userId: string, sessionId: string) => signToken('access', userId, { sid: sessionId }, env.ACCESS_TOKEN_TTL_SECONDS);

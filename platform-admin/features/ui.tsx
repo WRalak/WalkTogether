@@ -19,7 +19,15 @@ export function Section({ title, children, action }: { title: string; children: 
   );
 }
 
-export function DataTable<T extends Record<string, unknown>>({ rows, columns, empty = 'Nothing here yet' }: { rows: T[] | undefined; columns: { label: string; render: (r: T) => React.ReactNode }[]; empty?: string }) {
+export function DataTable<T extends Record<string, unknown>>({
+  rows,
+  columns,
+  empty = 'Nothing here yet',
+}: {
+  rows: T[] | undefined;
+  columns: { label: string; render: (r: T) => React.ReactNode }[];
+  empty?: string;
+}) {
   if (!rows) return <Spinner />;
   if (!rows.length) return <p className="text-sm text-muted-foreground">{empty}</p>;
   return (
@@ -46,7 +54,11 @@ export function DataTable<T extends Record<string, unknown>>({ rows, columns, em
 
 export function StatusBadge({ value }: { value: string }) {
   const v = value.toUpperCase();
-  const variant = ['ACTIVE', 'SUCCEEDED', 'APPROVED', 'FULFILLED', 'OK'].includes(v) ? 'success' : ['FAILED', 'SUSPENDED', 'REJECTED', 'CANCELLED', 'REFUNDED'].includes(v) ? 'destructive' : 'warning';
+  const variant = ['ACTIVE', 'SUCCEEDED', 'APPROVED', 'FULFILLED', 'OK'].includes(v)
+    ? 'success'
+    : ['FAILED', 'SUSPENDED', 'REJECTED', 'CANCELLED', 'REFUNDED'].includes(v)
+      ? 'destructive'
+      : 'warning';
   return <Badge variant={variant}>{value.replace(/_/g, ' ').toLowerCase()}</Badge>;
 }
 

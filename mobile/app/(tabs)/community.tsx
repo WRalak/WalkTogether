@@ -91,7 +91,13 @@ export default function Community() {
       </View>
       <View className="mx-5 mb-3 flex-row rounded-2xl bg-surface p-1" accessibilityRole="tablist">
         {(['feed', 'messages'] as const).map((t) => (
-          <Pressable key={t} accessibilityRole="tab" accessibilityState={{ selected: tab === t }} onPress={() => setTab(t)} className={`flex-1 items-center rounded-xl py-2.5 ${tab === t ? 'bg-primary' : ''}`}>
+          <Pressable
+            key={t}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === t }}
+            onPress={() => setTab(t)}
+            className={`flex-1 items-center rounded-xl py-2.5 ${tab === t ? 'bg-primary' : ''}`}
+          >
             <Text className={`font-semibold ${tab === t ? 'text-white' : 'text-ink-muted'}`}>{t === 'feed' ? 'Feed' : 'Messages'}</Text>
           </Pressable>
         ))}

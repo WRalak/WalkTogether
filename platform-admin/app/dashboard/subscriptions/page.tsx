@@ -6,7 +6,21 @@ import { Field, Input, Select } from '@/components/ui';
 import { adminApi } from '@/lib/api';
 import { Button, DataTable, money, Section, StatusBadge, useAction } from '@/features/ui';
 
-type Plan = { id: string; code: string; audience: string; name: string; currency: string; amountMinor: number; interval: string; trialDays: number; graceDays: number; isActive: boolean; isDefault: boolean; entitlements: { key: string; intLimit: number | null; boolValue: boolean | null }[]; _count: { subscriptions: number } };
+type Plan = {
+  id: string;
+  code: string;
+  audience: string;
+  name: string;
+  currency: string;
+  amountMinor: number;
+  interval: string;
+  trialDays: number;
+  graceDays: number;
+  isActive: boolean;
+  isDefault: boolean;
+  entitlements: { key: string; intLimit: number | null; boolValue: boolean | null }[];
+  _count: { subscriptions: number };
+};
 
 function PlanEditor({ plan, onSaved }: { plan?: Plan; onSaved: () => void }) {
   const { run, busy, ErrorBox } = useAction();
@@ -67,7 +81,13 @@ function PlanEditor({ plan, onSaved }: { plan?: Plan; onSaved: () => void }) {
         {keys.map((k) =>
           ENTITLEMENTS[k].kind === 'limit' ? (
             <label key={k} className="flex items-center gap-2 text-sm">
-              <Input type="number" min={0} className="h-8 w-24" value={String(f.ent[k] ?? '')} onChange={(e) => setF({ ...f, ent: { ...f.ent, [k]: e.target.value === '' ? null : Number(e.target.value) } })} />
+              <Input
+                type="number"
+                min={0}
+                className="h-8 w-24"
+                value={String(f.ent[k] ?? '')}
+                onChange={(e) => setF({ ...f, ent: { ...f.ent, [k]: e.target.value === '' ? null : Number(e.target.value) } })}
+              />
               {ENTITLEMENTS[k].label}
             </label>
           ) : (
@@ -126,8 +146,22 @@ export default function SubscriptionsAdmin() {
       <h1 className="text-2xl font-bold">Subscriptions</h1>
       <p className="text-sm text-muted-foreground">Plans and prices are configured here — never hardcoded. Basic tracking is always free.</p>
       <ErrorBox />
-      <Section title="Subscription plans" action={<Button size="sm" onClick={() => setEditing('new')}>New plan</Button>}>
-        {editing === 'new' && <PlanEditor onSaved={() => { setEditing(null); void plans.refetch(); }} />}
+      <Section
+        title="Subscription plans"
+        action={
+          <Button size="sm" onClick={() => setEditing('new')}>
+            New plan
+          </Button>
+        }
+      >
+        {editing === 'new' && (
+          <PlanEditor
+            onSaved={() => {
+              setEditing(null);
+              void plans.refetch();
+            }}
+          />
+        )}
         <DataTable
           rows={plans.data}
           columns={[
@@ -136,10 +170,28 @@ export default function SubscriptionsAdmin() {
             { label: 'Price', render: (p) => (p.amountMinor ? `${money(p.amountMinor, p.currency)} / ${p.interval.toLowerCase()}` : 'Free') },
             { label: 'Status', render: (p) => <StatusBadge value={p.isDefault ? 'default' : p.isActive ? 'ACTIVE' : 'inactive'} /> },
             { label: 'Live subs', render: (p) => p._count.subscriptions },
-            { label: '', render: (p) => <Button size="sm" variant="outline" onClick={() => setEditing(editing === p.id ? null : p.id)}>Edit</Button> },
+            {
+              label: '',
+              render: (p) => (
+                <Button size="sm" variant="outline" onClick={() => setEditing(editing === p.id ? null : p.id)}>
+                  Edit
+                </Button>
+              ),
+            },
           ]}
         />
-        {plans.data?.filter((p) => p.id === editing).map((p) => <PlanEditor key={p.id} plan={p} onSaved={() => { setEditing(null); void plans.refetch(); }} />)}
+        {plans.data
+          ?.filter((p) => p.id === editing)
+          .map((p) => (
+            <PlanEditor
+              key={p.id}
+              plan={p}
+              onSaved={() => {
+                setEditing(null);
+                void plans.refetch();
+              }}
+            />
+          ))}
       </Section>
       <Section title="Promotions">
         <div className="flex flex-wrap items-end gap-2">
@@ -152,9 +204,26 @@ export default function SubscriptionsAdmin() {
           <Field id="pr-max" label="Max uses">
             <Input type="number" min={1} value={promo.maxRedemptions} onChange={(e) => setPromo({ ...promo, maxRedemptions: e.target.value })} />
           </Field>
-          <Button onClick={() => run(async () => { await adminApi.promotions.save(promo.code, { percentOff: Number(promo.percentOff), maxRedemptions: promo.maxRedemptions ? Number(promo.maxRedemptions) : null }); void promos.refetch(); })}>Save</Button>
+          <Button
+            onClick={() =>
+              run(async () => {
+                await adminApi.promotions.save(promo.code, { percentOff: Number(promo.percentOff), maxRedemptions: promo.maxRedemptions ? Number(promo.maxRedemptions) : null });
+                void promos.refetch();
+              })
+            }
+          >
+            Save
+          </Button>
         </div>
-        <DataTable rows={promos.data} columns={[{ label: 'Code', render: (p) => String(p.code) }, { label: 'Discount', render: (p) => (p.percentOff ? `${p.percentOff}%` : money(Number(p.amountOffMinor), 'KES')) }, { label: 'Used', render: (p) => `${p.redeemed}${p.maxRedemptions ? ` / ${p.maxRedemptions}` : ''}` }, { label: 'Active', render: (p) => (p.active ? 'yes' : 'no') }]} />
+        <DataTable
+          rows={promos.data}
+          columns={[
+            { label: 'Code', render: (p) => String(p.code) },
+            { label: 'Discount', render: (p) => (p.percentOff ? `${p.percentOff}%` : money(Number(p.amountOffMinor), 'KES')) },
+            { label: 'Used', render: (p) => `${p.redeemed}${p.maxRedemptions ? ` / ${p.maxRedemptions}` : ''}` },
+            { label: 'Active', render: (p) => (p.active ? 'yes' : 'no') },
+          ]}
+        />
       </Section>
       <Section title="Subscriptions">
         <div className="flex flex-wrap items-end gap-2">
@@ -179,7 +248,21 @@ export default function SubscriptionsAdmin() {
         <DataTable
           rows={subscriptions.data}
           columns={[
-            { label: 'Subscriber', render: (x) => (x.club ? <a className="text-primary hover:underline" href={`/dashboard/clubs/${x.club.id}`}>{x.club.name}</a> : x.user ? <a className="text-primary hover:underline" href={`/dashboard/users/${x.user.id}`}>@{x.user.username}</a> : '—') },
+            {
+              label: 'Subscriber',
+              render: (x) =>
+                x.club ? (
+                  <a className="text-primary hover:underline" href={`/dashboard/clubs/${x.club.id}`}>
+                    {x.club.name}
+                  </a>
+                ) : x.user ? (
+                  <a className="text-primary hover:underline" href={`/dashboard/users/${x.user.id}`}>
+                    @{x.user.username}
+                  </a>
+                ) : (
+                  '—'
+                ),
+            },
             { label: 'Plan', render: (x) => `${x.plan.name} (${x.plan.audience.toLowerCase()})` },
             { label: 'Price', render: (x) => (x.plan.amountMinor ? `${money(x.plan.amountMinor, x.plan.currency)} / ${x.plan.interval.toLowerCase()}` : 'Free') },
             { label: 'Status', render: (x) => <StatusBadge value={x.status} /> },

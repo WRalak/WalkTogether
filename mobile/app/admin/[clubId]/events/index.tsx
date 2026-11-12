@@ -13,7 +13,12 @@ export default function AdminEvents() {
   const router = useRouter();
   const events = useQuery({ queryKey: ['admin-events', clubId], queryFn: () => api.events.ofClub(clubId, { limit: 100, includeCancelled: true }), enabled: !!club });
   if (!club) return <Loading />;
-  if (!can('club.view_private')) return <Screen edges={[]}><NoPermission what="view events" /></Screen>;
+  if (!can('club.view_private'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="view events" />
+      </Screen>
+    );
 
   return (
     <Screen edges={[]} refreshing={events.isRefetching} onRefresh={() => void events.refetch()}>
@@ -36,7 +41,11 @@ export default function AdminEvents() {
                     {new Date(e.startsAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} · {e.meetingPoint}
                   </Text>
                   <View className="mt-2 flex-row flex-wrap gap-2">
-                    {e.status === 'CANCELLED' ? <Badge label="Cancelled" tone="warning" /> : <Badge tone="primary" label={`${e.goingCount}${e.maxParticipants ? `/${e.maxParticipants}` : ''} going`} />}
+                    {e.status === 'CANCELLED' ? (
+                      <Badge label="Cancelled" tone="warning" />
+                    ) : (
+                      <Badge tone="primary" label={`${e.goingCount}${e.maxParticipants ? `/${e.maxParticipants}` : ''} going`} />
+                    )}
                     {e.seriesId ? <Badge label="Recurring" /> : null}
                     <Badge label={e.visibility === 'PUBLIC' ? 'Public' : 'Members only'} />
                   </View>

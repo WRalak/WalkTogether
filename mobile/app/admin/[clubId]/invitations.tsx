@@ -45,17 +45,28 @@ export default function Invitations() {
   });
 
   if (!club) return <Loading />;
-  if (!can('members.invite')) return <Screen edges={[]}><NoPermission what="manage invitations" /></Screen>;
+  if (!can('members.invite'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="manage invitations" />
+      </Screen>
+    );
 
-  const share = (inv: { code: string; link?: string }) =>
-    void Share.share({ message: `Join ${club.name} on WalkTogether: ${inv.link ?? ''}\nInvitation code: ${inv.code}` });
+  const share = (inv: { code: string; link?: string }) => void Share.share({ message: `Join ${club.name} on WalkTogether: ${inv.link ?? ''}\nInvitation code: ${inv.code}` });
 
   return (
     <Screen edges={[]} refreshing={invitations.isRefetching} onRefresh={() => void invitations.refetch()}>
       <Stack.Screen options={{ title: 'Invitations' }} />
       <Card>
         <Text className="mb-3 text-base font-bold text-ink">New invitation</Text>
-        <TextField label="Restrict to email (optional)" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" hint="Only this verified email can use it" />
+        <TextField
+          label="Restrict to email (optional)"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          hint="Only this verified email can use it"
+        />
         <View className="flex-row gap-3">
           <View className="flex-1">
             <TextField label="Max uses" value={maxUses} onChangeText={setMaxUses} keyboardType="number-pad" />
@@ -74,7 +85,11 @@ export default function Invitations() {
         )}
         <Button title="Create invitation" loading={create.isPending} onPress={() => create.mutate()} />
       </Card>
-      {error ? <View className="mt-4"><Notice>{error}</Notice></View> : null}
+      {error ? (
+        <View className="mt-4">
+          <Notice>{error}</Notice>
+        </View>
+      ) : null}
       {created && (
         <Card className="mt-4 border-primary">
           <Text className="font-semibold text-ink">Invitation created — share it now. The code won’t be shown again.</Text>
@@ -108,7 +123,14 @@ export default function Invitations() {
                 <Text className="text-xs text-ink-muted">
                   Used {i.useCount}/{i.maxUses} · expires {new Date(i.expiresAt).toLocaleDateString()}
                 </Text>
-                {active && <Button title="Revoke" variant="outline" className="mt-3 min-h-[40px]" onPress={() => confirm('Revoke invitation', 'People who haven’t used it yet won’t be able to join with it.', () => revoke.mutate(i.id), 'Revoke')} />}
+                {active && (
+                  <Button
+                    title="Revoke"
+                    variant="outline"
+                    className="mt-3 min-h-[40px]"
+                    onPress={() => confirm('Revoke invitation', 'People who haven’t used it yet won’t be able to join with it.', () => revoke.mutate(i.id), 'Revoke')}
+                  />
+                )}
               </Card>
             );
           })}

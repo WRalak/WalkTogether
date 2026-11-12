@@ -30,11 +30,30 @@ export function CampaignsPanel() {
                 <div className="flex flex-wrap gap-2">
                   {c.status === 'PENDING_REVIEW' && (
                     <>
-                      <StatusAction label="Approve" onConfirm={(note) => run(async () => { await adminApi.campaigns.review(String(c.id), 'APPROVE', note); void campaigns.refetch(); })} />
-                      <StatusAction label="Reject" variant="destructive" onConfirm={(note) => run(async () => { await adminApi.campaigns.review(String(c.id), 'REJECT', note); void campaigns.refetch(); })} />
+                      <StatusAction
+                        label="Approve"
+                        onConfirm={(note) =>
+                          run(async () => {
+                            await adminApi.campaigns.review(String(c.id), 'APPROVE', note);
+                            void campaigns.refetch();
+                          })
+                        }
+                      />
+                      <StatusAction
+                        label="Reject"
+                        variant="destructive"
+                        onConfirm={(note) =>
+                          run(async () => {
+                            await adminApi.campaigns.review(String(c.id), 'REJECT', note);
+                            void campaigns.refetch();
+                          })
+                        }
+                      />
                     </>
                   )}
-                  <Button size="sm" variant="outline" onClick={() => run(async () => setReport(await adminApi.campaigns.report(String(c.id))))}>Report</Button>
+                  <Button size="sm" variant="outline" onClick={() => run(async () => setReport(await adminApi.campaigns.report(String(c.id))))}>
+                    Report
+                  </Button>
                   {c.type === 'CHALLENGE' && ['ACTIVE', 'ENDED'].includes(String(c.status)) && (
                     <StatusAction label="Award top 3" onConfirm={(desc) => run(async () => setReport(await adminApi.campaigns.award(String(c.id), 3, desc)))} />
                   )}

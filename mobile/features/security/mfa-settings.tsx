@@ -93,7 +93,11 @@ export function MfaSettings() {
         <Badge tone={s?.enabled ? 'primary' : 'neutral'} label={s?.enabled ? 'On' : 'Off'} />
       </View>
       <Text className="mt-1 text-sm text-ink-muted">Ask for a code from an authenticator app (Google Authenticator, Microsoft Authenticator, Authy…) whenever you sign in.</Text>
-      {error ? <View className="mt-3"><Notice>{error}</Notice></View> : null}
+      {error ? (
+        <View className="mt-3">
+          <Notice>{error}</Notice>
+        </View>
+      ) : null}
       {codes && <RecoveryCodes codes={codes} onDone={() => setCodes(null)} />}
 
       {!s?.enabled && !setup && <Button title="Turn on" className="mt-3" loading={start.isPending} onPress={() => start.mutate()} />}
@@ -108,7 +112,12 @@ export function MfaSettings() {
           </Text>
           <View className="mt-2 flex-row gap-2">
             <Button title="Copy key" variant="outline" className="flex-1" onPress={() => void Clipboard.setStringAsync(setup.secret)} />
-            <Button title="Open app" variant="outline" className="flex-1" onPress={() => void Linking.openURL(setup.otpauthUrl).catch(() => setError('No authenticator app found on this phone.'))} />
+            <Button
+              title="Open app"
+              variant="outline"
+              className="flex-1"
+              onPress={() => void Linking.openURL(setup.otpauthUrl).catch(() => setError('No authenticator app found on this phone.'))}
+            />
           </View>
           <Text className="mt-4 text-sm text-ink">2. Enter the 6-digit code it shows:</Text>
           <TextField label="Code" value={code} onChangeText={setCode} keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" textContentType="oneTimeCode" />
@@ -127,8 +136,18 @@ export function MfaSettings() {
             </View>
           ) : (
             <View className="mt-3">
-              <TextField label="Code from your authenticator app" value={code} onChangeText={setCode} keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" textContentType="oneTimeCode" />
-              {mode === 'disable' && user?.email ? <TextField label="Your password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" /> : null}
+              <TextField
+                label="Code from your authenticator app"
+                value={code}
+                onChangeText={setCode}
+                keyboardType="number-pad"
+                maxLength={6}
+                autoComplete="one-time-code"
+                textContentType="oneTimeCode"
+              />
+              {mode === 'disable' && user?.email ? (
+                <TextField label="Your password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" />
+              ) : null}
               {mode === 'disable' ? (
                 <Button
                   title="Turn off two-step verification"

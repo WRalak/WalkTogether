@@ -20,7 +20,10 @@ export async function platformOverview() {
     prisma.club.count({ where: { deletedAt: null, status: 'SUSPENDED' } }),
     prisma.clubMembership.count({ where: { status: 'ACTIVE' } }),
   ]);
-  const liveSubs = await prisma.subscription.findMany({ where: { status: { in: ['TRIALING', 'ACTIVE', 'PAST_DUE', 'GRACE'] }, plan: { amountMinor: { gt: 0 } } }, select: { clubId: true, userId: true } });
+  const liveSubs = await prisma.subscription.findMany({
+    where: { status: { in: ['TRIALING', 'ACTIVE', 'PAST_DUE', 'GRACE'] }, plan: { amountMinor: { gt: 0 } } },
+    select: { clubId: true, userId: true },
+  });
   const paidClubs = new Set(liveSubs.filter((s) => s.clubId).map((s) => s.clubId)).size;
   const premiumUsers = liveSubs.filter((s) => s.userId).length;
   const [activityAgg, activities30d, events, eventsUpcoming, challengeParticipants, activeChallenges] = await Promise.all([
@@ -73,8 +76,15 @@ export async function listUsers(query: { cursor?: string; limit: number; q?: str
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: query.limit + 1,
     select: {
-      id: true, email: true, phone: true, username: true, status: true, createdAt: true, lastLoginAt: true,
-      emailVerifiedAt: true, phoneVerifiedAt: true,
+      id: true,
+      email: true,
+      phone: true,
+      username: true,
+      status: true,
+      createdAt: true,
+      lastLoginAt: true,
+      emailVerifiedAt: true,
+      phoneVerifiedAt: true,
       profile: { select: { displayName: true } },
       _count: { select: { memberships: { where: { status: 'ACTIVE' } } } },
     },
@@ -84,8 +94,17 @@ export async function listUsers(query: { cursor?: string; limit: number; q?: str
   const last = items[items.length - 1];
   return {
     items: items.map((u) => ({
-      id: u.id, email: u.email, phone: u.phone, username: u.username, status: u.status, createdAt: u.createdAt, lastLoginAt: u.lastLoginAt,
-      emailVerified: !!u.emailVerifiedAt, phoneVerified: !!u.phoneVerifiedAt, displayName: u.profile?.displayName ?? null, clubCount: u._count.memberships,
+      id: u.id,
+      email: u.email,
+      phone: u.phone,
+      username: u.username,
+      status: u.status,
+      createdAt: u.createdAt,
+      lastLoginAt: u.lastLoginAt,
+      emailVerified: !!u.emailVerifiedAt,
+      phoneVerified: !!u.phoneVerifiedAt,
+      displayName: u.profile?.displayName ?? null,
+      clubCount: u._count.memberships,
     })),
     nextCursor: hasMore && last ? encodeCursor(last) : null,
   };
@@ -95,8 +114,18 @@ export async function getUser(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
-      id: true, email: true, phone: true, username: true, status: true, createdAt: true, lastLoginAt: true, suspendedAt: true, suspensionReason: true,
-      emailVerifiedAt: true, phoneVerifiedAt: true, deletionScheduledAt: true,
+      id: true,
+      email: true,
+      phone: true,
+      username: true,
+      status: true,
+      createdAt: true,
+      lastLoginAt: true,
+      suspendedAt: true,
+      suspensionReason: true,
+      emailVerifiedAt: true,
+      phoneVerifiedAt: true,
+      deletionScheduledAt: true,
       profile: { select: { displayName: true, location: true, countryCode: true } },
       memberships: { select: { status: true, joinedAt: true, role: { select: { name: true } }, club: { select: { id: true, name: true, slug: true } } }, take: 100 },
       loginEvents: { orderBy: { createdAt: 'desc' }, take: 20, select: { method: true, success: true, suspicious: true, ipAddress: true, createdAt: true, failureReason: true } },
@@ -108,7 +137,16 @@ export async function getUser(userId: string) {
   if (!user) throw notFound('User not found');
   // Account history: audited actions by or on this user, plus reports against them.
   const [history, reportsAgainst] = await Promise.all([
-    prisma.auditLog.findMany({ where: { OR: [{ actorType: 'USER', actorId: userId }, { targetType: 'user', targetId: userId }] }, orderBy: { createdAt: 'desc' }, take: 50 }),
+    prisma.auditLog.findMany({
+      where: {
+        OR: [
+          { actorType: 'USER', actorId: userId },
+          { targetType: 'user', targetId: userId },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    }),
     prisma.contentReport.count({ where: { targetType: 'USER', targetId: userId } }),
   ]);
   return { ...user, history, reportsAgainst };
@@ -125,7 +163,18 @@ export async function changeUserStatus(adminId: string, userId: string, action: 
       data: action === 'SUSPEND' ? { status: 'SUSPENDED', suspendedAt: new Date(), suspensionReason: reason } : { status: 'ACTIVE', suspendedAt: null, suspensionReason: null },
     });
     if (action === 'SUSPEND') await revokeSessions({ userId }, 'account_suspended', tx);
-    await audit({ actorType: 'ADMIN', actorId: adminId, action: action === 'SUSPEND' ? 'admin.user_suspended' : 'admin.user_reactivated', targetType: 'user', targetId: userId, metadata: { reason } }, ctx, tx);
+    await audit(
+      {
+        actorType: 'ADMIN',
+        actorId: adminId,
+        action: action === 'SUSPEND' ? 'admin.user_suspended' : 'admin.user_reactivated',
+        targetType: 'user',
+        targetId: userId,
+        metadata: { reason },
+      },
+      ctx,
+      tx,
+    );
   });
   return getUser(userId);
 }
@@ -143,7 +192,16 @@ export async function listClubs(query: { cursor?: string; limit: number; q?: str
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: query.limit + 1,
     select: {
-      id: true, slug: true, name: true, status: true, visibility: true, category: true, city: true, countryCode: true, memberCount: true, createdAt: true,
+      id: true,
+      slug: true,
+      name: true,
+      status: true,
+      visibility: true,
+      category: true,
+      city: true,
+      countryCode: true,
+      memberCount: true,
+      createdAt: true,
       owner: { select: { id: true, username: true } },
     },
   });
@@ -173,7 +231,11 @@ export async function changeClubStatus(adminId: string, clubId: string, action: 
       where: { id: clubId },
       data: action === 'SUSPEND' ? { status: 'SUSPENDED', suspendedAt: new Date(), suspensionReason: reason } : { status: 'ACTIVE', suspendedAt: null, suspensionReason: null },
     });
-    await audit({ actorType: 'ADMIN', actorId: adminId, action: `admin.club_${action.toLowerCase()}`, targetType: 'club', targetId: clubId, clubId, metadata: { reason } }, ctx, tx);
+    await audit(
+      { actorType: 'ADMIN', actorId: adminId, action: `admin.club_${action.toLowerCase()}`, targetType: 'club', targetId: clubId, clubId, metadata: { reason } },
+      ctx,
+      tx,
+    );
   });
   return getClub(clubId);
 }
@@ -204,8 +266,23 @@ export async function listSettings() {
 export async function upsertSetting(adminId: string, key: string, value: Prisma.InputJsonValue, description: string | undefined, ctx: AuditContext) {
   return prisma.$transaction(async (tx) => {
     const before = await tx.platformSetting.findUnique({ where: { key } });
-    const row = await tx.platformSetting.upsert({ where: { key }, create: { key, value, description, updatedById: adminId }, update: { value, description, updatedById: adminId } });
-    await audit({ actorType: 'ADMIN', actorId: adminId, action: 'admin.setting_updated', targetType: 'platform_setting', targetId: key, metadata: { from: (before?.value ?? null) as Prisma.InputJsonValue, to: value } }, ctx, tx);
+    const row = await tx.platformSetting.upsert({
+      where: { key },
+      create: { key, value, description, updatedById: adminId },
+      update: { value, description, updatedById: adminId },
+    });
+    await audit(
+      {
+        actorType: 'ADMIN',
+        actorId: adminId,
+        action: 'admin.setting_updated',
+        targetType: 'platform_setting',
+        targetId: key,
+        metadata: { from: (before?.value ?? null) as Prisma.InputJsonValue, to: value },
+      },
+      ctx,
+      tx,
+    );
     return row;
   });
 }

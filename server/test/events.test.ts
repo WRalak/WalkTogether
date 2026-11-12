@@ -9,7 +9,20 @@ const H = 3600_000;
 
 async function proClub(ownerToken: { accessToken: string }, club: { id: string }) {
   const plan = await prisma.subscriptionPlan.create({
-    data: { code: `ev_${uid()}`, audience: 'CLUB', name: 'Pro', isActive: true, entitlements: { create: [{ key: 'club.recurring_events', boolValue: true }, { key: 'club.exports', boolValue: true }, { key: 'club.analytics_advanced', boolValue: true }, { key: 'club.max_events_per_month', intLimit: 500 }] } },
+    data: {
+      code: `ev_${uid()}`,
+      audience: 'CLUB',
+      name: 'Pro',
+      isActive: true,
+      entitlements: {
+        create: [
+          { key: 'club.recurring_events', boolValue: true },
+          { key: 'club.exports', boolValue: true },
+          { key: 'club.analytics_advanced', boolValue: true },
+          { key: 'club.max_events_per_month', intLimit: 500 },
+        ],
+      },
+    },
   });
   await prisma.$transaction((tx) => activateSubscription({ clubId: club.id }, plan.id, tx));
   void ownerToken;
@@ -42,7 +55,11 @@ describe('events', () => {
     const list = await api().get(`/api/v1/clubs/${club.id}/events`).set(bearer(outsider)).expect(200);
     expect(list.body.data).toHaveLength(0);
     // Public events of public clubs are discoverable, also by location.
-    const pub = await api().post(`/api/v1/clubs/${club.id}/events`).set(bearer(organizer)).send(eventBody({ visibility: 'PUBLIC', title: `Public ${uid()}` })).expect(201);
+    const pub = await api()
+      .post(`/api/v1/clubs/${club.id}/events`)
+      .set(bearer(organizer))
+      .send(eventBody({ visibility: 'PUBLIC', title: `Public ${uid()}` }))
+      .expect(201);
     const near = await api().get('/api/v1/events').query({ near: '-1.2341,36.8327', radiusKm: 2 }).expect(200);
     expect(near.body.data.map((e: { id: string }) => e.id)).toContain(pub.body.data.id);
   });
@@ -50,11 +67,17 @@ describe('events', () => {
   it('enforces the monthly event limit and gates recurring events by plan', async () => {
     const owner = await registerUser();
     const club = await createClub(owner);
-    const free = await prisma.subscriptionPlan.create({ data: { code: `lim_${uid()}`, audience: 'CLUB', name: 'Tiny', isActive: true, entitlements: { create: [{ key: 'club.max_events_per_month', intLimit: 1 }] } } });
+    const free = await prisma.subscriptionPlan.create({
+      data: { code: `lim_${uid()}`, audience: 'CLUB', name: 'Tiny', isActive: true, entitlements: { create: [{ key: 'club.max_events_per_month', intLimit: 1 }] } },
+    });
     await prisma.$transaction((tx) => activateSubscription({ clubId: club.id }, free.id, tx));
     await api().post(`/api/v1/clubs/${club.id}/events`).set(bearer(owner)).send(eventBody()).expect(201);
     expect((await api().post(`/api/v1/clubs/${club.id}/events`).set(bearer(owner)).send(eventBody()).expect(402)).body.error.code).toBe('PLAN_LIMIT_REACHED');
-    const rec = await api().post(`/api/v1/clubs/${club.id}/events`).set(bearer(owner)).send(eventBody({ recurrence: { frequency: 'WEEKLY', count: 4 } })).expect(402);
+    const rec = await api()
+      .post(`/api/v1/clubs/${club.id}/events`)
+      .set(bearer(owner))
+      .send(eventBody({ recurrence: { frequency: 'WEEKLY', count: 4 } }))
+      .expect(402);
     expect(rec.body.error.code).toBe('PLAN_UPGRADE_REQUIRED');
   });
 
@@ -64,7 +87,11 @@ describe('events', () => {
     const club = await createClub(owner);
     await proClub(owner, club);
     await addMember(club.id, member.id);
-    const ev = await api().post(`/api/v1/clubs/${club.id}/events`).set(bearer(owner)).send(eventBody({ recurrence: { frequency: 'WEEKLY', count: 4 } })).expect(201);
+    const ev = await api()
+      .post(`/api/v1/clubs/${club.id}/events`)
+      .set(bearer(owner))
+      .send(eventBody({ recurrence: { frequency: 'WEEKLY', count: 4 } }))
+      .expect(201);
     const series = await prisma.event.findMany({ where: { seriesId: ev.body.data.seriesId }, orderBy: { startsAt: 'asc' } });
     expect(series).toHaveLength(4);
     expect(series[1]!.startsAt.getTime() - series[0]!.startsAt.getTime()).toBe(7 * 24 * H);
@@ -80,7 +107,11 @@ describe('events', () => {
     const club = await createClub(owner);
     const [a, b, c] = [await registerUser(), await registerUser(), await registerUser()];
     for (const u of [a, b, c]) await addMember(club.id, u.id);
-    const ev = await api().post(`/api/v1/clubs/${club.id}/events`).set(bearer(owner)).send(eventBody({ maxParticipants: 2 })).expect(201);
+    const ev = await api()
+      .post(`/api/v1/clubs/${club.id}/events`)
+      .set(bearer(owner))
+      .send(eventBody({ maxParticipants: 2 }))
+      .expect(201);
     const id = ev.body.data.id;
     const results = await Promise.all([a, b, c].map((u) => api().post(`/api/v1/events/${id}/rsvp`).set(bearer(u)).send({ going: true })));
     const statuses = results.map((r) => r.body.data.status).sort();
@@ -99,16 +130,28 @@ describe('events', () => {
     const member = await registerUser();
     const club = await createClub(owner);
     await addMember(club.id, member.id);
-    const ev = await api().post(`/api/v1/clubs/${club.id}/events`).set(bearer(owner)).send(eventBody({ startsAt: new Date(Date.now() + 10 * 60_000).toISOString() })).expect(201);
+    const ev = await api()
+      .post(`/api/v1/clubs/${club.id}/events`)
+      .set(bearer(owner))
+      .send(eventBody({ startsAt: new Date(Date.now() + 10 * 60_000).toISOString() }))
+      .expect(201);
     const id = ev.body.data.id;
     await api().get(`/api/v1/events/${id}/check-in-code`).set(bearer(member)).expect(403);
     const code = (await api().get(`/api/v1/events/${id}/check-in-code`).set(bearer(owner)).expect(200)).body.data.code;
-    await api().post(`/api/v1/events/${id}/check-in`).set(bearer(member)).send({ code: `${code.split('.')[0]}.forgedforgedforgedforg` }).expect(400);
+    await api()
+      .post(`/api/v1/events/${id}/check-in`)
+      .set(bearer(member))
+      .send({ code: `${code.split('.')[0]}.forgedforgedforgedforg` })
+      .expect(400);
     const res = await api().post(`/api/v1/events/${id}/check-in`).set(bearer(member)).send({ code, lat: -1.2345, lng: 36.833 }).expect(200);
     expect(res.body.data.method).toBe('QR');
     expect(res.body.data.distanceFromMeetingM).toBeLessThan(100);
     // A code from another event is rejected.
-    const other = await api().post(`/api/v1/clubs/${club.id}/events`).set(bearer(owner)).send(eventBody({ startsAt: new Date(Date.now() + 10 * 60_000).toISOString() })).expect(201);
+    const other = await api()
+      .post(`/api/v1/clubs/${club.id}/events`)
+      .set(bearer(owner))
+      .send(eventBody({ startsAt: new Date(Date.now() + 10 * 60_000).toISOString() }))
+      .expect(201);
     await api().post(`/api/v1/events/${other.body.data.id}/check-in`).set(bearer(member)).send({ code }).expect(400);
   });
 

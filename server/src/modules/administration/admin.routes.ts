@@ -185,7 +185,13 @@ adminRouter.get('/subscriptions', requireAdminPermission('billing.view'), async 
   res.json({ data: rows });
 });
 adminRouter.post('/subscriptions/grant', requireAdminPermission('plans.manage'), async (req, res) => {
-  const body = parse(z.object({ planId: z.string().uuid(), clubId: z.string().uuid().optional(), userId: z.string().uuid().optional() }).strict().refine((b) => !!b.clubId !== !!b.userId, 'Provide exactly one of clubId or userId'), req.body);
+  const body = parse(
+    z
+      .object({ planId: z.string().uuid(), clubId: z.string().uuid().optional(), userId: z.string().uuid().optional() })
+      .strict()
+      .refine((b) => !!b.clubId !== !!b.userId, 'Provide exactly one of clubId or userId'),
+    req.body,
+  );
   const plan = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { id: body.planId } });
   if ((plan.audience === 'CLUB') !== !!body.clubId) throw badRequest('Plan audience does not match subject');
   res.status(201).json({ data: await subs.adminGrantPlan(req.admin!.adminId, body.clubId ? { clubId: body.clubId } : { userId: body.userId! }, body.planId, auditCtx(req)) });
@@ -214,7 +220,9 @@ adminRouter.post('/challenges', requireAdminPermission('sponsorships.manage'), a
   res.status(201).json({ data: await createPlatformChallenge(req.admin!.adminId, parse(adminChallengeSchema, req.body), auditCtx(req)) });
 });
 adminRouter.get('/challenges', requireAdminPermission('platform.overview.view'), async (_req, res) => {
-  res.json({ data: await prisma.challenge.findMany({ orderBy: { createdAt: 'desc' }, take: 200, include: { _count: { select: { participants: true } }, club: { select: { name: true } } } }) });
+  res.json({
+    data: await prisma.challenge.findMany({ orderBy: { createdAt: 'desc' }, take: 200, include: { _count: { select: { participants: true } }, club: { select: { name: true } } } }),
+  });
 });
 adminRouter.post('/challenges/:id/cancel', requireAdminPermission('sponsorships.manage'), async (req, res) => {
   await cancelChallenge(parse(idParam, req.params).id, { adminId: req.admin!.adminId }, auditCtx(req));
@@ -227,7 +235,10 @@ adminRouter.put('/achievements/:code', requireAdminPermission('settings.manage')
   const body = parse(achievementDefinitionSchema, { ...req.body, code: req.params.code });
   const rule = achievementRuleSchema.parse(body.rule);
   const row = await prisma.fitnessAchievement.upsert({ where: { code: body.code }, create: { ...body, rule }, update: { ...body, rule } });
-  await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.achievement_saved', targetType: 'achievement', targetId: row.id, metadata: { code: body.code } }, auditCtx(req));
+  await audit(
+    { actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.achievement_saved', targetType: 'achievement', targetId: row.id, metadata: { code: body.code } },
+    auditCtx(req),
+  );
   res.json({ data: row });
 });
 
@@ -242,7 +253,14 @@ adminRouter.get('/revenue', requireAdminPermission('billing.view'), async (_req,
 });
 adminRouter.get('/payments', requireAdminPermission('billing.view'), async (req, res) => {
   const { status } = parse(z.object({ status: z.enum(['PENDING', 'SUCCEEDED', 'FAILED', 'CANCELLED', 'REFUNDED', 'PARTIALLY_REFUNDED']).optional() }), req.query);
-  res.json({ data: await prisma.payment.findMany({ where: status ? { status } : {}, orderBy: { createdAt: 'desc' }, take: 200, include: { invoice: { select: { number: true } }, payer: { select: { username: true } } } }) });
+  res.json({
+    data: await prisma.payment.findMany({
+      where: status ? { status } : {},
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: { invoice: { select: { number: true } }, payer: { select: { username: true } } },
+    }),
+  });
 });
 adminRouter.post('/payments/:id/refund', requireAdminPermission('plans.manage'), async (req, res) => {
   const { amountMinor, reason } = parse(z.object({ amountMinor: z.number().int().positive(), reason: z.string().trim().min(3).max(300) }).strict(), req.body);
@@ -254,11 +272,16 @@ adminRouter.get('/promotions', requireAdminPermission('plans.manage'), async (_r
 adminRouter.put('/promotions/:code', requireAdminPermission('plans.manage'), async (req, res) => {
   const body = parse(promotionSchema, { ...req.body, code: req.params.code });
   const row = await prisma.promotion.upsert({ where: { code: body.code }, create: body, update: body });
-  await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.promotion_saved', targetType: 'promotion', targetId: row.id, metadata: { code: row.code } }, auditCtx(req));
+  await audit(
+    { actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.promotion_saved', targetType: 'promotion', targetId: row.id, metadata: { code: row.code } },
+    auditCtx(req),
+  );
   res.json({ data: row });
 });
 adminRouter.get('/sponsors', requireAdminPermission('sponsorships.manage'), async (_req, res) => {
-  res.json({ data: await prisma.sponsor.findMany({ orderBy: { createdAt: 'desc' }, include: { owner: { select: { username: true } }, _count: { select: { campaigns: true } } } }) });
+  res.json({
+    data: await prisma.sponsor.findMany({ orderBy: { createdAt: 'desc' }, include: { owner: { select: { username: true } }, _count: { select: { campaigns: true } } } }),
+  });
 });
 adminRouter.post('/sponsors/:id/status', requireAdminPermission('sponsorships.manage'), async (req, res) => {
   const { status } = parse(z.object({ status: z.enum(['ACTIVE', 'SUSPENDED']) }).strict(), req.body);
@@ -267,7 +290,13 @@ adminRouter.post('/sponsors/:id/status', requireAdminPermission('sponsorships.ma
   res.json({ data: row });
 });
 adminRouter.get('/campaigns', requireAdminPermission('sponsorships.manage'), async (_req, res) => {
-  res.json({ data: await prisma.sponsoredCampaign.findMany({ orderBy: { createdAt: 'desc' }, take: 200, include: { sponsor: { select: { name: true } }, _count: { select: { events: true, rewards: true } } } }) });
+  res.json({
+    data: await prisma.sponsoredCampaign.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: { sponsor: { select: { name: true } }, _count: { select: { events: true, rewards: true } } },
+    }),
+  });
 });
 adminRouter.post('/campaigns/:id/review', requireAdminPermission('sponsorships.manage'), async (req, res) => {
   const { decision, note } = parse(z.object({ decision: z.enum(['APPROVE', 'REJECT']), note: z.string().trim().min(3).max(500) }).strict(), req.body);
@@ -319,14 +348,22 @@ adminRouter.post('/events/:id/cancel', requireAdminPermission('moderation.manage
   await platformAnalytics.adminCancelEvent(req.admin!.adminId, parse(idParam, req.params).id, reason, auditCtx(req));
   res.status(204).end();
 });
-const REPORT_PERMISSION: Record<platformAnalytics.ReportKind, AdminPermissionKey> = { users: 'users.view', clubs: 'clubs.view', payments: 'billing.view', activity: 'platform.overview.view' };
+const REPORT_PERMISSION: Record<platformAnalytics.ReportKind, AdminPermissionKey> = {
+  users: 'users.view',
+  clubs: 'clubs.view',
+  payments: 'billing.view',
+  activity: 'platform.overview.view',
+};
 adminRouter.get('/reports/:kind.csv', async (req, res, next) => {
   const kind = z.enum(platformAnalytics.REPORT_KINDS).safeParse(req.params.kind);
   if (!kind.success) return next();
   await new Promise<void>((resolve, reject) => requireAdminPermission(REPORT_PERMISSION[kind.data])(req, res, (err?: unknown) => (err ? reject(err) : resolve())));
   const { from, to } = parse(z.object({ from: z.coerce.date().default(() => new Date(Date.now() - 30 * 86_400_000)), to: z.coerce.date().default(() => new Date()) }), req.query);
   const csv = await platformAnalytics.platformReportCsv(kind.data, from, to);
-  await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.report_exported', targetType: 'report', targetId: kind.data, metadata: { from, to } }, auditCtx(req));
+  await audit(
+    { actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.report_exported', targetType: 'report', targetId: kind.data, metadata: { from, to } },
+    auditCtx(req),
+  );
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${kind.data}-report.csv"`);
   res.send(csv);
@@ -345,16 +382,37 @@ adminRouter.post('/admin-sessions/:id/revoke', requireAdminPermission('admins.ma
   res.status(204).end();
 });
 adminRouter.get('/admins', requireAdminPermission('admins.manage'), async (_req, res) => {
-  res.json({ data: await prisma.adminUser.findMany({ orderBy: { createdAt: 'asc' }, select: { id: true, email: true, displayName: true, status: true, mfaEnabledAt: true, lastLoginAt: true, role: { select: { key: true, name: true } } } }) });
+  res.json({
+    data: await prisma.adminUser.findMany({
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, email: true, displayName: true, status: true, mfaEnabledAt: true, lastLoginAt: true, role: { select: { key: true, name: true } } },
+    }),
+  });
 });
 adminRouter.get('/admin-roles', requireAdminPermission('admins.manage'), async (_req, res) => {
   res.json({ data: await prisma.adminRole.findMany({ include: { permissions: { select: { permissionKey: true } } } }) });
 });
 adminRouter.post('/admins', requireAdminPermission('admins.manage'), async (req, res) => {
-  const body = parse(z.object({ email: emailSchema, displayName: z.string().trim().min(2).max(80), roleKey: z.enum(['SUPER_ADMIN', 'SUPPORT', 'FINANCE', 'MODERATOR']), password: passwordSchema.refine((p) => p.length >= 14, 'At least 14 characters') }).strict(), req.body);
+  const body = parse(
+    z
+      .object({
+        email: emailSchema,
+        displayName: z.string().trim().min(2).max(80),
+        roleKey: z.enum(['SUPER_ADMIN', 'SUPPORT', 'FINANCE', 'MODERATOR']),
+        password: passwordSchema.refine((p) => p.length >= 14, 'At least 14 characters'),
+      })
+      .strict(),
+    req.body,
+  );
   const role = await prisma.adminRole.findUniqueOrThrow({ where: { key: body.roleKey } });
-  const created = await prisma.adminUser.create({ data: { email: body.email, displayName: body.displayName, roleId: role.id, passwordHash: await hashPassword(body.password) }, select: { id: true, email: true } });
-  await audit({ actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.created', targetType: 'admin', targetId: created.id, metadata: { role: body.roleKey } }, auditCtx(req));
+  const created = await prisma.adminUser.create({
+    data: { email: body.email, displayName: body.displayName, roleId: role.id, passwordHash: await hashPassword(body.password) },
+    select: { id: true, email: true },
+  });
+  await audit(
+    { actorType: 'ADMIN', actorId: req.admin!.adminId, action: 'admin.created', targetType: 'admin', targetId: created.id, metadata: { role: body.roleKey } },
+    auditCtx(req),
+  );
   res.status(201).json({ data: created });
 });
 adminRouter.post('/admins/:id/status', requireAdminPermission('admins.manage'), async (req, res) => {

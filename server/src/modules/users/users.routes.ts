@@ -1,13 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import {
-  deleteAccountSchema,
-  emailSchema,
-  registerDeviceSchema,
-  updateMeSchema,
-  updateNotificationSettingsSchema,
-  updatePrivacySchema,
-} from '@walktogether/validation';
+import { deleteAccountSchema, emailSchema, registerDeviceSchema, updateMeSchema, updateNotificationSettingsSchema, updatePrivacySchema } from '@walktogether/validation';
 import { authUserId, optionalAuth, requireAuth } from '../../middleware/authenticate';
 import { auditCtx } from '../../middleware/request-context';
 import { parse } from '../../middleware/validate';

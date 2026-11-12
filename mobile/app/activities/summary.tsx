@@ -69,7 +69,13 @@ export default function Summary() {
       <SectionTitle>Who can see this?</SectionTitle>
       <View className="flex-row gap-2">
         {VIS.map((v) => (
-          <Pressable key={v.key} accessibilityRole="radio" accessibilityState={{ selected: visibility === v.key }} onPress={() => setVisibility(v.key)} className={`flex-1 items-center rounded-xl border py-3 ${visibility === v.key ? 'border-primary bg-primary-soft' : 'border-line bg-surface'}`}>
+          <Pressable
+            key={v.key}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: visibility === v.key }}
+            onPress={() => setVisibility(v.key)}
+            className={`flex-1 items-center rounded-xl border py-3 ${visibility === v.key ? 'border-primary bg-primary-soft' : 'border-line bg-surface'}`}
+          >
             <Text className={`font-semibold ${visibility === v.key ? 'text-primary' : 'text-ink-muted'}`}>{v.label}</Text>
           </Pressable>
         ))}
@@ -82,8 +88,16 @@ export default function Summary() {
             .map((c) => {
               const on = clubIds.includes(c.id);
               return (
-                <Pressable key={c.id} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => setClubIds(on ? clubIds.filter((x) => x !== c.id) : [...clubIds, c.id])} className="mb-2 flex-row items-center gap-3 rounded-xl border border-line bg-surface p-3">
-                  <View className={`h-6 w-6 items-center justify-center rounded-md border-2 ${on ? 'border-primary bg-primary' : 'border-line'}`}>{on && <Text className="font-bold text-white">✓</Text>}</View>
+                <Pressable
+                  key={c.id}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: on }}
+                  onPress={() => setClubIds(on ? clubIds.filter((x) => x !== c.id) : [...clubIds, c.id])}
+                  className="mb-2 flex-row items-center gap-3 rounded-xl border border-line bg-surface p-3"
+                >
+                  <View className={`h-6 w-6 items-center justify-center rounded-md border-2 ${on ? 'border-primary bg-primary' : 'border-line'}`}>
+                    {on && <Text className="font-bold text-white">✓</Text>}
+                  </View>
                   <Text className="text-ink">{c.name}</Text>
                 </Pressable>
               );

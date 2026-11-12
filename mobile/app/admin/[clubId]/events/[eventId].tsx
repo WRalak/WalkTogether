@@ -77,8 +77,16 @@ export default function ManageEvent() {
       <Text className="text-sm text-ink-muted">
         {new Date(e.startsAt).toLocaleString([], { dateStyle: 'full', timeStyle: 'short' })} · {e.meetingPoint}
       </Text>
-      {e.status === 'CANCELLED' && <View className="mt-2"><Badge tone="warning" label={`Cancelled: ${e.cancelReason ?? ''}`} /></View>}
-      {error ? <View className="mt-3"><Notice>{error}</Notice></View> : null}
+      {e.status === 'CANCELLED' && (
+        <View className="mt-2">
+          <Badge tone="warning" label={`Cancelled: ${e.cancelReason ?? ''}`} />
+        </View>
+      )}
+      {error ? (
+        <View className="mt-3">
+          <Notice>{error}</Notice>
+        </View>
+      ) : null}
       {people.data && (
         <View className="mt-4 flex-row flex-wrap gap-3">
           <StatTile label="Going" value={people.data.going} hint={e.maxParticipants ? `Capacity ${e.maxParticipants}` : undefined} />
@@ -132,8 +140,21 @@ export default function ManageEvent() {
         <Card className="mt-6 border-danger">
           <Text className="mb-2 text-base font-bold text-ink">Cancel event</Text>
           <TextField label="Reason (sent to participants)" value={reason} onChangeText={setReason} />
-          <Button title="Cancel this event" variant="danger" disabled={reason.trim().length < 3} onPress={() => confirm('Cancel event', 'Everyone who RSVP’d will be notified.', () => cancel.mutate(false), 'Cancel event')} />
-          {e.seriesId && <Button title="Cancel this and future occurrences" variant="outline" className="mt-2" disabled={reason.trim().length < 3} onPress={() => confirm('Cancel series', 'This and all future occurrences will be cancelled.', () => cancel.mutate(true), 'Cancel series')} />}
+          <Button
+            title="Cancel this event"
+            variant="danger"
+            disabled={reason.trim().length < 3}
+            onPress={() => confirm('Cancel event', 'Everyone who RSVP’d will be notified.', () => cancel.mutate(false), 'Cancel event')}
+          />
+          {e.seriesId && (
+            <Button
+              title="Cancel this and future occurrences"
+              variant="outline"
+              className="mt-2"
+              disabled={reason.trim().length < 3}
+              onPress={() => confirm('Cancel series', 'This and all future occurrences will be cancelled.', () => cancel.mutate(true), 'Cancel series')}
+            />
+          )}
         </Card>
       )}
     </Screen>

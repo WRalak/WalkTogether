@@ -79,9 +79,14 @@ export function createAdminApi(options: Omit<HttpClientOptions, 'refreshPath'>) 
     auth: {
       login: (email: string, password: string) =>
         http.request<{ mfaToken: string; mfaSetupRequired: boolean }>('/api/v1/platform-admin/auth/login', { method: 'POST', body: { email, password }, auth: false }),
-      setupMfa: (mfaToken: string) => http.request<{ secret: string; otpauthUrl: string }>('/api/v1/platform-admin/auth/mfa/setup', { method: 'POST', body: { mfaToken }, auth: false }),
+      setupMfa: (mfaToken: string) =>
+        http.request<{ secret: string; otpauthUrl: string }>('/api/v1/platform-admin/auth/mfa/setup', { method: 'POST', body: { mfaToken }, auth: false }),
       verifyMfa: async (mfaToken: string, code: string) => {
-        const t = await http.request<{ accessToken: string; refreshToken?: string }>('/api/v1/platform-admin/auth/mfa/verify', { method: 'POST', body: { mfaToken, code }, auth: false });
+        const t = await http.request<{ accessToken: string; refreshToken?: string }>('/api/v1/platform-admin/auth/mfa/verify', {
+          method: 'POST',
+          body: { mfaToken, code },
+          auth: false,
+        });
         await options.tokens.setTokens(t);
         return t;
       },
@@ -109,8 +114,20 @@ export function createAdminApi(options: Omit<HttpClientOptions, 'refreshPath'>) 
       approve: (id: string) => http.request<unknown>(`/api/v1/platform-admin/clubs/${id}/approve`, { method: 'POST', body: {} }),
     },
     reports: {
-      list: (query: Query = {}) => http.page<{ id: string; targetType: string; targetId: string; reason: string; details: string | null; status: string; preview: string | null; createdAt: string; reporter: { username: string } }>('/api/v1/platform-admin/reports', { query }),
-      resolve: (id: string, action: 'DISMISS' | 'HIDE_CONTENT' | 'SUSPEND_USER', note: string) => http.request<void>(`/api/v1/platform-admin/reports/${id}/resolve`, { method: 'POST', body: { action, note } }),
+      list: (query: Query = {}) =>
+        http.page<{
+          id: string;
+          targetType: string;
+          targetId: string;
+          reason: string;
+          details: string | null;
+          status: string;
+          preview: string | null;
+          createdAt: string;
+          reporter: { username: string };
+        }>('/api/v1/platform-admin/reports', { query }),
+      resolve: (id: string, action: 'DISMISS' | 'HIDE_CONTENT' | 'SUSPEND_USER', note: string) =>
+        http.request<void>(`/api/v1/platform-admin/reports/${id}/resolve`, { method: 'POST', body: { action, note } }),
     },
     revenue: () => http.request<Json>('/api/v1/platform-admin/revenue'),
     system: () => http.request<Json>('/api/v1/platform-admin/system'),
@@ -153,7 +170,8 @@ export function createAdminApi(options: Omit<HttpClientOptions, 'refreshPath'>) 
     },
     /** CSV report downloads (moderation cases are under `reports`). */
     exports: {
-      csv: (kind: 'users' | 'clubs' | 'payments' | 'activity', range: { from?: string; to?: string } = {}) => http.text(`/api/v1/platform-admin/reports/${kind}.csv`, { query: range }),
+      csv: (kind: 'users' | 'clubs' | 'payments' | 'activity', range: { from?: string; to?: string } = {}) =>
+        http.text(`/api/v1/platform-admin/reports/${kind}.csv`, { query: range }),
     },
     subscriptions: {
       list: (query: { status?: string; audience?: 'CLUB' | 'INDIVIDUAL' } = {}) =>
@@ -176,7 +194,8 @@ export function createAdminApi(options: Omit<HttpClientOptions, 'refreshPath'>) 
     },
     payments: {
       list: (status?: string) => http.request<Json[]>('/api/v1/platform-admin/payments', { query: { status } }),
-      refund: (id: string, amountMinor: number, reason: string) => http.request<Json>(`/api/v1/platform-admin/payments/${id}/refund`, { method: 'POST', body: { amountMinor, reason } }),
+      refund: (id: string, amountMinor: number, reason: string) =>
+        http.request<Json>(`/api/v1/platform-admin/payments/${id}/refund`, { method: 'POST', body: { amountMinor, reason } }),
     },
     sponsors: {
       list: () => http.request<Json[]>('/api/v1/platform-admin/sponsors'),
@@ -184,9 +203,11 @@ export function createAdminApi(options: Omit<HttpClientOptions, 'refreshPath'>) 
     },
     campaigns: {
       list: () => http.request<Json[]>('/api/v1/platform-admin/campaigns'),
-      review: (id: string, decision: 'APPROVE' | 'REJECT', note: string) => http.request<void>(`/api/v1/platform-admin/campaigns/${id}/review`, { method: 'POST', body: { decision, note } }),
+      review: (id: string, decision: 'APPROVE' | 'REJECT', note: string) =>
+        http.request<void>(`/api/v1/platform-admin/campaigns/${id}/review`, { method: 'POST', body: { decision, note } }),
       report: (id: string) => http.request<Json>(`/api/v1/platform-admin/campaigns/${id}/report`),
-      award: (id: string, topN: number, description: string) => http.request<Json[]>(`/api/v1/platform-admin/campaigns/${id}/rewards`, { method: 'POST', body: { topN, description } }),
+      award: (id: string, topN: number, description: string) =>
+        http.request<Json[]>(`/api/v1/platform-admin/campaigns/${id}/rewards`, { method: 'POST', body: { topN, description } }),
       fulfil: (rewardId: string) => http.request<Json>(`/api/v1/platform-admin/rewards/${rewardId}/fulfil`, { method: 'POST' }),
     },
     challenges: {

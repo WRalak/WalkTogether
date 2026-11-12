@@ -11,7 +11,15 @@ const buttonStyles: Record<Variant, { box: string; text: string }> = {
   ghost: { box: 'bg-transparent', text: 'text-primary' },
 };
 
-export function Button({ title, variant = 'primary', loading, disabled, className = '', textClassName = '', ...props }: PressableProps & { title: string; variant?: Variant; loading?: boolean; className?: string; textClassName?: string }) {
+export function Button({
+  title,
+  variant = 'primary',
+  loading,
+  disabled,
+  className = '',
+  textClassName = '',
+  ...props
+}: PressableProps & { title: string; variant?: Variant; loading?: boolean; className?: string; textClassName?: string }) {
   const s = buttonStyles[variant];
   const isDisabled = disabled || loading;
   return (

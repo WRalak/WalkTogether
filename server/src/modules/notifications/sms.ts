@@ -29,9 +29,7 @@ class ConsoleSmsProvider implements SmsProvider {
 class AfricasTalkingSmsProvider implements SmsProvider {
   async send(message: SmsMessage) {
     const sandbox = env.AFRICASTALKING_USERNAME === 'sandbox';
-    const url = sandbox
-      ? 'https://api.sandbox.africastalking.com/version1/messaging'
-      : 'https://api.africastalking.com/version1/messaging';
+    const url = sandbox ? 'https://api.sandbox.africastalking.com/version1/messaging' : 'https://api.africastalking.com/version1/messaging';
     const body = new URLSearchParams({ username: env.AFRICASTALKING_USERNAME!, to: message.to, message: message.body });
     if (env.AFRICASTALKING_SENDER_ID) body.set('from', env.AFRICASTALKING_SENDER_ID);
     const res = await fetch(url, {

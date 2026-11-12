@@ -109,7 +109,13 @@ export default function ClubDetail() {
         ) : (
           <View>
             {(needsInvite || c.visibility === 'PRIVATE') && (
-              <TextField label={needsInvite ? 'Invitation code' : 'Invitation code (optional)'} autoCapitalize="none" value={code} onChangeText={setCode} hint={needsInvite ? 'Ask a club admin for an invitation' : 'With a code you skip the approval queue'} />
+              <TextField
+                label={needsInvite ? 'Invitation code' : 'Invitation code (optional)'}
+                autoCapitalize="none"
+                value={code}
+                onChangeText={setCode}
+                hint={needsInvite ? 'Ask a club admin for an invitation' : 'With a code you skip the approval queue'}
+              />
             )}
             <Button
               title={code.trim() || (c.visibility === 'PUBLIC' && !c.requiresApproval) ? 'Join club' : 'Request to join'}

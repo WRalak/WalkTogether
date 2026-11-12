@@ -29,14 +29,21 @@ const CLUB_PERMISSION_DESCRIPTIONS: Record<(typeof CLUB_PERMISSIONS)[number], st
  */
 export async function syncPermissionCatalog() {
   for (const key of CLUB_PERMISSIONS) {
-    await prisma.clubPermission.upsert({ where: { key }, create: { key, description: CLUB_PERMISSION_DESCRIPTIONS[key] }, update: { description: CLUB_PERMISSION_DESCRIPTIONS[key] } });
+    await prisma.clubPermission.upsert({
+      where: { key },
+      create: { key, description: CLUB_PERMISSION_DESCRIPTIONS[key] },
+      update: { description: CLUB_PERMISSION_DESCRIPTIONS[key] },
+    });
   }
   for (const key of ADMIN_PERMISSIONS) {
     const description = key.replace(/[._]/g, ' ');
     await prisma.adminPermission.upsert({ where: { key }, create: { key, description }, update: {} });
   }
   for (const roleKey of SYSTEM_ADMIN_ROLES) {
-    const name = roleKey.split('_').map((w) => w[0] + w.slice(1).toLowerCase()).join(' ');
+    const name = roleKey
+      .split('_')
+      .map((w) => w[0] + w.slice(1).toLowerCase())
+      .join(' ');
     const role = await prisma.adminRole.upsert({ where: { key: roleKey }, create: { key: roleKey, name }, update: {} });
     await prisma.adminRolePermission.createMany({
       data: DEFAULT_ADMIN_ROLE_PERMISSIONS[roleKey].map((permissionKey) => ({ roleId: role.id, permissionKey })),

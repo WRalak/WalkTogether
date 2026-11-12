@@ -17,7 +17,9 @@ export const transferOwnershipSchema = z.object({ membershipId: z.string().uuid(
 export const announcementSchema = z
   .object({ title: z.string().trim().min(2).max(140), body: z.string().trim().min(1).max(5000), pinned: z.boolean().default(false), notify: z.boolean().default(true) })
   .strict();
-export const updateAnnouncementSchema = z.object({ title: z.string().trim().min(2).max(140).optional(), body: z.string().trim().min(1).max(5000).optional(), pinned: z.boolean().optional() }).strict();
+export const updateAnnouncementSchema = z
+  .object({ title: z.string().trim().min(2).max(140).optional(), body: z.string().trim().min(1).max(5000).optional(), pinned: z.boolean().optional() })
+  .strict();
 
 export const listQuerySchema = cursorPaginationSchema.strict();
 
@@ -25,7 +27,10 @@ const entitlementKey = z.enum(Object.keys(ENTITLEMENTS) as [keyof typeof ENTITLE
 
 export const planInputSchema = z
   .object({
-    code: z.string().trim().regex(/^[a-z0-9_]{2,50}$/),
+    code: z
+      .string()
+      .trim()
+      .regex(/^[a-z0-9_]{2,50}$/),
     audience: z.enum(['CLUB', 'INDIVIDUAL']),
     name: z.string().trim().min(2).max(80),
     description: z.string().trim().max(500).nullable().optional(),
@@ -37,7 +42,10 @@ export const planInputSchema = z
     isActive: z.boolean().default(false),
     isDefault: z.boolean().default(false),
     sortOrder: z.number().int().min(0).max(1000).default(0),
-    entitlements: z.array(z.object({ key: entitlementKey, intLimit: z.number().int().min(0).max(1_000_000).nullable().optional(), boolValue: z.boolean().nullable().optional() }).strict()).max(50).default([]),
+    entitlements: z
+      .array(z.object({ key: entitlementKey, intLimit: z.number().int().min(0).max(1_000_000).nullable().optional(), boolValue: z.boolean().nullable().optional() }).strict())
+      .max(50)
+      .default([]),
   })
   .strict();
 export const updatePlanSchema = planInputSchema.omit({ code: true, audience: true }).partial().strict();

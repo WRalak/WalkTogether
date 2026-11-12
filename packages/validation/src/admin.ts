@@ -13,9 +13,7 @@ export const adminListClubsQuerySchema = cursorPaginationSchema
   .extend({ q: z.string().trim().max(100).optional(), status: z.enum(['ACTIVE', 'PENDING_APPROVAL', 'SUSPENDED', 'ARCHIVED']).optional() })
   .strict();
 
-export const adminStatusChangeSchema = z
-  .object({ action: z.enum(['SUSPEND', 'REACTIVATE']), reason: z.string().trim().min(3).max(500) })
-  .strict();
+export const adminStatusChangeSchema = z.object({ action: z.enum(['SUSPEND', 'REACTIVATE']), reason: z.string().trim().min(3).max(500) }).strict();
 
 export const adminAuditQuerySchema = cursorPaginationSchema
   .extend({

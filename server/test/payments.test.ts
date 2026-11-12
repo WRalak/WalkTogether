@@ -11,7 +11,15 @@ afterAll(teardown);
 
 async function paidPlan(audience: 'CLUB' | 'INDIVIDUAL', ent: Record<string, boolean | number>, amountMinor = 150000) {
   return prisma.subscriptionPlan.create({
-    data: { code: `p_${uid()}`, audience, name: `Plan ${uid()}`, isActive: true, amountMinor, currency: 'KES', entitlements: { create: Object.entries(ent).map(([key, v]) => (typeof v === 'number' ? { key, intLimit: v } : { key, boolValue: v })) } },
+    data: {
+      code: `p_${uid()}`,
+      audience,
+      name: `Plan ${uid()}`,
+      isActive: true,
+      amountMinor,
+      currency: 'KES',
+      entitlements: { create: Object.entries(ent).map(([key, v]) => (typeof v === 'number' ? { key, intLimit: v } : { key, boolValue: v })) },
+    },
   });
 }
 
@@ -20,7 +28,8 @@ function sandboxWebhook(providerRef: string, outcome: 'SUCCEEDED' | 'FAILED', ev
   return api().post('/api/v1/payments/webhooks/sandbox').set('Content-Type', 'application/json').set('X-Sandbox-Signature', sandboxSignature(body)).send(body);
 }
 
-const checkout = (u: TestUser, body: Record<string, unknown>, key = randomUUID()) => api().post('/api/v1/subscriptions/checkout').set(bearer(u)).set('Idempotency-Key', key).send(body);
+const checkout = (u: TestUser, body: Record<string, unknown>, key = randomUUID()) =>
+  api().post('/api/v1/subscriptions/checkout').set(bearer(u)).set('Idempotency-Key', key).send(body);
 
 describe('subscription checkout', () => {
   it('activates only after a verified provider confirmation; idempotent and invoiced', async () => {
@@ -37,7 +46,11 @@ describe('subscription checkout', () => {
 
     const payment = await prisma.payment.findUniqueOrThrow({ where: { id: r1.body.data.paymentId } });
     // Forged webhook is rejected.
-    await api().post('/api/v1/payments/webhooks/sandbox').set('X-Sandbox-Signature', 'forged').send({ eventId: 'x', providerRef: payment.providerRef, outcome: 'SUCCEEDED' }).expect(401);
+    await api()
+      .post('/api/v1/payments/webhooks/sandbox')
+      .set('X-Sandbox-Signature', 'forged')
+      .send({ eventId: 'x', providerRef: payment.providerRef, outcome: 'SUCCEEDED' })
+      .expect(401);
     expect((await api().get(`/api/v1/payments/${payment.id}`).set(bearer(owner)).expect(200)).body.data.status).toBe('PENDING');
 
     const evt = randomUUID();
@@ -145,7 +158,11 @@ describe('sponsorships', () => {
     const admin = await createAdmin();
     const A = { Authorization: `Bearer ${admin.accessToken}` };
     const brand = await registerUser();
-    const sponsor = await api().post('/api/v1/sponsors').set(bearer(brand)).send({ name: 'Safari Water', slug: `safari-${uid()}`, contactEmail: 'brand@example.com' }).expect(201);
+    const sponsor = await api()
+      .post('/api/v1/sponsors')
+      .set(bearer(brand))
+      .send({ name: 'Safari Water', slug: `safari-${uid()}`, contactEmail: 'brand@example.com' })
+      .expect(201);
     const campaignBody = {
       name: 'Safari Water 100K',
       type: 'CHALLENGE',
@@ -178,7 +195,18 @@ describe('sponsorships', () => {
     await api().post(`/api/v1/challenges/${c.challengeId}/join`).set(bearer(walker)).send({}).expect(400); // consent required
     await api().post(`/api/v1/challenges/${c.challengeId}/join`).set(bearer(walker)).send({ acceptTerms: true }).expect(200);
     // A verified, completed walk inside the window (server-computed stats are trusted here).
-    await prisma.activity.create({ data: { userId: walker.id, clientId: randomUUID(), type: 'WALK', status: 'COMPLETED', startedAt: new Date(Date.now() - 1800_000), endedAt: new Date(), distanceM: 12000, movingSeconds: 7200 } });
+    await prisma.activity.create({
+      data: {
+        userId: walker.id,
+        clientId: randomUUID(),
+        type: 'WALK',
+        status: 'COMPLETED',
+        startedAt: new Date(Date.now() - 1800_000),
+        endedAt: new Date(),
+        distanceM: 12000,
+        movingSeconds: 7200,
+      },
+    });
     await api().post(`/api/v1/challenges/${c.challengeId}/join`).set(bearer(walker)).send({ acceptTerms: true }).expect(200); // recompute
     const report = (await api().get(`/api/v1/campaigns/${cid}/report`).set(bearer(brand)).expect(200)).body.data;
     expect(report.challenge.participants).toBe(1);
@@ -199,18 +227,43 @@ describe('sponsorships', () => {
     const ev = await api()
       .post(`/api/v1/clubs/${club.id}/events`)
       .set(bearer(owner))
-      .send({ title: 'Charity walk', type: 'CHARITY_WALK', visibility: 'PUBLIC', startsAt: new Date(Date.now() + 5 * 86_400_000).toISOString(), endsAt: new Date(Date.now() + 5 * 86_400_000 + 7200_000).toISOString(), meetingPoint: 'Uhuru Park' })
+      .send({
+        title: 'Charity walk',
+        type: 'CHARITY_WALK',
+        visibility: 'PUBLIC',
+        startsAt: new Date(Date.now() + 5 * 86_400_000).toISOString(),
+        endsAt: new Date(Date.now() + 5 * 86_400_000 + 7200_000).toISOString(),
+        meetingPoint: 'Uhuru Park',
+      })
       .expect(201);
     const brand = await registerUser();
-    const sp = await api().post('/api/v1/sponsors').set(bearer(brand)).send({ name: 'Jua Bank', slug: `jua-${uid()}`, contactEmail: 'csr@example.com' }).expect(201);
+    const sp = await api()
+      .post('/api/v1/sponsors')
+      .set(bearer(brand))
+      .send({ name: 'Jua Bank', slug: `jua-${uid()}`, contactEmail: 'csr@example.com' })
+      .expect(201);
     await api().post(`/api/v1/platform-admin/sponsors/${sp.body.data.id}/status`).set(A).send({ status: 'ACTIVE' }).expect(200);
     const camp = await api()
       .post(`/api/v1/sponsors/${sp.body.data.id}/campaigns`)
       .set(bearer(brand))
-      .send({ name: 'Jua charity walk', type: 'EVENT', budgetMinor: 1_000_000, currency: 'KES', startsAt: new Date().toISOString(), endsAt: new Date(Date.now() + 10 * 86_400_000).toISOString(), terms: 'Jua Bank sponsors refreshments. No participant data is shared with the sponsor; reports are aggregated.', eventIds: [ev.body.data.id] })
+      .send({
+        name: 'Jua charity walk',
+        type: 'EVENT',
+        budgetMinor: 1_000_000,
+        currency: 'KES',
+        startsAt: new Date().toISOString(),
+        endsAt: new Date(Date.now() + 10 * 86_400_000).toISOString(),
+        terms: 'Jua Bank sponsors refreshments. No participant data is shared with the sponsor; reports are aggregated.',
+        eventIds: [ev.body.data.id],
+      })
       .expect(201);
     await api().post(`/api/v1/campaigns/${camp.body.data.id}/submit`).set(bearer(brand)).expect(200);
-    const pay = await api().post(`/api/v1/payments/campaigns/${camp.body.data.id}/checkout`).set(bearer(brand)).set('Idempotency-Key', randomUUID()).send({ provider: 'sandbox' }).expect(202);
+    const pay = await api()
+      .post(`/api/v1/payments/campaigns/${camp.body.data.id}/checkout`)
+      .set(bearer(brand))
+      .set('Idempotency-Key', randomUUID())
+      .send({ provider: 'sandbox' })
+      .expect(202);
     await sandboxWebhook((await prisma.payment.findUniqueOrThrow({ where: { id: pay.body.data.paymentId } })).providerRef!, 'SUCCEEDED').expect(200);
     await api().post(`/api/v1/platform-admin/campaigns/${camp.body.data.id}/review`).set(A).send({ decision: 'APPROVE', note: 'ok go' }).expect(204);
     expect((await api().get(`/api/v1/events/${ev.body.data.id}`).expect(200)).body.data.sponsor).toBeNull();

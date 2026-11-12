@@ -33,7 +33,11 @@ export default function UserProfile() {
   const qc = useQueryClient();
   const like = useLike();
   const q = useQuery({ queryKey: ['profile', username], queryFn: () => api.users.profile(username) as Promise<unknown> as Promise<Profile> });
-  const posts = useQuery({ queryKey: ['user-posts', q.data?.id], queryFn: () => api.social.userPosts(q.data!.id), enabled: !!q.data && (!q.data.isPrivate || q.data.id === me?.id) });
+  const posts = useQuery({
+    queryKey: ['user-posts', q.data?.id],
+    queryFn: () => api.social.userPosts(q.data!.id),
+    enabled: !!q.data && (!q.data.isPrivate || q.data.id === me?.id),
+  });
   const follow = useMutation({
     mutationFn: async () => (q.data!.viewerFollows ? api.social.unfollow(q.data!.id) : api.social.follow(q.data!.id)),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['profile', username] }),
@@ -46,7 +50,11 @@ export default function UserProfile() {
     <Screen edges={[]}>
       <Stack.Screen options={{ title: `@${p.username}` }} />
       <View className="items-center">
-        {p.avatarUrl ? <Image source={{ uri: p.avatarUrl }} className="h-20 w-20 rounded-full" accessibilityIgnoresInvertColors /> : <Avatar label={initials(p.displayName)} size={80} />}
+        {p.avatarUrl ? (
+          <Image source={{ uri: p.avatarUrl }} className="h-20 w-20 rounded-full" accessibilityIgnoresInvertColors />
+        ) : (
+          <Avatar label={initials(p.displayName)} size={80} />
+        )}
         <Text accessibilityRole="header" className="mt-3 text-2xl font-extrabold text-ink">
           {p.displayName}
         </Text>
@@ -104,7 +112,11 @@ export default function UserProfile() {
               ))}
             </View>
           )}
-          <View className="mt-5">{posts.data?.items.map((post) => <PostCard key={post.id} post={post} onLike={like} />)}</View>
+          <View className="mt-5">
+            {posts.data?.items.map((post) => (
+              <PostCard key={post.id} post={post} onLike={like} />
+            ))}
+          </View>
         </>
       )}
     </Screen>

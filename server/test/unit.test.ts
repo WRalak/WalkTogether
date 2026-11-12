@@ -46,7 +46,12 @@ describe('split hosting', () => {
     expect(registrableDomain('api.walktogether.app')).toBe('walktogether.app');
     expect(registrableDomain('clubs.walktogether.co.ke')).toBe('walktogether.co.ke');
     expect(
-      crossSiteOrigins('https://api.walktogether.app', ['https://walktogether.app', 'https://clubs.walktogether.app', 'https://admin.walktogether.app', 'https://wt-clubs.vercel.app']),
+      crossSiteOrigins('https://api.walktogether.app', [
+        'https://walktogether.app',
+        'https://clubs.walktogether.app',
+        'https://admin.walktogether.app',
+        'https://wt-clubs.vercel.app',
+      ]),
     ).toEqual(['https://wt-clubs.vercel.app']);
     expect(crossSiteOrigins('https://api.walktogether.co.ke', ['https://clubs.walktogether.co.ke', 'https://other.co.ke'])).toEqual(['https://other.co.ke']);
   });

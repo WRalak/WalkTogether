@@ -39,8 +39,39 @@ export default function Login() {
           <ErrorState message={error} />
         </View>
       )}
-      <Controller control={control} name="email" render={({ field }) => <TextField label="Email" autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" value={field.value} onChangeText={field.onChange} onBlur={field.onBlur} error={formState.errors.email?.message} />} />
-      <Controller control={control} name="password" render={({ field }) => <TextField label="Password" secureTextEntry autoComplete="current-password" textContentType="password" value={field.value} onChangeText={field.onChange} onBlur={field.onBlur} error={formState.errors.password?.message} />} />
+      <Controller
+        control={control}
+        name="email"
+        render={({ field }) => (
+          <TextField
+            label="Email"
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            error={formState.errors.email?.message}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="password"
+        render={({ field }) => (
+          <TextField
+            label="Password"
+            secureTextEntry
+            autoComplete="current-password"
+            textContentType="password"
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            error={formState.errors.password?.message}
+          />
+        )}
+      />
       <Button title="Sign in" onPress={onSubmit} loading={formState.isSubmitting} />
       <Link href="/(auth)/forgot-password" asChild>
         <Button title="Forgot password?" variant="ghost" className="mt-2" />

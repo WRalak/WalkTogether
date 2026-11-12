@@ -23,7 +23,11 @@ export const createChallengeSchema = z
   .strict();
 
 export const adminChallengeSchema = createChallengeSchema
-  .extend({ scope: z.enum(['PLATFORM', 'CLUB_VS_CLUB', 'SPONSORED']), clubIds: z.array(z.string().uuid()).max(50).optional(), sponsorName: z.string().trim().max(120).nullable().optional() })
+  .extend({
+    scope: z.enum(['PLATFORM', 'CLUB_VS_CLUB', 'SPONSORED']),
+    clubIds: z.array(z.string().uuid()).max(50).optional(),
+    sponsorName: z.string().trim().max(120).nullable().optional(),
+  })
   .strict();
 
 export const achievementDefinitionSchema = z

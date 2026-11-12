@@ -9,12 +9,18 @@ describe('email links', () => {
   it('verification email links to the API page, which verifies the address', async () => {
     const u = await registerUser({ verified: false });
     expect(lastEmailTo(u.email).text).toContain('/links/verify-email?token=');
-    const res = await api().get('/links/verify-email').query({ token: tokenFromEmail(u.email) }).expect(200);
+    const res = await api()
+      .get('/links/verify-email')
+      .query({ token: tokenFromEmail(u.email) })
+      .expect(200);
     expect(res.headers['content-type']).toMatch(/text\/html/);
     expect(res.text).toContain('Email verified');
     const row = await prisma.user.findUniqueOrThrow({ where: { id: u.id } });
     expect(row.emailVerifiedAt).not.toBeNull();
-    await api().get('/links/verify-email').query({ token: tokenFromEmail(u.email) }).expect(400);
+    await api()
+      .get('/links/verify-email')
+      .query({ token: tokenFromEmail(u.email) })
+      .expect(400);
     await api().get('/links/verify-email').query({ token: 'x' }).expect(400);
   });
 

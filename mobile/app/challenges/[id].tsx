@@ -18,7 +18,11 @@ export default function ChallengeDetail() {
   const [team, setTeam] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ['challenge', id] }), qc.invalidateQueries({ queryKey: ['challenge-lb', id] })]);
-  const join = useMutation({ mutationFn: () => api.challenges.join(id, { hideFromLeaderboard: hidden, teamClubId: team ?? undefined, acceptTerms: consent || undefined }), onSuccess: refresh, onError: (e) => Alert.alert('Could not join', errorMessage(e)) });
+  const join = useMutation({
+    mutationFn: () => api.challenges.join(id, { hideFromLeaderboard: hidden, teamClubId: team ?? undefined, acceptTerms: consent || undefined }),
+    onSuccess: refresh,
+    onError: (e) => Alert.alert('Could not join', errorMessage(e)),
+  });
   const leave = useMutation({ mutationFn: () => api.challenges.leave(id), onSuccess: refresh, onError: (e) => Alert.alert('Could not leave', errorMessage(e)) });
   if (c.isLoading) return <Loading />;
   if (!c.data) return <ErrorState message={errorMessage(c.error, 'Challenge not found')} />;
@@ -43,7 +47,11 @@ export default function ChallengeDetail() {
           <Text className="font-semibold text-ink">Your progress</Text>
           <Text className="mt-1 text-3xl font-extrabold text-ink">{metricValue(ch.metric, ch.me.progressValue)}</Text>
           {ch.target != null && (
-            <View className="mt-3 h-3 overflow-hidden rounded-full bg-primary-soft" accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round((ch.me.progress ?? 0) * 100) }}>
+            <View
+              className="mt-3 h-3 overflow-hidden rounded-full bg-primary-soft"
+              accessibilityRole="progressbar"
+              accessibilityValue={{ min: 0, max: 100, now: Math.round((ch.me.progress ?? 0) * 100) }}
+            >
               <View className="h-3 rounded-full bg-primary" style={{ width: `${Math.round((ch.me.progress ?? 0) * 100)}%` }} />
             </View>
           )}
@@ -57,7 +65,13 @@ export default function ChallengeDetail() {
               <Text className="mb-2 font-semibold text-ink">Represent your club</Text>
               {myTeams.length ? (
                 myTeams.map((t) => (
-                  <Pressable key={t.clubId} accessibilityRole="radio" accessibilityState={{ selected: team === t.clubId }} onPress={() => setTeam(t.clubId)} className={`mb-2 rounded-xl border p-3 ${team === t.clubId ? 'border-primary bg-primary-soft' : 'border-line'}`}>
+                  <Pressable
+                    key={t.clubId}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: team === t.clubId }}
+                    onPress={() => setTeam(t.clubId)}
+                    className={`mb-2 rounded-xl border p-3 ${team === t.clubId ? 'border-primary bg-primary-soft' : 'border-line'}`}
+                  >
                     <Text className="text-ink">{t.club.name}</Text>
                   </Pressable>
                 ))
@@ -72,7 +86,9 @@ export default function ChallengeDetail() {
           </View>
           {ch.isSponsored && (
             <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: consent }} onPress={() => setConsent((v) => !v)} className="mb-3 flex-row items-start gap-3">
-              <View className={`mt-0.5 h-6 w-6 items-center justify-center rounded-md border-2 ${consent ? 'border-primary bg-primary' : 'border-line'}`}>{consent && <Text className="font-bold text-white">✓</Text>}</View>
+              <View className={`mt-0.5 h-6 w-6 items-center justify-center rounded-md border-2 ${consent ? 'border-primary bg-primary' : 'border-line'}`}>
+                {consent && <Text className="font-bold text-white">✓</Text>}
+              </View>
               <Text className="flex-1 text-sm text-ink-muted">I accept {ch.sponsorName}’s competition terms below. My personal data is not shared with the sponsor.</Text>
             </Pressable>
           )}

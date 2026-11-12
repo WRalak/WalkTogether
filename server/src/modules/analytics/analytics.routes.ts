@@ -32,4 +32,3 @@ clubAnalyticsRouter.get('/:clubId/reports/members.csv', requireAuth, async (req,
   res.setHeader('Content-Disposition', 'attachment; filename="members.csv"');
   res.send(csv);
 });
-

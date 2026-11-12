@@ -24,13 +24,28 @@ export default function Moderation() {
     onError: (e) => setError(errorMessage(e)),
   });
   if (!club) return <Loading />;
-  if (!can('community.moderate')) return <Screen edges={[]}><NoPermission what="moderate the community" /></Screen>;
+  if (!can('community.moderate'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="moderate the community" />
+      </Screen>
+    );
 
   return (
     <Screen edges={[]} refreshing={reports.isRefetching} onRefresh={() => void reports.refetch()}>
       <Stack.Screen options={{ title: 'Moderation' }} />
-      <Text className="mb-3 text-sm text-ink-muted">Reports about posts, comments and messages in your club. Serious issues are also visible to the WalkTogether trust & safety team.</Text>
-      <Tabs value={status} options={[{ key: 'OPEN', label: 'Open' }, { key: 'ACTIONED', label: 'Hidden' }, { key: 'DISMISSED', label: 'Dismissed' }]} onChange={setStatus} />
+      <Text className="mb-3 text-sm text-ink-muted">
+        Reports about posts, comments and messages in your club. Serious issues are also visible to the WalkTogether trust & safety team.
+      </Text>
+      <Tabs
+        value={status}
+        options={[
+          { key: 'OPEN', label: 'Open' },
+          { key: 'ACTIONED', label: 'Hidden' },
+          { key: 'DISMISSED', label: 'Dismissed' },
+        ]}
+        onChange={setStatus}
+      />
       {error ? <Notice>{error}</Notice> : null}
       {reports.isLoading ? (
         <Loading />
@@ -51,7 +66,12 @@ export default function Moderation() {
               </Text>
               {status === 'OPEN' && (
                 <View className="mt-3 flex-row gap-2">
-                  <Button title="Hide content" variant="danger" className="min-h-[40px] flex-1" onPress={() => confirm('Hide content', 'Members will no longer see it.', () => resolve.mutate({ id: r.id, action: 'HIDE' }), 'Hide')} />
+                  <Button
+                    title="Hide content"
+                    variant="danger"
+                    className="min-h-[40px] flex-1"
+                    onPress={() => confirm('Hide content', 'Members will no longer see it.', () => resolve.mutate({ id: r.id, action: 'HIDE' }), 'Hide')}
+                  />
                   <Button title="Dismiss" variant="outline" className="min-h-[40px] flex-1" onPress={() => resolve.mutate({ id: r.id, action: 'DISMISS' })} />
                 </View>
               )}

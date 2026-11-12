@@ -77,8 +77,12 @@ export default function ClubsPage() {
                         Approve
                       </Button>
                     )}
-                    {can('clubs.suspend') && (c.status === 'ACTIVE' || c.status === 'PENDING_APPROVAL') && <StatusAction label="Suspend" variant="destructive" onConfirm={(r) => run(() => adminApi.clubs.setStatus(c.id, 'SUSPEND', r))} />}
-                    {can('clubs.suspend') && c.status === 'SUSPENDED' && <StatusAction label="Reactivate" onConfirm={(r) => run(() => adminApi.clubs.setStatus(c.id, 'REACTIVATE', r))} />}
+                    {can('clubs.suspend') && (c.status === 'ACTIVE' || c.status === 'PENDING_APPROVAL') && (
+                      <StatusAction label="Suspend" variant="destructive" onConfirm={(r) => run(() => adminApi.clubs.setStatus(c.id, 'SUSPEND', r))} />
+                    )}
+                    {can('clubs.suspend') && c.status === 'SUSPENDED' && (
+                      <StatusAction label="Reactivate" onConfirm={(r) => run(() => adminApi.clubs.setStatus(c.id, 'REACTIVATE', r))} />
+                    )}
                   </div>
                 </Td>
               </tr>

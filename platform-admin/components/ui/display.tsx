@@ -89,5 +89,7 @@ export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTab
     </div>
   );
 }
-export const Th = ({ className, ...p }: React.ThHTMLAttributes<HTMLTableCellElement>) => <th className={cn('border-b bg-muted px-4 py-2.5 font-medium text-muted-foreground', className)} {...p} />;
+export const Th = ({ className, ...p }: React.ThHTMLAttributes<HTMLTableCellElement>) => (
+  <th className={cn('border-b bg-muted px-4 py-2.5 font-medium text-muted-foreground', className)} {...p} />
+);
 export const Td = ({ className, ...p }: React.TdHTMLAttributes<HTMLTableCellElement>) => <td className={cn('border-b px-4 py-2.5 align-middle', className)} {...p} />;

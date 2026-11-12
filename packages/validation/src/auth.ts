@@ -36,23 +36,15 @@ export const refreshSchema = z.object({ refreshToken: z.string().min(20).max(512
 
 export const forgotPasswordSchema = z.object({ email: emailSchema }).strict();
 
-export const resetPasswordSchema = z
-  .object({ token: z.string().min(20).max(256), password: passwordSchema })
-  .strict();
+export const resetPasswordSchema = z.object({ token: z.string().min(20).max(256), password: passwordSchema }).strict();
 
 export const verifyEmailSchema = z.object({ token: z.string().min(20).max(256) }).strict();
 
-export const changePasswordSchema = z
-  .object({ currentPassword: z.string().min(1).max(128), newPassword: passwordSchema })
-  .strict();
+export const changePasswordSchema = z.object({ currentPassword: z.string().min(1).max(128), newPassword: passwordSchema }).strict();
 
-export const phoneOtpRequestSchema = z
-  .object({ phone: phoneSchema, purpose: z.enum(['LOGIN', 'VERIFY']) })
-  .strict();
+export const phoneOtpRequestSchema = z.object({ phone: phoneSchema, purpose: z.enum(['LOGIN', 'VERIFY']) }).strict();
 
-export const phoneOtpVerifySchema = z
-  .object({ phone: phoneSchema, code: otpCodeSchema, purpose: z.enum(['LOGIN', 'VERIFY']), device: deviceInfoSchema.optional() })
-  .strict();
+export const phoneOtpVerifySchema = z.object({ phone: phoneSchema, code: otpCodeSchema, purpose: z.enum(['LOGIN', 'VERIFY']), device: deviceInfoSchema.optional() }).strict();
 
 export const oauthLoginSchema = z
   .object({
@@ -64,9 +56,7 @@ export const oauthLoginSchema = z
   })
   .strict();
 
-export const deleteAccountSchema = z
-  .object({ password: z.string().max(128).optional(), confirm: z.literal('DELETE') })
-  .strict();
+export const deleteAccountSchema = z.object({ password: z.string().max(128).optional(), confirm: z.literal('DELETE') }).strict();
 
 export const phoneRegistrationSchema = z
   .object({
@@ -79,12 +69,21 @@ export const phoneRegistrationSchema = z
   .strict();
 
 // Optional member MFA (TOTP + single-use recovery codes) -----------------------------------------
-export const totpCodeSchema = z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code from your authenticator app');
-export const recoveryCodeSchema = z.string().trim().toLowerCase().regex(/^[a-z0-9]{5}-[a-z0-9]{5}$/, 'Recovery codes look like abcde-12345');
+export const totpCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, 'Enter the 6-digit code from your authenticator app');
+export const recoveryCodeSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(/^[a-z0-9]{5}-[a-z0-9]{5}$/, 'Recovery codes look like abcde-12345');
 export const mfaVerifySchema = z
   .object({ mfaToken: z.string().min(20).max(2000), code: totpCodeSchema.optional(), recoveryCode: recoveryCodeSchema.optional() })
   .strict()
   .refine((b) => !!b.code !== !!b.recoveryCode, { message: 'Provide either an authenticator code or a recovery code' });
 export const mfaEnableSchema = z.object({ code: totpCodeSchema }).strict();
-export const mfaDisableSchema = z.object({ code: totpCodeSchema.optional(), recoveryCode: recoveryCodeSchema.optional(), password: z.string().max(128).optional() }).strict()
+export const mfaDisableSchema = z
+  .object({ code: totpCodeSchema.optional(), recoveryCode: recoveryCodeSchema.optional(), password: z.string().max(128).optional() })
+  .strict()
   .refine((b) => !!b.code !== !!b.recoveryCode, { message: 'Provide either an authenticator code or a recovery code' });

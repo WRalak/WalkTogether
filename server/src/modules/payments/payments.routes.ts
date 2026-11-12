@@ -59,7 +59,9 @@ paymentsRouter.get('/invoices/:id/html', requireAuth, async (req, res) => {
   res.send(svc.renderInvoiceHtml(inv));
 });
 paymentsRouter.post('/campaigns/:id/checkout', requireAuth, async (req, res) => {
-  res.status(202).json({ data: await svc.campaignCheckout(authUserId(req), idempotencyKey(req.header('idempotency-key')), parse(idParam, req.params).id, parse(campaignCheckoutSchema, req.body)) });
+  res.status(202).json({
+    data: await svc.campaignCheckout(authUserId(req), idempotencyKey(req.header('idempotency-key')), parse(idParam, req.params).id, parse(campaignCheckoutSchema, req.body)),
+  });
 });
 paymentsRouter.get('/:id', requireAuth, async (req, res) => {
   res.json({ data: await svc.getPayment(parse(idParam, req.params).id, authUserId(req)) });

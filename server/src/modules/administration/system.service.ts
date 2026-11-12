@@ -11,7 +11,10 @@ export async function systemHealth() {
   const t0 = Date.now();
   const db = await prisma.$queryRaw`SELECT 1`.then(() => ({ ok: true, latencyMs: Date.now() - t0 })).catch((e) => ({ ok: false, error: String(e).slice(0, 200) }));
   const t1 = Date.now();
-  const cache = await redis.ping().then(() => ({ ok: true, latencyMs: Date.now() - t1 })).catch((e) => ({ ok: false, error: String(e).slice(0, 200) }));
+  const cache = await redis
+    .ping()
+    .then(() => ({ ok: true, latencyMs: Date.now() - t1 }))
+    .catch((e) => ({ ok: false, error: String(e).slice(0, 200) }));
   const queues: Record<string, unknown> = {};
   if (env.QUEUE_DRIVER === 'bullmq') {
     for (const name of ['notifications', 'maintenance', 'activity'] as const) {
@@ -20,7 +23,9 @@ export async function systemHealth() {
         .catch((e) => ({ error: String(e).slice(0, 100) }));
     }
   }
-  const migrations = await prisma.$queryRaw<{ migration_name: string; finished_at: Date | null }[]>`SELECT migration_name, finished_at FROM _prisma_migrations ORDER BY started_at DESC LIMIT 1`.catch(() => []);
+  const migrations = await prisma.$queryRaw<
+    { migration_name: string; finished_at: Date | null }[]
+  >`SELECT migration_name, finished_at FROM _prisma_migrations ORDER BY started_at DESC LIMIT 1`.catch(() => []);
   const [webhookErrors, pendingPayments, openReports] = await Promise.all([
     prisma.webhookEvent.count({ where: { error: { not: null }, receivedAt: { gte: new Date(Date.now() - 86_400_000) } } }),
     prisma.payment.count({ where: { status: 'PENDING' } }),
@@ -54,14 +59,29 @@ export async function systemHealth() {
 export async function securityOverview() {
   const since = new Date(Date.now() - 7 * 86_400_000);
   const [suspicious, failedLogins, lockedUsers, tokenReuse, adminFailures, adminSessions] = await Promise.all([
-    prisma.loginEvent.findMany({ where: { suspicious: true, createdAt: { gte: since } }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, userId: true, ipAddress: true, userAgent: true, method: true, createdAt: true, user: { select: { username: true } } } }),
+    prisma.loginEvent.findMany({
+      where: { suspicious: true, createdAt: { gte: since } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: { id: true, userId: true, ipAddress: true, userAgent: true, method: true, createdAt: true, user: { select: { username: true } } },
+    }),
     prisma.loginEvent.count({ where: { success: false, createdAt: { gte: since } } }),
     prisma.user.count({ where: { lockedUntil: { gt: new Date() } } }),
-    prisma.auditLog.findMany({ where: { action: { in: ['auth.refresh_token_reuse_detected', 'admin.refresh_token_reuse_detected'] }, createdAt: { gte: since } }, orderBy: { createdAt: 'desc' }, take: 50 }),
+    prisma.auditLog.findMany({
+      where: { action: { in: ['auth.refresh_token_reuse_detected', 'admin.refresh_token_reuse_detected'] }, createdAt: { gte: since } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    }),
     prisma.auditLog.findMany({ where: { action: { in: ['admin.login_failed', 'admin.mfa_failed'] }, createdAt: { gte: since } }, orderBy: { createdAt: 'desc' }, take: 50 }),
     prisma.adminSession.findMany({ where: { revokedAt: null, expiresAt: { gt: new Date() } }, orderBy: { lastUsedAt: 'desc' }, include: { admin: { select: { email: true } } } }),
   ]);
-  const topFailingIps = await prisma.loginEvent.groupBy({ by: ['ipAddress'], where: { success: false, createdAt: { gte: since } }, _count: true, orderBy: { _count: { ipAddress: 'desc' } }, take: 10 });
+  const topFailingIps = await prisma.loginEvent.groupBy({
+    by: ['ipAddress'],
+    where: { success: false, createdAt: { gte: since } },
+    _count: true,
+    orderBy: { _count: { ipAddress: 'desc' } },
+    take: 10,
+  });
   return {
     window: '7d',
     failedLogins,

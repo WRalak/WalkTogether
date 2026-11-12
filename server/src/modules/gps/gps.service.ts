@@ -77,7 +77,10 @@ export async function analyseActivity(
   }
   if (stats.avgSpeedMps && stats.avgSpeedMps > (activity.type === 'RUN' ? 7 : 3.5)) flags.unrealisticAverageSpeed = stats.avgSpeedMps;
 
-  const display = simplify(segments.flatMap((s) => s.points).map((p) => ({ lat: p.lat, lng: p.lng })), 4);
+  const display = simplify(
+    segments.flatMap((s) => s.points).map((p) => ({ lat: p.lat, lng: p.lng })),
+    4,
+  );
   return {
     stats,
     flags,

@@ -40,13 +40,20 @@ export async function clubGrowth(clubId: string, actorId: string) {
   await requireFeature({ clubId }, 'club.analytics_advanced');
   const since = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 11, 1));
   const [joins, attendance, top] = await Promise.all([
-    prisma.$queryRaw<{ month: Date; n: bigint }[]>`SELECT date_trunc('month', joined_at) AS month, count(*) AS n FROM club_memberships WHERE club_id = ${clubId}::uuid AND joined_at >= ${since} GROUP BY 1 ORDER BY 1`,
-    prisma.$queryRaw<{ month: Date; n: bigint }[]>`SELECT date_trunc('month', a.checked_in_at) AS month, count(*) AS n FROM event_attendance a JOIN events e ON e.id = a.event_id WHERE e.club_id = ${clubId}::uuid AND a.checked_in_at >= ${since} GROUP BY 1 ORDER BY 1`,
-    prisma.$queryRaw<{ user_id: string; n: bigint }[]>`SELECT a.user_id, count(*) AS n FROM event_attendance a JOIN events e ON e.id = a.event_id WHERE e.club_id = ${clubId}::uuid AND a.checked_in_at >= ${since} GROUP BY 1 ORDER BY 2 DESC LIMIT 10`,
+    prisma.$queryRaw<
+      { month: Date; n: bigint }[]
+    >`SELECT date_trunc('month', joined_at) AS month, count(*) AS n FROM club_memberships WHERE club_id = ${clubId}::uuid AND joined_at >= ${since} GROUP BY 1 ORDER BY 1`,
+    prisma.$queryRaw<
+      { month: Date; n: bigint }[]
+    >`SELECT date_trunc('month', a.checked_in_at) AS month, count(*) AS n FROM event_attendance a JOIN events e ON e.id = a.event_id WHERE e.club_id = ${clubId}::uuid AND a.checked_in_at >= ${since} GROUP BY 1 ORDER BY 1`,
+    prisma.$queryRaw<
+      { user_id: string; n: bigint }[]
+    >`SELECT a.user_id, count(*) AS n FROM event_attendance a JOIN events e ON e.id = a.event_id WHERE e.club_id = ${clubId}::uuid AND a.checked_in_at >= ${since} GROUP BY 1 ORDER BY 2 DESC LIMIT 10`,
   ]);
   const users = await prisma.user.findMany({ where: { id: { in: top.map((t) => t.user_id) } }, select: { id: true, username: true, profile: { select: { displayName: true } } } });
   const months = Array.from({ length: 12 }, (_, i) => new Date(Date.UTC(since.getUTCFullYear(), since.getUTCMonth() + i, 1)).toISOString().slice(0, 7));
-  const series = (rows: { month: Date; n: bigint }[]) => months.map((m) => ({ month: m, value: Number(rows.find((r) => new Date(r.month).toISOString().slice(0, 7) === m)?.n ?? 0) }));
+  const series = (rows: { month: Date; n: bigint }[]) =>
+    months.map((m) => ({ month: m, value: Number(rows.find((r) => new Date(r.month).toISOString().slice(0, 7) === m)?.n ?? 0) }));
   return {
     newMembers: series(joins),
     attendance: series(attendance),
@@ -66,7 +73,10 @@ export async function membersCsv(clubId: string, actorId: string) {
     select: { status: true, joinedAt: true, role: { select: { name: true } }, user: { select: { username: true, profile: { select: { displayName: true } } } } },
   });
   // Contact details are intentionally excluded: exports contain only club-relevant data.
-  return toCsv(['name', 'username', 'role', 'status', 'joined_at'], rows.map((r) => [r.user.profile?.displayName ?? r.user.username, r.user.username, r.role.name, r.status, r.joinedAt?.toISOString() ?? '']));
+  return toCsv(
+    ['name', 'username', 'role', 'status', 'joined_at'],
+    rows.map((r) => [r.user.profile?.displayName ?? r.user.username, r.user.username, r.role.name, r.status, r.joinedAt?.toISOString() ?? '']),
+  );
 }
 
 export async function attendanceReport(clubId: string, actorId: string, from?: Date, to?: Date) {
@@ -77,7 +87,16 @@ export async function attendanceReport(clubId: string, actorId: string, from?: D
     take: 200,
     select: { id: true, title: true, startsAt: true, status: true, goingCount: true, maxParticipants: true, _count: { select: { attendance: true } } },
   });
-  return events.map((e) => ({ id: e.id, title: e.title, startsAt: e.startsAt, status: e.status, going: e.goingCount, capacity: e.maxParticipants, attended: e._count.attendance, rate: e.goingCount ? Math.round((e._count.attendance / e.goingCount) * 100) : null }));
+  return events.map((e) => ({
+    id: e.id,
+    title: e.title,
+    startsAt: e.startsAt,
+    status: e.status,
+    going: e.goingCount,
+    capacity: e.maxParticipants,
+    attended: e._count.attendance,
+    rate: e.goingCount ? Math.round((e._count.attendance / e.goingCount) * 100) : null,
+  }));
 }
 
 /**
@@ -98,7 +117,14 @@ export async function clubActivities(clubId: string, actorId: string, q: { curso
     include: {
       activity: {
         select: {
-          id: true, type: true, title: true, startedAt: true, distanceM: true, movingSeconds: true, avgPaceSecPerKm: true, flagged: true,
+          id: true,
+          type: true,
+          title: true,
+          startedAt: true,
+          distanceM: true,
+          movingSeconds: true,
+          avgPaceSecPerKm: true,
+          flagged: true,
           user: { select: { id: true, username: true, profile: { select: { displayName: true, avatarUrl: true } } } },
         },
       },

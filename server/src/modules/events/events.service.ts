@@ -73,7 +73,10 @@ export async function createEvent(clubId: string, actorId: string, input: EventI
   if (input.startsAt.getTime() < Date.now() - 60 * MIN) throw badRequest('Events cannot start in the past');
   if (input.recurrence) await requireFeature({ clubId }, 'club.recurring_events');
   const dates = occurrences(input.startsAt, input.endsAt, input.recurrence);
-  await assertMonthlyLimit(clubId, dates.map((d) => d.startsAt));
+  await assertMonthlyLimit(
+    clubId,
+    dates.map((d) => d.startsAt),
+  );
   const { recurrence, ...fields } = input;
   const seriesId = recurrence ? crypto.randomUUID() : null;
   const ids = await prisma.$transaction(async (tx) => {
@@ -81,7 +84,15 @@ export async function createEvent(clubId: string, actorId: string, input: EventI
     for (const d of dates) {
       const closeOffset = input.registrationClosesAt ? input.startsAt.getTime() - input.registrationClosesAt.getTime() : null;
       const e = await tx.event.create({
-        data: { ...fields, ...d, clubId, createdById: actorId, seriesId, checkInSecret: randomToken(24), registrationClosesAt: closeOffset != null ? new Date(d.startsAt.getTime() - closeOffset) : null },
+        data: {
+          ...fields,
+          ...d,
+          clubId,
+          createdById: actorId,
+          seriesId,
+          checkInSecret: randomToken(24),
+          registrationClosesAt: closeOffset != null ? new Date(d.startsAt.getTime() - closeOffset) : null,
+        },
       });
       ids.push(e.id);
     }
@@ -93,9 +104,29 @@ export async function createEvent(clubId: string, actorId: string, input: EventI
 }
 
 const eventSelect = {
-  id: true, clubId: true, seriesId: true, title: true, description: true, type: true, status: true, visibility: true, startsAt: true, endsAt: true, timezone: true,
-  meetingPoint: true, meetingLat: true, meetingLng: true, routeDescription: true, distanceM: true, difficulty: true, maxParticipants: true, registrationClosesAt: true,
-  coverUrl: true, cancelReason: true, goingCount: true, createdAt: true,
+  id: true,
+  clubId: true,
+  seriesId: true,
+  title: true,
+  description: true,
+  type: true,
+  status: true,
+  visibility: true,
+  startsAt: true,
+  endsAt: true,
+  timezone: true,
+  meetingPoint: true,
+  meetingLat: true,
+  meetingLng: true,
+  routeDescription: true,
+  distanceM: true,
+  difficulty: true,
+  maxParticipants: true,
+  registrationClosesAt: true,
+  coverUrl: true,
+  cancelReason: true,
+  goingCount: true,
+  createdAt: true,
   club: { select: { id: true, slug: true, name: true, logoUrl: true, visibility: true, status: true } },
   sponsorship: { select: { acceptedAt: true, campaign: { select: { status: true, sponsor: { select: { name: true, logoUrl: true, websiteUrl: true } } } } } },
 } satisfies Prisma.EventSelect;
@@ -201,15 +232,31 @@ export async function updateEvent(eventId: string, actorId: string, input: Parti
   const { applyToSeries, recurrence: _r, ...fields } = input;
   const merged = { startsAt: fields.startsAt ?? e.startsAt, endsAt: fields.endsAt ?? e.endsAt };
   if (merged.endsAt <= merged.startsAt) throw badRequest('endsAt must be after startsAt');
-  if (fields.maxParticipants != null && fields.maxParticipants < e.goingCount) throw conflict('Capacity cannot be below the number of people already going', 'CAPACITY_BELOW_GOING');
+  if (fields.maxParticipants != null && fields.maxParticipants < e.goingCount)
+    throw conflict('Capacity cannot be below the number of people already going', 'CAPACITY_BELOW_GOING');
   await prisma.$transaction(async (tx) => {
-    const targets = applyToSeries && e.seriesId ? (await tx.event.findMany({ where: { seriesId: e.seriesId, startsAt: { gte: e.startsAt }, status: 'SCHEDULED' }, select: { id: true } })).map((x) => x.id) : [e.id];
+    const targets =
+      applyToSeries && e.seriesId
+        ? (await tx.event.findMany({ where: { seriesId: e.seriesId, startsAt: { gte: e.startsAt }, status: 'SCHEDULED' }, select: { id: true } })).map((x) => x.id)
+        : [e.id];
     // Times are only changed on this occurrence; series edits update descriptive fields.
     const { startsAt, endsAt, ...shared } = fields;
     await tx.event.updateMany({ where: { id: { in: targets } }, data: shared });
     if (startsAt || endsAt) await tx.event.update({ where: { id: e.id }, data: { startsAt: merged.startsAt, endsAt: merged.endsAt } });
     await setMeetingLocation(tx, targets, fields.meetingLat, fields.meetingLng);
-    await audit({ actorType: 'USER', actorId, action: 'event.updated', targetType: 'event', targetId: e.id, clubId: e.clubId, metadata: { fields: Object.keys(fields), occurrences: targets.length } }, ctx, tx);
+    await audit(
+      {
+        actorType: 'USER',
+        actorId,
+        action: 'event.updated',
+        targetType: 'event',
+        targetId: e.id,
+        clubId: e.clubId,
+        metadata: { fields: Object.keys(fields), occurrences: targets.length },
+      },
+      ctx,
+      tx,
+    );
   });
   return getEvent(eventId, actorId);
 }
@@ -217,14 +264,27 @@ export async function updateEvent(eventId: string, actorId: string, input: Parti
 export async function cancelEvent(eventId: string, actorId: string, reason: string, applyToSeries: boolean, ctx: AuditContext) {
   const { e } = await manageableEvent(eventId, actorId, 'events.manage');
   if (e.status === 'CANCELLED') throw conflict('Event is already cancelled', 'ALREADY_CANCELLED');
-  const targets = applyToSeries && e.seriesId ? await prisma.event.findMany({ where: { seriesId: e.seriesId, startsAt: { gte: e.startsAt }, status: 'SCHEDULED' }, select: { id: true, title: true, startsAt: true } }) : [e];
+  const targets =
+    applyToSeries && e.seriesId
+      ? await prisma.event.findMany({ where: { seriesId: e.seriesId, startsAt: { gte: e.startsAt }, status: 'SCHEDULED' }, select: { id: true, title: true, startsAt: true } })
+      : [e];
   await prisma.$transaction(async (tx) => {
     await tx.event.updateMany({ where: { id: { in: targets.map((t) => t.id) } }, data: { status: 'CANCELLED', cancelReason: reason } });
-    await audit({ actorType: 'USER', actorId, action: 'event.cancelled', targetType: 'event', targetId: e.id, clubId: e.clubId, metadata: { reason, occurrences: targets.length } }, ctx, tx);
+    await audit(
+      { actorType: 'USER', actorId, action: 'event.cancelled', targetType: 'event', targetId: e.id, clubId: e.clubId, metadata: { reason, occurrences: targets.length } },
+      ctx,
+      tx,
+    );
   });
   for (const t of targets) {
     const regs = await prisma.eventRegistration.findMany({ where: { eventId: t.id, status: { in: ['GOING', 'WAITLISTED'] } }, select: { userId: true } });
-    await notify({ userIds: regs.map((r) => r.userId), type: 'event.cancelled', title: `Cancelled: ${t.title}`, body: `${t.startsAt.toUTCString()} — ${reason}`, data: { eventId: t.id } });
+    await notify({
+      userIds: regs.map((r) => r.userId),
+      type: 'event.cancelled',
+      title: `Cancelled: ${t.title}`,
+      body: `${t.startsAt.toUTCString()} — ${reason}`,
+      data: { eventId: t.id },
+    });
   }
 }
 
@@ -240,7 +300,9 @@ export async function rsvp(eventId: string, userId: string, going: boolean) {
   if (going && event.registrationClosesAt && event.registrationClosesAt < new Date()) throw conflict('Registration has closed', 'REGISTRATION_CLOSED');
 
   const result = await prisma.$transaction(async (tx) => {
-    const [locked] = await tx.$queryRaw<{ going_count: number; max_participants: number | null }[]>`SELECT going_count, max_participants FROM events WHERE id = ${eventId}::uuid FOR UPDATE`;
+    const [locked] = await tx.$queryRaw<
+      { going_count: number; max_participants: number | null }[]
+    >`SELECT going_count, max_participants FROM events WHERE id = ${eventId}::uuid FOR UPDATE`;
     const current = await tx.eventRegistration.findUnique({ where: { eventId_userId: { eventId, userId } } });
     let promoted: string | null = null;
     if (going) {
@@ -265,7 +327,13 @@ export async function rsvp(eventId: string, userId: string, going: boolean) {
     return { status: 'CANCELLED' as const, promoted };
   });
   if (result.promoted) {
-    await notify({ userIds: [result.promoted], type: 'event.reminder', title: `You’re in: ${event.title}`, body: 'A spot opened up and you’ve moved off the waitlist.', data: { eventId } });
+    await notify({
+      userIds: [result.promoted],
+      type: 'event.reminder',
+      title: `You’re in: ${event.title}`,
+      body: 'A spot opened up and you’ve moved off the waitlist.',
+      data: { eventId },
+    });
   }
   return { status: result.status };
 }
@@ -273,12 +341,37 @@ export async function rsvp(eventId: string, userId: string, going: boolean) {
 export async function participants(eventId: string, actorId: string) {
   const { e } = await manageableEvent(eventId, actorId, 'attendance.manage');
   const [regs, att] = await Promise.all([
-    prisma.eventRegistration.findMany({ where: { eventId: e.id, status: { not: 'CANCELLED' } }, orderBy: { createdAt: 'asc' }, select: { status: true, createdAt: true, user: { select: { id: true, username: true, profile: { select: { displayName: true } } } } } }),
-    prisma.eventAttendance.findMany({ where: { eventId: e.id }, select: { userId: true, method: true, checkedInAt: true, distanceFromMeetingM: true, user: { select: { id: true, username: true, profile: { select: { displayName: true } } } } } }),
+    prisma.eventRegistration.findMany({
+      where: { eventId: e.id, status: { not: 'CANCELLED' } },
+      orderBy: { createdAt: 'asc' },
+      select: { status: true, createdAt: true, user: { select: { id: true, username: true, profile: { select: { displayName: true } } } } },
+    }),
+    prisma.eventAttendance.findMany({
+      where: { eventId: e.id },
+      select: {
+        userId: true,
+        method: true,
+        checkedInAt: true,
+        distanceFromMeetingM: true,
+        user: { select: { id: true, username: true, profile: { select: { displayName: true } } } },
+      },
+    }),
   ]);
   const attended = new Map(att.map((a) => [a.userId, a]));
-  const rows = regs.map((r) => ({ user: { id: r.user.id, username: r.user.username, displayName: r.user.profile?.displayName ?? r.user.username }, registration: r.status, registeredAt: r.createdAt, attendance: attended.get(r.user.id) ?? null }));
-  for (const a of att) if (!regs.some((r) => r.user.id === a.userId)) rows.push({ user: { id: a.user.id, username: a.user.username, displayName: a.user.profile?.displayName ?? a.user.username }, registration: null as never, registeredAt: null as never, attendance: a });
+  const rows = regs.map((r) => ({
+    user: { id: r.user.id, username: r.user.username, displayName: r.user.profile?.displayName ?? r.user.username },
+    registration: r.status,
+    registeredAt: r.createdAt,
+    attendance: attended.get(r.user.id) ?? null,
+  }));
+  for (const a of att)
+    if (!regs.some((r) => r.user.id === a.userId))
+      rows.push({
+        user: { id: a.user.id, username: a.user.username, displayName: a.user.profile?.displayName ?? a.user.username },
+        registration: null as never,
+        registeredAt: null as never,
+        attendance: a,
+      });
   return { eventId: e.id, going: regs.filter((r) => r.status === 'GOING').length, waitlisted: regs.filter((r) => r.status === 'WAITLISTED').length, attended: att.length, rows };
 }
 
@@ -305,11 +398,15 @@ export async function selfCheckIn(eventId: string, userId: string, input: { code
   const { event, isMember } = await loadVisibleEvent(eventId, userId);
   if (event.status !== 'SCHEDULED') throw conflict('This event has been cancelled', 'EVENT_CANCELLED');
   const now = Date.now();
-  if (now < event.startsAt.getTime() - CHECK_IN_EARLY_MS || now > event.endsAt.getTime() + CHECK_IN_LATE_MS) throw conflict('Check-in is not open for this event', 'CHECK_IN_CLOSED');
+  if (now < event.startsAt.getTime() - CHECK_IN_EARLY_MS || now > event.endsAt.getTime() + CHECK_IN_LATE_MS)
+    throw conflict('Check-in is not open for this event', 'CHECK_IN_CLOSED');
   if (!verifyCode(event.id, event.checkInSecret, input.code)) throw badRequest('This check-in code is invalid or has expired. Scan the organizer’s current QR code.');
   if (event.visibility === 'MEMBERS' && !isMember) throw forbidden('Join the club to check in', 'MEMBERS_ONLY');
   // GPS proximity is recorded as a supporting signal only.
-  const distance = input.lat != null && input.lng != null && event.meetingLat != null && event.meetingLng != null ? Math.round(haversine({ lat: input.lat, lng: input.lng }, { lat: event.meetingLat, lng: event.meetingLng })) : null;
+  const distance =
+    input.lat != null && input.lng != null && event.meetingLat != null && event.meetingLng != null
+      ? Math.round(haversine({ lat: input.lat, lng: input.lng }, { lat: event.meetingLat, lng: event.meetingLng }))
+      : null;
   const row = await prisma.eventAttendance.upsert({
     where: { eventId_userId: { eventId, userId } },
     create: { eventId, userId, method: 'QR', distanceFromMeetingM: distance },
@@ -329,7 +426,10 @@ export async function organizerAttendance(eventId: string, actorId: string, user
   } else {
     await prisma.eventAttendance.deleteMany({ where: { eventId, userId } });
   }
-  await audit({ actorType: 'USER', actorId, action: present ? 'attendance.marked' : 'attendance.unmarked', targetType: 'event', targetId: eventId, clubId: e.clubId, metadata: { userId } }, ctx);
+  await audit(
+    { actorType: 'USER', actorId, action: present ? 'attendance.marked' : 'attendance.unmarked', targetType: 'event', targetId: eventId, clubId: e.clubId, metadata: { userId } },
+    ctx,
+  );
 }
 
 export async function attendanceCsv(eventId: string, actorId: string) {
@@ -339,7 +439,14 @@ export async function attendanceCsv(eventId: string, actorId: string) {
   const p = await participants(eventId, actorId);
   return toCsv(
     ['name', 'username', 'registration', 'attended', 'method', 'checked_in_at'],
-    p.rows.map((r) => [r.user.displayName, r.user.username, r.registration ?? '', r.attendance ? 'yes' : 'no', r.attendance?.method ?? '', r.attendance?.checkedInAt?.toISOString() ?? '']),
+    p.rows.map((r) => [
+      r.user.displayName,
+      r.user.username,
+      r.registration ?? '',
+      r.attendance ? 'yes' : 'no',
+      r.attendance?.method ?? '',
+      r.attendance?.checkedInAt?.toISOString() ?? '',
+    ]),
   );
 }
 
@@ -372,7 +479,13 @@ export async function sendEventReminders(now = new Date()) {
       const claimed = await prisma.eventReminder.createMany({ data: [{ eventId: e.id, kind: w.kind }], skipDuplicates: true });
       if (!claimed.count) continue;
       const regs = await prisma.eventRegistration.findMany({ where: { eventId: e.id, status: 'GOING' }, select: { userId: true } });
-      sent += await notify({ userIds: regs.map((r) => r.userId), type: 'event.reminder', title: `${w.kind === '24h' ? 'Tomorrow' : 'Starting soon'}: ${e.title}`, body: `${e.club.name} · meet at ${e.meetingPoint}`, data: { eventId: e.id } });
+      sent += await notify({
+        userIds: regs.map((r) => r.userId),
+        type: 'event.reminder',
+        title: `${w.kind === '24h' ? 'Tomorrow' : 'Starting soon'}: ${e.title}`,
+        body: `${e.club.name} · meet at ${e.meetingPoint}`,
+        data: { eventId: e.id },
+      });
     }
   }
   return { sent };

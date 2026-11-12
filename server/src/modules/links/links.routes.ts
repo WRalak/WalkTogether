@@ -28,9 +28,21 @@ linksRouter.get('/links/verify-email', authLimiter, async (req, res) => {
   if (!parsed.success) return send(res, page('Link invalid', '<h1>This link is invalid</h1><p>Request a new verification email from the app.</p>', { status: 'error' }), 400);
   try {
     await auth.verifyEmail(parsed.data, auditCtx(req));
-    send(res, page('Email verified', `<h1>Email verified</h1><p>Thanks — your email address is confirmed. You can return to the app.</p><a class="btn" href="${appLink('/')}">Open WalkTogether</a>`));
+    send(
+      res,
+      page(
+        'Email verified',
+        `<h1>Email verified</h1><p>Thanks — your email address is confirmed. You can return to the app.</p><a class="btn" href="${appLink('/')}">Open WalkTogether</a>`,
+      ),
+    );
   } catch (err) {
-    send(res, page('Link expired', `<h1>We couldn’t verify your email</h1><p>${esc(failMessage(err, 'Something went wrong.'))}</p><p>Request a new link from the app.</p>`, { status: 'error' }), 400);
+    send(
+      res,
+      page('Link expired', `<h1>We couldn’t verify your email</h1><p>${esc(failMessage(err, 'Something went wrong.'))}</p><p>Request a new link from the app.</p>`, {
+        status: 'error',
+      }),
+      400,
+    );
   }
 });
 
@@ -65,7 +77,10 @@ linksRouter.post('/links/reset-password', authLimiter, form, async (req, res) =>
   if (!strength.success) return send(res, resetForm(t, strength.error.issues[0]?.message ?? 'Choose a stronger password.'), 400);
   try {
     await auth.resetPassword(t, password, auditCtx(req));
-    send(res, page('Password changed', `<h1>Password changed</h1><p>Sign in to the app with your new password.</p><a class="btn" href="${appLink('/login')}">Open WalkTogether</a>`));
+    send(
+      res,
+      page('Password changed', `<h1>Password changed</h1><p>Sign in to the app with your new password.</p><a class="btn" href="${appLink('/login')}">Open WalkTogether</a>`),
+    );
   } catch (err) {
     send(res, page('Link expired', `<h1>We couldn’t reset your password</h1><p>${esc(failMessage(err, 'Something went wrong.'))}</p>`, { status: 'error' }), 400);
   }
@@ -82,7 +97,12 @@ linksRouter.get('/links/payment', (req, res) => {
 });
 
 linksRouter.get('/links/invite/:code', async (req, res) => {
-  const code = z.string().min(6).max(64).regex(/^[A-Za-z0-9_-]+$/).safeParse(req.params.code);
+  const code = z
+    .string()
+    .min(6)
+    .max(64)
+    .regex(/^[A-Za-z0-9_-]+$/)
+    .safeParse(req.params.code);
   if (!code.success) return send(res, page('Invitation invalid', '<h1>This invitation is invalid</h1>', { status: 'error' }), 404);
   try {
     const inv = await previewInvitation(code.data);

@@ -31,7 +31,11 @@ const SECTIONS: Section[] = [
 export default function ClubAdminOverview() {
   const { clubId, club, isLoading, error, refetch, isRefetching, can } = useAdminClub();
   const overview = useQuery({ queryKey: ['club-overview', clubId], queryFn: () => api.reports.overview(clubId), enabled: !!club && can('analytics.view') });
-  const pending = useQuery({ queryKey: ['members', clubId, 'PENDING', ''], queryFn: () => api.clubs.members(clubId, { status: 'PENDING', limit: 100 }), enabled: !!club && can('members.approve') });
+  const pending = useQuery({
+    queryKey: ['members', clubId, 'PENDING', ''],
+    queryFn: () => api.clubs.members(clubId, { status: 'PENDING', limit: 100 }),
+    enabled: !!club && can('members.approve'),
+  });
 
   if (isLoading) return <Loading />;
   if (error || !club)

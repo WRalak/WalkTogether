@@ -24,15 +24,7 @@ export const paymentCounter = new client.Counter({ name: 'payments_total', help:
  * user input — so cardinality stays bounded and no personal data reaches the metrics store.
  */
 export type SecurityEventType =
-  | 'auth_failure'
-  | 'mfa_failure'
-  | 'suspicious_login'
-  | 'refresh_token_reuse'
-  | 'rate_limited'
-  | 'unauthorized'
-  | 'forbidden'
-  | 'admin_action'
-  | 'payment_anomaly';
+  'auth_failure' | 'mfa_failure' | 'suspicious_login' | 'refresh_token_reuse' | 'rate_limited' | 'unauthorized' | 'forbidden' | 'admin_action' | 'payment_anomaly';
 export const securityEvents = new client.Counter({
   name: 'walktogether_security_events_total',
   help: 'Security-relevant events (authentication failures, abuse, denials, privileged actions, payment anomalies)',

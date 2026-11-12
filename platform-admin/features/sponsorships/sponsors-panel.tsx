@@ -22,9 +22,30 @@ export function SponsorsPanel() {
               label: '',
               render: (s) =>
                 s.status === 'ACTIVE' ? (
-                  <Button size="sm" variant="outline" onClick={() => run(async () => { await adminApi.sponsors.setStatus(String(s.id), 'SUSPENDED'); void sponsors.refetch(); })}>Suspend</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      run(async () => {
+                        await adminApi.sponsors.setStatus(String(s.id), 'SUSPENDED');
+                        void sponsors.refetch();
+                      })
+                    }
+                  >
+                    Suspend
+                  </Button>
                 ) : (
-                  <Button size="sm" onClick={() => run(async () => { await adminApi.sponsors.setStatus(String(s.id), 'ACTIVE'); void sponsors.refetch(); })}>Approve</Button>
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      run(async () => {
+                        await adminApi.sponsors.setStatus(String(s.id), 'ACTIVE');
+                        void sponsors.refetch();
+                      })
+                    }
+                  >
+                    Approve
+                  </Button>
                 ),
             },
           ]}

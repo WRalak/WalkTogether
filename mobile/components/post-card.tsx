@@ -15,7 +15,11 @@ export function PostCard({ post, onLike }: { post: PostDto; onLike: (p: PostDto)
     <View className="mb-3 rounded-3xl border border-line bg-surface p-4">
       <Link href={{ pathname: '/users/[username]', params: { username: post.author.username } }} asChild>
         <Pressable accessibilityRole="link" className="flex-row items-center gap-3">
-          {post.author.avatarUrl ? <Image source={{ uri: post.author.avatarUrl }} className="h-10 w-10 rounded-full" accessibilityIgnoresInvertColors /> : <Avatar label={initials(post.author.displayName)} size={40} />}
+          {post.author.avatarUrl ? (
+            <Image source={{ uri: post.author.avatarUrl }} className="h-10 w-10 rounded-full" accessibilityIgnoresInvertColors />
+          ) : (
+            <Avatar label={initials(post.author.displayName)} size={40} />
+          )}
           <View className="flex-1">
             <Text className="font-bold text-ink">{post.author.displayName}</Text>
             <Text className="text-xs text-ink-muted">
@@ -43,7 +47,12 @@ export function PostCard({ post, onLike }: { post: PostDto; onLike: (p: PostDto)
               accessibilityLabel="Play video"
               className="mt-3 w-full overflow-hidden rounded-2xl"
             >
-              <Image source={{ uri: video.urls.poster }} className="w-full" style={{ aspectRatio: video.width && video.height ? video.width / video.height : 16 / 9 }} accessibilityIgnoresInvertColors />
+              <Image
+                source={{ uri: video.urls.poster }}
+                className="w-full"
+                style={{ aspectRatio: video.width && video.height ? video.width / video.height : 16 / 9 }}
+                accessibilityIgnoresInvertColors
+              />
               <View className="absolute inset-0 items-center justify-center">
                 <View className="h-14 w-14 items-center justify-center rounded-full bg-black/60">
                   <Text className="text-2xl text-white">▶</Text>
@@ -51,11 +60,24 @@ export function PostCard({ post, onLike }: { post: PostDto; onLike: (p: PostDto)
               </View>
             </Pressable>
           )}
-          {img?.urls.medium && <Image source={{ uri: img.urls.medium }} className="mt-3 w-full rounded-2xl" style={{ aspectRatio: img.width && img.height ? img.width / img.height : 4 / 3 }} accessibilityLabel="Post photo" />}
+          {img?.urls.medium && (
+            <Image
+              source={{ uri: img.urls.medium }}
+              className="mt-3 w-full rounded-2xl"
+              style={{ aspectRatio: img.width && img.height ? img.width / img.height : 4 / 3 }}
+              accessibilityLabel="Post photo"
+            />
+          )}
         </Pressable>
       </Link>
       <View className="mt-3 flex-row gap-6">
-        <Pressable accessibilityRole="button" accessibilityLabel={post.likedByMe ? 'Unlike' : 'Like'} accessibilityState={{ selected: post.likedByMe }} onPress={() => onLike(post)} hitSlop={10}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={post.likedByMe ? 'Unlike' : 'Like'}
+          accessibilityState={{ selected: post.likedByMe }}
+          onPress={() => onLike(post)}
+          hitSlop={10}
+        >
           <Text className={`font-semibold ${post.likedByMe ? 'text-accent' : 'text-ink-muted'}`}>
             {post.likedByMe ? '♥' : '♡'} {post.likeCount}
           </Text>

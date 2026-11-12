@@ -101,10 +101,7 @@ export async function loginWithPhone(phone: string, code: string, ctx: ClientCon
   return { status: 'registration_required' as const, registrationToken: reg.token, expiresAt: reg.expiresAt.toISOString() };
 }
 
-export async function completePhoneRegistration(
-  input: { registrationToken: string; username: string; displayName: string },
-  ctx: ClientContext,
-) {
+export async function completePhoneRegistration(input: { registrationToken: string; username: string; displayName: string }, ctx: ClientContext) {
   const payload = await verifyToken('phone_registration', input.registrationToken);
   const phone = payload.sub;
   const [phoneOwner, usernameOwner] = await Promise.all([

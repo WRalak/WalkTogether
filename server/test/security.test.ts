@@ -42,7 +42,10 @@ describe('HTTP hardening', () => {
   });
 
   it('rejects oversized and malformed JSON bodies without leaking internals', async () => {
-    const big = await api().post('/api/v1/auth/login').set('Content-Type', 'application/json').send(`{"email":"${'a'.repeat(1_100_000)}"}`);
+    const big = await api()
+      .post('/api/v1/auth/login')
+      .set('Content-Type', 'application/json')
+      .send(`{"email":"${'a'.repeat(1_100_000)}"}`);
     expect(big.status).toBe(413);
     const bad = await api().post('/api/v1/auth/login').set('Content-Type', 'application/json').send('{"email":');
     expect(bad.status).toBe(400);
@@ -50,7 +53,9 @@ describe('HTTP hardening', () => {
   });
 
   it('protects the metrics endpoint', async () => {
-    await api().get('/metrics').expect((r) => expect([401, 404]).toContain(r.status));
+    await api()
+      .get('/metrics')
+      .expect((r) => expect([401, 404]).toContain(r.status));
   });
 
   it('returns 404 JSON for unknown routes', async () => {
@@ -82,7 +87,11 @@ describe('authentication bypass attempts', () => {
 
   it('a valid signature for a revoked session is refused', async () => {
     const u = await registerUser();
-    await api().post('/api/v1/auth/logout').set(bearer(u)).send({ refreshToken: u.refreshToken }).expect((r) => expect(r.status).toBeLessThan(300));
+    await api()
+      .post('/api/v1/auth/logout')
+      .set(bearer(u))
+      .send({ refreshToken: u.refreshToken })
+      .expect((r) => expect(r.status).toBeLessThan(300));
     await api().get('/api/v1/users/me').set(bearer(u)).expect(401);
   });
 
@@ -103,7 +112,9 @@ describe('authentication bypass attempts', () => {
   it('login errors do not reveal whether an account exists', async () => {
     const u = await registerUser();
     const wrongPw = await api().post('/api/v1/auth/login').send({ email: u.email, password: 'wrong-password-123' });
-    const noUser = await api().post('/api/v1/auth/login').send({ email: `nobody_${uid()}@example.com`, password: 'wrong-password-123' });
+    const noUser = await api()
+      .post('/api/v1/auth/login')
+      .send({ email: `nobody_${uid()}@example.com`, password: 'wrong-password-123' });
     expect(wrongPw.status).toBe(noUser.status);
     expect(wrongPw.body.error.code).toBe(noUser.body.error.code);
     expect(wrongPw.body.error.message).toBe(noUser.body.error.message);
@@ -123,10 +134,19 @@ describe('injection and mass assignment', () => {
 
   it('registration ignores privileged fields', async () => {
     const id = uid();
-    const res = await api().post('/api/v1/auth/register').send({
-      email: `mass_${id}@example.com`, password: 'walk2gether-strong', username: `m_${id}`, displayName: 'M',
-      acceptTerms: true, status: 'ACTIVE', emailVerifiedAt: new Date().toISOString(), role: 'SUPER_ADMIN', isAdmin: true,
-    });
+    const res = await api()
+      .post('/api/v1/auth/register')
+      .send({
+        email: `mass_${id}@example.com`,
+        password: 'walk2gether-strong',
+        username: `m_${id}`,
+        displayName: 'M',
+        acceptTerms: true,
+        status: 'ACTIVE',
+        emailVerifiedAt: new Date().toISOString(),
+        role: 'SUPER_ADMIN',
+        isAdmin: true,
+      });
     expect([201, 422]).toContain(res.status);
     if (res.status === 201) {
       const user = await prisma.user.findUniqueOrThrow({ where: { id: res.body.data.userId } });
@@ -140,7 +160,10 @@ describe('injection and mass assignment', () => {
     const clubA = await createClub(a);
     const clubB = await createClub(b);
     const before = await prisma.club.findUniqueOrThrow({ where: { id: clubB.id } });
-    await api().patch(`/api/v1/clubs/${clubA.id}`).set(bearer(a)).send({ id: clubB.id, clubId: clubB.id, name: `Renamed ${uid()}` });
+    await api()
+      .patch(`/api/v1/clubs/${clubA.id}`)
+      .set(bearer(a))
+      .send({ id: clubB.id, clubId: clubB.id, name: `Renamed ${uid()}` });
     const untouched = await prisma.club.findUniqueOrThrow({ where: { id: clubB.id } });
     expect(untouched.name).toBe(before.name);
   });
@@ -157,9 +180,13 @@ describe('injection and mass assignment', () => {
 
 describe('payment webhooks', () => {
   it('rejects unsigned or forged Stripe and M-Pesa callbacks', async () => {
-    const stripe = await api().post('/api/v1/payments/webhooks/stripe').send({ type: 'checkout.session.completed', data: { object: { id: 'cs_x' } } });
+    const stripe = await api()
+      .post('/api/v1/payments/webhooks/stripe')
+      .send({ type: 'checkout.session.completed', data: { object: { id: 'cs_x' } } });
     expect(stripe.status).toBeGreaterThanOrEqual(400);
-    const mpesa = await api().post('/api/v1/payments/webhooks/mpesa').send({ Body: { stkCallback: { CheckoutRequestID: 'ws_x', ResultCode: 0 } } });
+    const mpesa = await api()
+      .post('/api/v1/payments/webhooks/mpesa')
+      .send({ Body: { stkCallback: { CheckoutRequestID: 'ws_x', ResultCode: 0 } } });
     expect(mpesa.status).toBeGreaterThanOrEqual(400);
   });
 });
@@ -168,17 +195,34 @@ describe('threat-detection metrics', () => {
   it('counts authentication failures, denials, admin actions and forged payment webhooks', async () => {
     const { securityEvents } = await import('../src/shared/metrics');
     const value = async (type: string) => (await securityEvents.get()).values.filter((v) => v.labels.type === type).reduce((n, v) => n + v.value, 0);
-    const before = { auth: await value('auth_failure'), unauth: await value('unauthorized'), forbidden: await value('forbidden'), admin: await value('admin_action'), pay: await value('payment_anomaly') };
+    const before = {
+      auth: await value('auth_failure'),
+      unauth: await value('unauthorized'),
+      forbidden: await value('forbidden'),
+      admin: await value('admin_action'),
+      pay: await value('payment_anomaly'),
+    };
 
     const u = await registerUser();
     await api().post('/api/v1/auth/login').send({ email: u.email, password: 'wrong-password-123' }).expect(401);
     await api().get('/api/v1/users/me').expect(401);
     const owner = await registerUser();
     const club = await createClub(owner);
-    await api().patch(`/api/v1/clubs/${club.id}`).set(bearer(u)).send({ name: 'Hijacked club name' }).expect((r) => expect([403, 404]).toContain(r.status));
+    await api()
+      .patch(`/api/v1/clubs/${club.id}`)
+      .set(bearer(u))
+      .send({ name: 'Hijacked club name' })
+      .expect((r) => expect([403, 404]).toContain(r.status));
     const admin = await createAdmin();
-    await api().put('/api/v1/platform-admin/promotions/' + `SEC${uid().toUpperCase()}`).set({ Authorization: `Bearer ${admin.accessToken}` }).send({ percentOff: 10 }).expect(200);
-    await api().post('/api/v1/payments/webhooks/sandbox').send({ eventId: 'forged' }).expect((r) => expect(r.status).toBeGreaterThanOrEqual(400));
+    await api()
+      .put('/api/v1/platform-admin/promotions/' + `SEC${uid().toUpperCase()}`)
+      .set({ Authorization: `Bearer ${admin.accessToken}` })
+      .send({ percentOff: 10 })
+      .expect(200);
+    await api()
+      .post('/api/v1/payments/webhooks/sandbox')
+      .send({ eventId: 'forged' })
+      .expect((r) => expect(r.status).toBeGreaterThanOrEqual(400));
 
     expect(await value('auth_failure')).toBeGreaterThan(before.auth);
     expect(await value('unauthorized')).toBeGreaterThan(before.unauth);

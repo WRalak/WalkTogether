@@ -26,7 +26,10 @@ export class MpesaProvider implements PaymentProvider {
   }
 
   private password() {
-    const timestamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[-:TZ.]/g, '')
+      .slice(0, 14);
     return { timestamp, password: Buffer.from(`${env.MPESA_SHORTCODE}${env.MPESA_PASSKEY}${timestamp}`).toString('base64') };
   }
 
@@ -61,13 +64,30 @@ export class MpesaProvider implements PaymentProvider {
       TransactionDesc: input.description.slice(0, 13),
     });
     if (raw.ResponseCode !== '0') throw Object.assign(new Error('M-Pesa rejected the request'), { raw });
-    return { providerRef: raw.CheckoutRequestID, status: 'PENDING' as const, clientAction: { type: 'stk_push' as const, message: raw.CustomerMessage || 'Check your phone and enter your M-Pesa PIN.' }, raw };
+    return {
+      providerRef: raw.CheckoutRequestID,
+      status: 'PENDING' as const,
+      clientAction: { type: 'stk_push' as const, message: raw.CustomerMessage || 'Check your phone and enter your M-Pesa PIN.' },
+      raw,
+    };
   }
 
   async parseWebhook(req: import('express').Request) {
     const secret = String(req.query.secret ?? '');
     if (!env.MPESA_CALLBACK_SECRET || !safeEqual(secret, env.MPESA_CALLBACK_SECRET)) throw new WebhookAuthError();
-    const cb = (req.body as { Body?: { stkCallback?: { CheckoutRequestID: string; ResultCode: number; ResultDesc: string; MerchantRequestID: string; CallbackMetadata?: { Item?: { Name: string; Value?: string | number }[] } } } })?.Body?.stkCallback;
+    const cb = (
+      req.body as {
+        Body?: {
+          stkCallback?: {
+            CheckoutRequestID: string;
+            ResultCode: number;
+            ResultDesc: string;
+            MerchantRequestID: string;
+            CallbackMetadata?: { Item?: { Name: string; Value?: string | number }[] };
+          };
+        };
+      }
+    )?.Body?.stkCallback;
     if (!cb?.CheckoutRequestID) throw new WebhookAuthError('Malformed M-Pesa callback');
     return {
       eventId: `${cb.CheckoutRequestID}:${cb.ResultCode}`,

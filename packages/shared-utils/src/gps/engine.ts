@@ -38,7 +38,19 @@ export class TrackingEngine {
   private speedStreak = 0;
 
   constructor(kind: ActivityKind, restore?: { snapshot: EngineSnapshot; seq: number; lastPoint?: RawPoint }) {
-    this.s = restore?.snapshot ?? { status: 'idle', kind, startedAt: null, distanceM: 0, movingMs: 0, elapsedMs: 0, currentPaceSecPerKm: null, lastPoint: null, segment: 0, acceptedCount: 0, rejectedCount: 0 };
+    this.s = restore?.snapshot ?? {
+      status: 'idle',
+      kind,
+      startedAt: null,
+      distanceM: 0,
+      movingMs: 0,
+      elapsedMs: 0,
+      currentPaceSecPerKm: null,
+      lastPoint: null,
+      segment: 0,
+      acceptedCount: 0,
+      rejectedCount: 0,
+    };
     if (restore) {
       this.seq = restore.seq;
       this.prev = restore.lastPoint;

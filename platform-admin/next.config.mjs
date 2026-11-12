@@ -30,7 +30,14 @@ const nextConfig = {
   // Pre-restructure URLs map onto /dashboard/<section>.
   // Older URLs map onto the current /dashboard/<section> structure.
   async redirects() {
-    const moved = { revenue: 'analytics', billing: 'subscriptions', sponsorships: 'sponsorships', sponsors: 'sponsorships', campaigns: 'sponsorships', challenges: 'sponsorships/competitions' };
+    const moved = {
+      revenue: 'analytics',
+      billing: 'subscriptions',
+      sponsorships: 'sponsorships',
+      sponsors: 'sponsorships',
+      campaigns: 'sponsorships',
+      challenges: 'sponsorships/competitions',
+    };
     const same = ['users', 'clubs', 'moderation', 'audit-logs', 'security', 'system', 'settings', 'admins'];
     return [
       ...Object.entries(moved).flatMap(([from, to]) => [

@@ -36,7 +36,13 @@ export function Tabs<T extends string>({ value, options, onChange }: { value: T;
       {options.map((o) => {
         const on = o.key === value;
         return (
-          <Pressable key={o.key} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => onChange(o.key)} className={`flex-1 items-center rounded-xl py-2.5 ${on ? 'bg-primary' : ''}`}>
+          <Pressable
+            key={o.key}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: on }}
+            onPress={() => onChange(o.key)}
+            className={`flex-1 items-center rounded-xl py-2.5 ${on ? 'bg-primary' : ''}`}
+          >
             <Text className={`text-sm font-semibold ${on ? 'text-white' : 'text-ink-muted'}`}>{o.label}</Text>
           </Pressable>
         );
@@ -133,7 +139,12 @@ export function DateTimeField({ label, value, onChange, minimumDate }: { label: 
         <DateTimePicker value={value} mode="datetime" minimumDate={minimumDate} onChange={onPick} accessibilityLabel={label} />
       ) : (
         <>
-          <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${value.toLocaleString()}`} onPress={() => setMode('date')} className="min-h-[52px] justify-center rounded-2xl border border-line bg-surface px-4">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${label}: ${value.toLocaleString()}`}
+            onPress={() => setMode('date')}
+            className="min-h-[52px] justify-center rounded-2xl border border-line bg-surface px-4"
+          >
             <Text className="text-base text-ink">{value.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</Text>
           </Pressable>
           {mode && <DateTimePicker value={value} mode={mode} minimumDate={mode === 'date' ? minimumDate : undefined} onChange={onPick} />}

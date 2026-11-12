@@ -26,8 +26,7 @@ const config: ExpoConfig = {
     supportsTablet: false,
     infoPlist: {
       NSLocationWhenInUseUsageDescription: 'WalkTogether uses your location to record the route, distance and pace of your walks and runs.',
-      NSLocationAlwaysAndWhenInUseUsageDescription:
-        'Allow location access in the background so WalkTogether can keep recording your walk or run when your screen is off.',
+      NSLocationAlwaysAndWhenInUseUsageDescription: 'Allow location access in the background so WalkTogether can keep recording your walk or run when your screen is off.',
       UIBackgroundModes: ['location'],
     },
   },
@@ -40,8 +39,22 @@ const config: ExpoConfig = {
     // Keep tokens, the offline activity store and cached data out of cloud/adb backups (MASVS-STORAGE).
     allowBackup: false,
     // Permissions pulled in by libraries that WalkTogether never uses.
-    blockedPermissions: ['android.permission.RECORD_AUDIO', 'android.permission.SYSTEM_ALERT_WINDOW', 'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE', 'android.permission.READ_CONTACTS'],
-    permissions: ['android.permission.health.READ_STEPS', 'ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'ACCESS_BACKGROUND_LOCATION', 'FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_LOCATION', 'POST_NOTIFICATIONS'],
+    blockedPermissions: [
+      'android.permission.RECORD_AUDIO',
+      'android.permission.SYSTEM_ALERT_WINDOW',
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
+      'android.permission.READ_CONTACTS',
+    ],
+    permissions: [
+      'android.permission.health.READ_STEPS',
+      'ACCESS_FINE_LOCATION',
+      'ACCESS_COARSE_LOCATION',
+      'ACCESS_BACKGROUND_LOCATION',
+      'FOREGROUND_SERVICE',
+      'FOREGROUND_SERVICE_LOCATION',
+      'POST_NOTIFICATIONS',
+    ],
   },
   plugins: [
     '@react-native-community/datetimepicker',
@@ -49,7 +62,10 @@ const config: ExpoConfig = {
     // Health Connect requires Android minSdk 26; HealthKit entitlement for steps (read-only).
     ['expo-build-properties', { android: { minSdkVersion: 26, usesCleartextTraffic: isDevelopmentBuild } }],
     'expo-health-connect',
-    ['@kingstinct/react-native-healthkit', { NSHealthShareUsageDescription: 'WalkTogether reads your daily step count to show it alongside your activities.', NSHealthUpdateUsageDescription: false, background: false }],
+    [
+      '@kingstinct/react-native-healthkit',
+      { NSHealthShareUsageDescription: 'WalkTogether reads your daily step count to show it alongside your activities.', NSHealthUpdateUsageDescription: false, background: false },
+    ],
     'expo-sqlite',
     'expo-secure-store',
     [

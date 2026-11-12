@@ -53,7 +53,12 @@ export async function listFollows(userId: string, viewerId: string | undefined, 
   const cursor = decodeCursor(q.cursor);
   const where = direction === 'followers' ? { followeeId: userId, status: 'ACCEPTED' as const } : { followerId: userId, status: 'ACCEPTED' as const };
   const rows = await prisma.follow.findMany({
-    where: { ...where, ...(cursor ? { OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, [direction === 'followers' ? 'followerId' : 'followeeId']: { lt: cursor.id } }] } : {}) },
+    where: {
+      ...where,
+      ...(cursor
+        ? { OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, [direction === 'followers' ? 'followerId' : 'followeeId']: { lt: cursor.id } }] }
+        : {}),
+    },
     orderBy: [{ createdAt: 'desc' }, { [direction === 'followers' ? 'followerId' : 'followeeId']: 'desc' }],
     take: q.limit + 1,
     select: { createdAt: true, follower: { select: userSelect }, followee: { select: userSelect } },
@@ -65,11 +70,19 @@ export async function listFollows(userId: string, viewerId: string | undefined, 
 }
 
 export async function pendingRequests(userId: string) {
-  const rows = await prisma.follow.findMany({ where: { followeeId: userId, status: 'PENDING' }, orderBy: { createdAt: 'desc' }, take: 100, select: { createdAt: true, follower: { select: userSelect } } });
+  const rows = await prisma.follow.findMany({
+    where: { followeeId: userId, status: 'PENDING' },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+    select: { createdAt: true, follower: { select: userSelect } },
+  });
   return rows.map((r) => ({ ...r.follower, requestedAt: r.createdAt }));
 }
 
 export async function followCounts(userId: string) {
-  const [followers, following] = await Promise.all([prisma.follow.count({ where: { followeeId: userId, status: 'ACCEPTED' } }), prisma.follow.count({ where: { followerId: userId, status: 'ACCEPTED' } })]);
+  const [followers, following] = await Promise.all([
+    prisma.follow.count({ where: { followeeId: userId, status: 'ACCEPTED' } }),
+    prisma.follow.count({ where: { followerId: userId, status: 'ACCEPTED' } }),
+  ]);
   return { followers, following };
 }

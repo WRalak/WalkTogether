@@ -68,7 +68,12 @@ export default function AdminChallenges() {
   });
 
   if (!club) return <Loading />;
-  if (!can('club.view_private')) return <Screen edges={[]}><NoPermission what="view challenges" /></Screen>;
+  if (!can('club.view_private'))
+    return (
+      <Screen edges={[]}>
+        <NoPermission what="view challenges" />
+      </Screen>
+    );
   const items = list.data?.items.filter((c) => c.clubId === clubId) ?? [];
 
   return (
@@ -81,18 +86,38 @@ export default function AdminChallenges() {
           <TextField label="Title" value={f.title} onChangeText={(t) => set('title', t)} placeholder="100 km in November" />
           <Chips label="Measure" value={f.metric} options={(Object.keys(METRICS) as Metric[]).map((k) => ({ key: k, label: METRICS[k] }))} onChange={(m) => set('metric', m)} />
           <TextField label="Goal (empty = ranking only)" value={f.target} keyboardType="decimal-pad" onChangeText={(t) => set('target', t)} />
-          <TextField label="Daily distance cap (km)" value={f.capKm} keyboardType="decimal-pad" hint="Safety: distance above this per day doesn’t count" onChangeText={(t) => set('capKm', t)} />
+          <TextField
+            label="Daily distance cap (km)"
+            value={f.capKm}
+            keyboardType="decimal-pad"
+            hint="Safety: distance above this per day doesn’t count"
+            onChangeText={(t) => set('capKm', t)}
+          />
           <DateTimeField label="Starts" value={f.start} onChange={(d) => set('start', d)} />
           <DateTimeField label="Ends" value={f.end} minimumDate={f.start} onChange={(d) => set('end', d)} />
           <Text className="mb-1.5 text-sm font-medium text-ink">Counts</Text>
           <Toggle label="Walks" value={f.walk} onChange={(b) => set('walk', b)} />
           <Toggle label="Runs" value={f.run} onChange={(b) => set('run', b)} />
           <Toggle label="Hikes" value={f.hike} onChange={(b) => set('hike', b)} />
-          <Chips label="Who can join" value={f.visibility} options={[{ key: 'MEMBERS', label: 'Members only' }, { key: 'PUBLIC', label: 'Public' }]} onChange={(v) => set('visibility', v)} />
+          <Chips
+            label="Who can join"
+            value={f.visibility}
+            options={[
+              { key: 'MEMBERS', label: 'Members only' },
+              { key: 'PUBLIC', label: 'Public' },
+            ]}
+            onChange={(v) => set('visibility', v)}
+          />
           <TextField label="Reward (optional)" value={f.reward} onChangeText={(t) => set('reward', t)} placeholder="Certificate and a shout-out" />
           <TextField label="Description & rules" value={f.description} multiline onChangeText={(t) => set('description', t)} style={{ minHeight: 90, textAlignVertical: 'top' }} />
           <View className="flex-row gap-2">
-            <Button title="Launch" className="flex-1" loading={create.isPending} disabled={f.title.trim().length < 3 || !(f.walk || f.run || f.hike)} onPress={() => create.mutate()} />
+            <Button
+              title="Launch"
+              className="flex-1"
+              loading={create.isPending}
+              disabled={f.title.trim().length < 3 || !(f.walk || f.run || f.hike)}
+              onPress={() => create.mutate()}
+            />
             <Button title="Close" variant="ghost" className="flex-1" onPress={() => setOpen(false)} />
           </View>
         </Card>
@@ -113,7 +138,14 @@ export default function AdminChallenges() {
               <Text className="mt-1 text-sm text-ink-muted">
                 {METRICS[c.metric as Metric] ?? c.metric} · ends {new Date(c.endsAt).toLocaleDateString()}
               </Text>
-              {can('challenges.manage') && <Button title="Cancel challenge" variant="outline" className="mt-3 min-h-[40px]" onPress={() => confirm('Cancel challenge', `Cancel “${c.title}”? Participants keep their activities.`, () => cancel.mutate(c.id), 'Cancel challenge')} />}
+              {can('challenges.manage') && (
+                <Button
+                  title="Cancel challenge"
+                  variant="outline"
+                  className="mt-3 min-h-[40px]"
+                  onPress={() => confirm('Cancel challenge', `Cancel “${c.title}”? Participants keep their activities.`, () => cancel.mutate(c.id), 'Cancel challenge')}
+                />
+              )}
             </Card>
           ))}
         </View>

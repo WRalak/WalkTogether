@@ -8,7 +8,11 @@ export function ClubCard({ club }: { club: ClubSummary }) {
   const place = [club.city, club.countryCode].filter(Boolean).join(', ');
   return (
     <Link href={{ pathname: '/clubs/[slug]', params: { slug: club.slug } }} asChild>
-      <Pressable accessibilityRole="link" accessibilityLabel={`${club.name}, ${club.memberCount} members`} className="mb-3 rounded-3xl border border-line bg-surface p-4 active:opacity-80">
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={`${club.name}, ${club.memberCount} members`}
+        className="mb-3 rounded-3xl border border-line bg-surface p-4 active:opacity-80"
+      >
         <View className="flex-row items-center gap-3">
           <Avatar label={initials(club.name)} />
           <View className="flex-1">
@@ -16,7 +20,9 @@ export function ClubCard({ club }: { club: ClubSummary }) {
               {club.name}
             </Text>
             <Text className="text-sm text-ink-muted">
-              {[place, `${club.memberCount} member${club.memberCount === 1 ? '' : 's'}`, club.distanceKm !== undefined ? `${club.distanceKm} km away` : null].filter(Boolean).join(' · ')}
+              {[place, `${club.memberCount} member${club.memberCount === 1 ? '' : 's'}`, club.distanceKm !== undefined ? `${club.distanceKm} km away` : null]
+                .filter(Boolean)
+                .join(' · ')}
             </Text>
           </View>
         </View>

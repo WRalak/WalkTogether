@@ -52,7 +52,11 @@ async function consumeRecoveryCode(userId: string, code: string) {
 }
 
 /** Verifies a second factor for an MFA-enabled user, counting failures toward the lockout. */
-export async function checkSecondFactor(user: { id: string; mfaSecretEncrypted: string | null; failedLoginCount: number }, input: { code?: string; recoveryCode?: string }, ctx: AuditContext) {
+export async function checkSecondFactor(
+  user: { id: string; mfaSecretEncrypted: string | null; failedLoginCount: number },
+  input: { code?: string; recoveryCode?: string },
+  ctx: AuditContext,
+) {
   if (!user.mfaSecretEncrypted) throw badRequest('Two-step verification is not enabled');
   const ok = input.code ? await checkTotp(user.id, user.mfaSecretEncrypted, input.code) : input.recoveryCode ? await consumeRecoveryCode(user.id, input.recoveryCode) : false;
   if (ok) {
@@ -61,7 +65,10 @@ export async function checkSecondFactor(user: { id: string; mfaSecretEncrypted: 
   }
   recordSecurityEvent('mfa_failure', input.recoveryCode ? 'recovery_code' : 'totp');
   const failed = user.failedLoginCount + 1;
-  await prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: failed, lockedUntil: failed >= MAX_MFA_FAILURES ? new Date(Date.now() + 15 * 60_000) : undefined } });
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { failedLoginCount: failed, lockedUntil: failed >= MAX_MFA_FAILURES ? new Date(Date.now() + 15 * 60_000) : undefined },
+  });
   throw unauthorized('That code is not valid. Try again or use a recovery code.', 'INVALID_MFA_CODE');
 }
 
@@ -113,7 +120,10 @@ export async function enable(userId: string, code: string, ctx: AuditContext) {
 }
 
 export async function disable(userId: string, input: { code?: string; recoveryCode?: string; password?: string }, ctx: AuditContext) {
-  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { id: true, mfaEnabledAt: true, mfaSecretEncrypted: true, failedLoginCount: true, passwordHash: true } });
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { id: true, mfaEnabledAt: true, mfaSecretEncrypted: true, failedLoginCount: true, passwordHash: true },
+  });
   if (!user.mfaEnabledAt) throw badRequest('Two-step verification is not on');
   // Accounts with a password must re-enter it, so a stolen unlocked phone alone can't remove MFA.
   if (user.passwordHash && !(input.password && (await verifyPassword(user.passwordHash, input.password)))) {

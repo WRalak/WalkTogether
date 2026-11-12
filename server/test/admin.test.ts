@@ -14,7 +14,10 @@ describe('platform admin authentication', () => {
     expect(res.body.data.accessToken).toBeUndefined();
     expect(res.body.data.mfaSetupRequired).toBe(false);
     // The MFA token is not an access token.
-    await api().get('/api/v1/platform-admin/me').set({ Authorization: `Bearer ${res.body.data.mfaToken}` }).expect(401);
+    await api()
+      .get('/api/v1/platform-admin/me')
+      .set({ Authorization: `Bearer ${res.body.data.mfaToken}` })
+      .expect(401);
     await api().post('/api/v1/platform-admin/auth/mfa/verify').send({ mfaToken: res.body.data.mfaToken, code: '000000' }).expect(401);
   });
 
@@ -75,7 +78,10 @@ describe('platform admin permissions & actions', () => {
     const owner = await registerUser();
     const club = await createClub(owner);
     await api().post(`/api/v1/platform-admin/clubs/${club.id}/status`).set(adminBearer(admin)).send({ action: 'SUSPEND', reason: 'Terms violation' }).expect(200);
-    const list = await api().get('/api/v1/clubs').query({ q: club.slug.replace('club-', '') }).expect(200);
+    const list = await api()
+      .get('/api/v1/clubs')
+      .query({ q: club.slug.replace('club-', '') })
+      .expect(200);
     expect(list.body.data.map((c: { id: string }) => c.id)).not.toContain(club.id);
     await api().post(`/api/v1/platform-admin/clubs/${club.id}/status`).set(adminBearer(admin)).send({ action: 'REACTIVATE', reason: 'Resolved' }).expect(200);
   });
@@ -92,7 +98,11 @@ describe('platform admin permissions & actions', () => {
     await api().post(`/api/v1/platform-admin/clubs/${club.id}/approve`).set(adminBearer(admin)).send({}).expect(409);
 
     const key = `test.setting.${Date.now()}`;
-    await api().put(`/api/v1/platform-admin/settings/${key}`).set(adminBearer(admin)).send({ value: { enabled: true } }).expect(200);
+    await api()
+      .put(`/api/v1/platform-admin/settings/${key}`)
+      .set(adminBearer(admin))
+      .send({ value: { enabled: true } })
+      .expect(200);
     const logs = await api().get('/api/v1/platform-admin/audit-logs').query({ targetId: key }).set(adminBearer(admin)).expect(200);
     expect(logs.body.data[0]).toMatchObject({ action: 'admin.setting_updated', metadata: { to: { enabled: true } } });
   });

@@ -16,8 +16,17 @@ function walk(n: number, speedMps = 1.4, offsetSeg = 0) {
 
 async function record(u: TestUser, points = walk(401), extra: Record<string, unknown> = {}, type = 'WALK') {
   const clientId = randomUUID();
-  const a = await api().post('/api/v1/activities').set(bearer(u)).send({ clientId, type, startedAt: new Date(points[0]!.t).toISOString() }).expect(201);
-  for (let i = 0; i < points.length; i += 150) await api().post(`/api/v1/activities/${a.body.data.id}/gps-points`).set(bearer(u)).send({ points: points.slice(i, i + 150) }).expect(200);
+  const a = await api()
+    .post('/api/v1/activities')
+    .set(bearer(u))
+    .send({ clientId, type, startedAt: new Date(points[0]!.t).toISOString() })
+    .expect(201);
+  for (let i = 0; i < points.length; i += 150)
+    await api()
+      .post(`/api/v1/activities/${a.body.data.id}/gps-points`)
+      .set(bearer(u))
+      .send({ points: points.slice(i, i + 150) })
+      .expect(200);
   const done = await api()
     .post(`/api/v1/activities/${a.body.data.id}/complete`)
     .set(bearer(u))
@@ -69,16 +78,28 @@ describe('recording & sync', () => {
   it('completed activities are closed and completion is idempotent', async () => {
     const u = await registerUser();
     const r = await record(u, walk(50));
-    await api().post(`/api/v1/activities/${r.id}/gps-points`).set(bearer(u)).send({ points: walk(5) }).expect(409);
+    await api()
+      .post(`/api/v1/activities/${r.id}/gps-points`)
+      .set(bearer(u))
+      .send({ points: walk(5) })
+      .expect(409);
     const again = await api().post(`/api/v1/activities/${r.id}/complete`).set(bearer(u)).send({ endedAt: new Date().toISOString() }).expect(200);
     expect(again.body.data.distanceM).toBe(r.data.distanceM);
   });
 
   it('rejects future timestamps and invalid coordinates', async () => {
     const u = await registerUser();
-    await api().post('/api/v1/activities').set(bearer(u)).send({ clientId: randomUUID(), type: 'WALK', startedAt: new Date(Date.now() + 86_400_000).toISOString() }).expect(400);
+    await api()
+      .post('/api/v1/activities')
+      .set(bearer(u))
+      .send({ clientId: randomUUID(), type: 'WALK', startedAt: new Date(Date.now() + 86_400_000).toISOString() })
+      .expect(400);
     const a = await api().post('/api/v1/activities').set(bearer(u)).send({ clientId: randomUUID(), type: 'WALK', startedAt: new Date().toISOString() }).expect(201);
-    await api().post(`/api/v1/activities/${a.body.data.id}/gps-points`).set(bearer(u)).send({ points: [{ seq: 0, t: Date.now(), lat: 123, lng: 0 }] }).expect(422);
+    await api()
+      .post(`/api/v1/activities/${a.body.data.id}/gps-points`)
+      .set(bearer(u))
+      .send({ points: [{ seq: 0, t: Date.now(), lat: 123, lng: 0 }] })
+      .expect(422);
   });
 });
 
@@ -96,10 +117,18 @@ describe('visibility & privacy', () => {
     await api().get(`/api/v1/activities/${priv.id}`).set(bearer(stranger)).expect(404);
     await api().get(`/api/v1/activities/${priv.id}`).set(bearer(clubOwner)).expect(404); // club admins get nothing implicitly
 
-    await api().patch(`/api/v1/activities/${priv.id}`).set(bearer(owner)).send({ clubIds: [club.id] }).expect(200);
+    await api()
+      .patch(`/api/v1/activities/${priv.id}`)
+      .set(bearer(owner))
+      .send({ clubIds: [club.id] })
+      .expect(200);
     await api().get(`/api/v1/activities/${priv.id}`).set(bearer(clubmate)).expect(200);
     const foreignClub = await createClub(stranger);
-    await api().patch(`/api/v1/activities/${priv.id}`).set(bearer(owner)).send({ clubIds: [foreignClub.id] }).expect(403);
+    await api()
+      .patch(`/api/v1/activities/${priv.id}`)
+      .set(bearer(owner))
+      .send({ clubIds: [foreignClub.id] })
+      .expect(403);
 
     const pub = await record(owner, walk(401), { visibility: 'PUBLIC' });
     const own = await api().get(`/api/v1/activities/${pub.id}`).set(bearer(owner)).expect(200);
@@ -145,9 +174,21 @@ describe('stats, goals and premium features', () => {
     expect(s.body.data.goals[0].progress).toBeGreaterThan(0.4);
     expect(s.body.data.steps).toBeNull(); // never inferred from GPS
     const today = new Date().toISOString().slice(0, 10);
-    await api().post('/api/v1/activities/steps').set(bearer(u)).send({ source: 'HEALTH_CONNECT', days: [{ day: today, steps: 8432 }] }).expect(200);
-    await api().post('/api/v1/activities/steps').set(bearer(u)).send({ source: 'HEALTHKIT', days: [{ day: today, steps: 8000 }] }).expect(200);
-    await api().post('/api/v1/activities/steps').set(bearer(u)).send({ source: 'HEALTH_CONNECT', days: [{ day: '2001-01-01', steps: 5 }] }).expect(400);
+    await api()
+      .post('/api/v1/activities/steps')
+      .set(bearer(u))
+      .send({ source: 'HEALTH_CONNECT', days: [{ day: today, steps: 8432 }] })
+      .expect(200);
+    await api()
+      .post('/api/v1/activities/steps')
+      .set(bearer(u))
+      .send({ source: 'HEALTHKIT', days: [{ day: today, steps: 8000 }] })
+      .expect(200);
+    await api()
+      .post('/api/v1/activities/steps')
+      .set(bearer(u))
+      .send({ source: 'HEALTH_CONNECT', days: [{ day: '2001-01-01', steps: 5 }] })
+      .expect(400);
     const s2 = await api().get('/api/v1/activities/stats').set(bearer(u)).expect(200);
     expect(s2.body.data.steps).toMatchObject({ today: 8432 }); // max per day, no double counting
 
@@ -173,7 +214,9 @@ describe('GPS storage partitioning', () => {
     const r = await record(u, walk(20));
     const [row] = await prisma.$queryRaw<{ part: string }[]>`SELECT tableoid::regclass::text AS part FROM activity_gps_points WHERE activity_id = ${r.id}::uuid LIMIT 1`;
     expect(row!.part).toMatch(/^gps_partitions\.activity_gps_points_\d{4}_\d{2}$/);
-    const plan = await prisma.$queryRawUnsafe<{ 'QUERY PLAN': string }[]>(`EXPLAIN SELECT * FROM activity_gps_points WHERE recorded_at >= date_trunc('month', now()) AND recorded_at < date_trunc('month', now()) + interval '1 day'`);
+    const plan = await prisma.$queryRawUnsafe<{ 'QUERY PLAN': string }[]>(
+      `EXPLAIN SELECT * FROM activity_gps_points WHERE recorded_at >= date_trunc('month', now()) AND recorded_at < date_trunc('month', now()) + interval '1 day'`,
+    );
     const text = plan.map((p) => p['QUERY PLAN']).join('\n');
     expect(text).toContain(`activity_gps_points_${new Date().toISOString().slice(0, 7).replace('-', '_')}`);
     expect(text).not.toContain('activity_gps_points_default');

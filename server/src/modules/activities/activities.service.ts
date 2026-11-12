@@ -16,7 +16,14 @@ export async function createActivity(userId: string, input: { clientId: string; 
   // Idempotent: retries with the same clientId return the same activity.
   const activity = await prisma.activity.upsert({
     where: { userId_clientId: { userId, clientId: input.clientId } },
-    create: { userId, clientId: input.clientId, type: input.type, startedAt: input.startedAt, title: input.title, visibility: input.visibility ?? privacy?.activityDefaultVisibility ?? 'FOLLOWERS' },
+    create: {
+      userId,
+      clientId: input.clientId,
+      type: input.type,
+      startedAt: input.startedAt,
+      title: input.title,
+      visibility: input.visibility ?? privacy?.activityDefaultVisibility ?? 'FOLLOWERS',
+    },
     update: {},
   });
   return serializeOwn(activity);
@@ -44,7 +51,15 @@ async function assertShareableClubs(userId: string, clubIds: string[]) {
 export async function completeActivity(
   userId: string,
   id: string,
-  input: { endedAt: Date; title?: string | null; notes?: string | null; visibility?: Vis; clubIds?: string[]; clientStats?: { distanceM: number; movingSeconds: number }; mockLocationDetected?: boolean },
+  input: {
+    endedAt: Date;
+    title?: string | null;
+    notes?: string | null;
+    visibility?: Vis;
+    clubIds?: string[];
+    clientStats?: { distanceM: number; movingSeconds: number };
+    mockLocationDetected?: boolean;
+  },
 ) {
   const a = await ownActivity(userId, id);
   if (a.status === 'COMPLETED') return getActivity(id, userId); // idempotent retry
@@ -184,7 +199,12 @@ export async function listUserActivities(ownerId: string, viewerId: string | und
   // Scan in pages so visibility checks never load a whole history into memory.
   for (let guard = 0; guard < 5 && out.length < q.limit; guard++) {
     const rows = await prisma.activity.findMany({
-      where: { userId: ownerId, status: 'COMPLETED', visibility: { not: 'PRIVATE' }, ...(scanCursor ? { OR: [{ startedAt: { lt: scanCursor.createdAt } }, { startedAt: scanCursor.createdAt, id: { lt: scanCursor.id } }] } : {}) },
+      where: {
+        userId: ownerId,
+        status: 'COMPLETED',
+        visibility: { not: 'PRIVATE' },
+        ...(scanCursor ? { OR: [{ startedAt: { lt: scanCursor.createdAt } }, { startedAt: scanCursor.createdAt, id: { lt: scanCursor.id } }] } : {}),
+      },
       orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
       take: q.limit * 2,
     });
@@ -208,6 +228,8 @@ export async function exportGpx(userId: string, id: string) {
   const a = await ownActivity(userId, id);
   const pts = await prisma.activityGpsPoint.findMany({ where: { activityId: id }, orderBy: { seq: 'asc' } });
   const esc = (s: string) => s.replace(/[<>&'"]/g, (c) => `&#${c.charCodeAt(0)};`);
-  const trkpts = pts.map((p) => `<trkpt lat="${p.lat}" lon="${p.lng}">${p.altitudeM != null ? `<ele>${p.altitudeM}</ele>` : ''}<time>${p.recordedAt.toISOString()}</time></trkpt>`).join('');
+  const trkpts = pts
+    .map((p) => `<trkpt lat="${p.lat}" lon="${p.lng}">${p.altitudeM != null ? `<ele>${p.altitudeM}</ele>` : ''}<time>${p.recordedAt.toISOString()}</time></trkpt>`)
+    .join('');
   return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="WalkTogether" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${esc(a.title ?? `${a.type} ${a.startedAt.toISOString()}`)}</name><trkseg>${trkpts}</trkseg></trk></gpx>`;
 }

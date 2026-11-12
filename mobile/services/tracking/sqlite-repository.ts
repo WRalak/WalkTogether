@@ -44,8 +44,21 @@ const toActivity = (r: Row): LocalActivity => ({
   mockLocation: !!r.mock_location,
 });
 const COLS: Record<keyof LocalActivity, string> = {
-  localId: 'local_id', serverId: 'server_id', type: 'type', status: 'status', startedAt: 'started_at', endedAt: 'ended_at', title: 'title', visibility: 'visibility',
-  clubIds: 'club_ids', engine: 'engine', nextSeq: 'next_seq', syncedSeq: 'synced_seq', attempts: 'attempts', syncError: 'sync_error', mockLocation: 'mock_location',
+  localId: 'local_id',
+  serverId: 'server_id',
+  type: 'type',
+  status: 'status',
+  startedAt: 'started_at',
+  endedAt: 'ended_at',
+  title: 'title',
+  visibility: 'visibility',
+  clubIds: 'club_ids',
+  engine: 'engine',
+  nextSeq: 'next_seq',
+  syncedSeq: 'synced_seq',
+  attempts: 'attempts',
+  syncError: 'sync_error',
+  mockLocation: 'mock_location',
 };
 const encode = (k: keyof LocalActivity, v: unknown) => (k === 'clubIds' || k === 'engine' ? JSON.stringify(v) : k === 'mockLocation' ? (v ? 1 : 0) : (v as SQLite.SQLiteBindValue));
 
@@ -53,13 +66,19 @@ export const sqliteRepository: TrackingRepository = {
   async insertActivity(a) {
     const d = await db();
     const keys = Object.keys(COLS) as (keyof LocalActivity)[];
-    await d.runAsync(`INSERT INTO local_activities (${keys.map((k) => COLS[k]).join(',')}) VALUES (${keys.map(() => '?').join(',')})`, keys.map((k) => encode(k, a[k])) as SQLite.SQLiteBindValue[]);
+    await d.runAsync(
+      `INSERT INTO local_activities (${keys.map((k) => COLS[k]).join(',')}) VALUES (${keys.map(() => '?').join(',')})`,
+      keys.map((k) => encode(k, a[k])) as SQLite.SQLiteBindValue[],
+    );
   },
   async updateActivity(localId, patch) {
     const keys = Object.keys(patch) as (keyof LocalActivity)[];
     if (!keys.length) return;
     const d = await db();
-    await d.runAsync(`UPDATE local_activities SET ${keys.map((k) => `${COLS[k]} = ?`).join(', ')} WHERE local_id = ?`, [...keys.map((k) => encode(k, patch[k])), localId] as SQLite.SQLiteBindValue[]);
+    await d.runAsync(`UPDATE local_activities SET ${keys.map((k) => `${COLS[k]} = ?`).join(', ')} WHERE local_id = ?`, [
+      ...keys.map((k) => encode(k, patch[k])),
+      localId,
+    ] as SQLite.SQLiteBindValue[]);
   },
   async getActivity(localId) {
     const r = await (await db()).getFirstAsync<Row>('SELECT * FROM local_activities WHERE local_id = ?', [localId]);
@@ -83,14 +102,33 @@ export const sqliteRepository: TrackingRepository = {
     await d.withTransactionAsync(async () => {
       for (const p of points) {
         await d.runAsync('INSERT OR IGNORE INTO local_points (local_id, seq, segment, t, lat, lng, accuracy, altitude, altitude_accuracy, speed) VALUES (?,?,?,?,?,?,?,?,?,?)', [
-          localId, p.seq, p.segment, p.t, p.lat, p.lng, p.accuracy, p.altitude, p.altitudeAccuracy, p.speed,
+          localId,
+          p.seq,
+          p.segment,
+          p.t,
+          p.lat,
+          p.lng,
+          p.accuracy,
+          p.altitude,
+          p.altitudeAccuracy,
+          p.speed,
         ]);
       }
     });
   },
   async pointsAfter(localId, afterSeq, limit) {
     const rows = await (await db()).getAllAsync<Row>('SELECT * FROM local_points WHERE local_id = ? AND seq > ? ORDER BY seq ASC LIMIT ?', [localId, afterSeq, limit]);
-    return rows.map((r) => ({ seq: r.seq as number, segment: r.segment as number, t: r.t as number, lat: r.lat as number, lng: r.lng as number, accuracy: r.accuracy as number | null, altitude: r.altitude as number | null, altitudeAccuracy: r.altitude_accuracy as number | null, speed: r.speed as number | null }));
+    return rows.map((r) => ({
+      seq: r.seq as number,
+      segment: r.segment as number,
+      t: r.t as number,
+      lat: r.lat as number,
+      lng: r.lng as number,
+      accuracy: r.accuracy as number | null,
+      altitude: r.altitude as number | null,
+      altitudeAccuracy: r.altitude_accuracy as number | null,
+      speed: r.speed as number | null,
+    }));
   },
   async allPoints(localId) {
     return this.pointsAfter(localId, -1, 100_000);

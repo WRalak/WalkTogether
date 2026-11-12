@@ -61,7 +61,11 @@ export default function SecuritySettings() {
                 <Text className="font-semibold text-ink">{s.deviceName ?? s.platform ?? 'Unknown device'}</Text>
                 <Text className="text-xs text-ink-muted">Last active {new Date(s.lastUsedAt).toLocaleString()}</Text>
               </View>
-              {s.current ? <Badge label="This device" tone="primary" /> : <Button title="Sign out" variant="outline" className="min-h-[40px]" onPress={() => revoke.mutate(s.id)} />}
+              {s.current ? (
+                <Badge label="This device" tone="primary" />
+              ) : (
+                <Button title="Sign out" variant="outline" className="min-h-[40px]" onPress={() => revoke.mutate(s.id)} />
+              )}
             </View>
           </Card>
         ))
@@ -70,7 +74,9 @@ export default function SecuritySettings() {
 
       <SectionTitle>Delete account</SectionTitle>
       <Card>
-        <Text className="mb-3 text-sm text-ink-muted">Deleting your account removes your profile and personal data after a 30-day grace period. Club owners must transfer ownership first.</Text>
+        <Text className="mb-3 text-sm text-ink-muted">
+          Deleting your account removes your profile and personal data after a 30-day grace period. Club owners must transfer ownership first.
+        </Text>
         {user?.email ? <TextField label="Confirm with your password" secureTextEntry value={deletePassword} onChangeText={setDeletePassword} /> : null}
         <Button title="Delete my account" variant="danger" onPress={confirmDelete} />
       </Card>

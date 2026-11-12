@@ -106,7 +106,11 @@ describe('devices', () => {
   it('registers push devices and scopes removal to the owner', async () => {
     const u = await registerUser();
     const other = await registerUser();
-    const res = await api().post('/api/v1/users/me/devices').set(bearer(u)).send({ pushToken: `ExponentPushToken[${uid()}]`, platform: 'android' }).expect(201);
+    const res = await api()
+      .post('/api/v1/users/me/devices')
+      .set(bearer(u))
+      .send({ pushToken: `ExponentPushToken[${uid()}]`, platform: 'android' })
+      .expect(201);
     await api().delete(`/api/v1/users/me/devices/${res.body.data.id}`).set(bearer(other)).expect(404);
     await api().delete(`/api/v1/users/me/devices/${res.body.data.id}`).set(bearer(u)).expect(204);
   });
