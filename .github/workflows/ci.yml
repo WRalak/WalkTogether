@@ -96,7 +96,7 @@ jobs:
       - run: npm ci -w @walktogether/server
       - run: npm run db:generate
       - name: Install ffmpeg and psql
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg postgresql-client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg postgresql-client age
       - name: Create the least-privilege application role (random, per-run password)
         run: |
           PW=$(openssl rand -hex 24)
@@ -109,6 +109,14 @@ jobs:
         run: npx vitest run test/security.test.ts test/tenant-isolation.test.ts test/mfa.test.ts test/auth.test.ts test/admin.test.ts
       - name: Integration tests (whole API, as wt_app — no DDL, append-only audit and financial records)
         run: npm run test -w @walktogether/server
+      - name: Backup and restore drill (encrypted dump → checksum → decrypt → restore → verify)
+        run: |
+          d="$RUNNER_TEMP/drill" && mkdir -p "$d"
+          age-keygen -o "$d/key.txt" 2>/dev/null
+          DATABASE_URL=postgresql://walktogether:walktogether@localhost:5432/walktogether_test \
+            AGE_RECIPIENT="$(age-keygen -y "$d/key.txt")" BACKUP_DIR="$d" bash infrastructure/backup/backup.sh
+          BACKUP_FILE="$(ls "$d"/*.age)" AGE_IDENTITY="$d/key.txt" \
+            ADMIN_URL=postgresql://walktogether:walktogether@localhost:5432/postgres bash infrastructure/backup/restore-drill.sh
       - name: Migration drift check (schema.prisma vs migrations)
         working-directory: server
         run: |

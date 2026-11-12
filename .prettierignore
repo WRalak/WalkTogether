@@ -9,3 +9,5 @@ mobile/android
 mobile/ios
 *.md
 infrastructure/monitoring/grafana/dashboards
+security/semgrep/tests/
+**/.terraform/

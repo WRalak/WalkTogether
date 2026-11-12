@@ -16,6 +16,8 @@ export default tseslint.config(
       '**/.expo-export-check/**',
       '**/coverage/**',
       '**/next-env.d.ts',
+      // Intentionally vulnerable fixtures that prove the Semgrep rules fire (scanner test data, not product code).
+      'security/semgrep/tests/**',
       'mobile/android/**',
       'mobile/ios/**',
       'mobile/nativewind-env.d.ts',

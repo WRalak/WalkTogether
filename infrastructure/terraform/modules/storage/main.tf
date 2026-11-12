@@ -29,14 +29,14 @@ resource "aws_s3_bucket" "logs" {
 }
 
 resource "aws_s3_bucket" "media" {
-  #checkov:skip=CKV_AWS_144:Media is reproducible from users' devices; cross-region replication is a cost decision documented in BACKUP_AND_RECOVERY.md.
+  #checkov:skip=CKV_AWS_144:Cross-region replication not enabled yet - an accepted, tracked gap (security/policies/BACKUP_AND_RECOVERY.md section 6).
   #checkov:skip=CKV2_AWS_62:The API records uploads itself; no S3 event consumers.
   bucket        = local.buckets.media
   force_destroy = var.force_destroy
 }
 
 resource "aws_s3_bucket" "backups" {
-  #checkov:skip=CKV_AWS_144:Cross-region copies are made by the backup job (BACKUP_AND_RECOVERY.md) to keep Object Lock semantics simple.
+  #checkov:skip=CKV_AWS_144:Cross-region replication not enabled yet - an accepted, tracked gap (security/policies/BACKUP_AND_RECOVERY.md section 6).
   #checkov:skip=CKV2_AWS_62:No consumers of object events for backups.
   bucket              = local.buckets.backups
   force_destroy       = var.force_destroy
@@ -86,9 +86,19 @@ resource "aws_s3_bucket_versioning" "this" {
   }
 }
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "kms" {
-  for_each = { media = aws_s3_bucket.media, backups = aws_s3_bucket.backups }
-  bucket   = each.value.id
+resource "aws_s3_bucket_server_side_encryption_configuration" "media" {
+  bucket = aws_s3_bucket.media.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = var.kms_key_arn
+    }
+    bucket_key_enabled = true
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "backups" {
+  bucket = aws_s3_bucket.backups.id
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm     = "aws:kms"
