@@ -2,6 +2,7 @@ import { rateLimit, type Options } from 'express-rate-limit';
 import { RedisStore, type RedisReply } from 'rate-limit-redis';
 import { env } from '../config/env';
 import { redis } from '../database/redis';
+import { recordSecurityEvent } from '../shared/metrics';
 
 function store(prefix: string) {
   return new RedisStore({
@@ -18,6 +19,7 @@ function limiter(prefix: string, opts: Partial<Options>) {
     skip: () => !env.RATE_LIMIT_ENABLED,
     store: env.RATE_LIMIT_ENABLED ? store(prefix) : undefined,
     handler: (req, res) => {
+      recordSecurityEvent('rate_limited', prefix);
       res.status(429).json({ error: { code: 'RATE_LIMITED', message: 'Too many requests, please try again later', requestId: req.requestId } });
     },
     ...opts,

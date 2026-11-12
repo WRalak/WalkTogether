@@ -2,7 +2,7 @@
 # WalkTogether API + background worker (one image, three roles).
 #
 # Build from the REPOSITORY ROOT (the server bundles shared code from packages/):
-#   docker build -f server/Dockerfile -t walktogether-api .
+#   docker build -f infrastructure/docker/Dockerfile.api -t walktogether-api .
 # Run as:
 #   API     (default)  node dist/main.js
 #   Worker             node dist/worker.js

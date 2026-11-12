@@ -94,7 +94,8 @@ export async function loginWithPhone(phone: string, code: string, ctx: ClientCon
   await consumeOtp(phone, 'LOGIN', code);
   const user = await prisma.user.findUnique({ where: { phone } });
   if (user && user.phoneVerifiedAt && user.status !== 'DELETED') {
-    return { status: 'authenticated' as const, tokens: await completeLogin(user, 'PHONE_OTP', ctx) };
+    const tokens = await completeLogin(user, 'PHONE_OTP', ctx);
+    return 'mfaRequired' in tokens ? { status: 'mfa_required' as const, tokens } : { status: 'authenticated' as const, tokens };
   }
   const reg = await signToken('phone_registration', phone, {}, 15 * 60);
   return { status: 'registration_required' as const, registrationToken: reg.token, expiresAt: reg.expiresAt.toISOString() };

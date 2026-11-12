@@ -117,30 +117,35 @@ enum ActorType {
 // ---------------------------------------------------------------------------
 
 model User {
-  id                  String     @id @default(uuid()) @db.Uuid
-  email               String?    @unique @db.VarChar(254)
-  emailVerifiedAt     DateTime?  @map("email_verified_at")
-  phone               String?    @unique @db.VarChar(20)
-  phoneVerifiedAt     DateTime?  @map("phone_verified_at")
-  username            String     @unique @db.VarChar(30)
-  passwordHash        String?    @map("password_hash")
-  status              UserStatus @default(ACTIVE)
-  failedLoginCount    Int        @default(0) @map("failed_login_count")
-  lockedUntil         DateTime?  @map("locked_until")
-  suspendedAt         DateTime?  @map("suspended_at")
-  suspensionReason    String?    @map("suspension_reason") @db.VarChar(500)
-  deletionRequestedAt DateTime?  @map("deletion_requested_at")
-  deletionScheduledAt DateTime?  @map("deletion_scheduled_at")
-  lastLoginAt         DateTime?  @map("last_login_at")
-  termsAcceptedAt     DateTime?  @map("terms_accepted_at")
-  createdAt           DateTime   @default(now()) @map("created_at")
-  updatedAt           DateTime   @updatedAt @map("updated_at")
-  deletedAt           DateTime?  @map("deleted_at")
+  id                        String     @id @default(uuid()) @db.Uuid
+  email                     String?    @unique @db.VarChar(254)
+  emailVerifiedAt           DateTime?  @map("email_verified_at")
+  phone                     String?    @unique @db.VarChar(20)
+  phoneVerifiedAt           DateTime?  @map("phone_verified_at")
+  username                  String     @unique @db.VarChar(30)
+  passwordHash              String?    @map("password_hash")
+  status                    UserStatus @default(ACTIVE)
+  failedLoginCount          Int        @default(0) @map("failed_login_count")
+  lockedUntil               DateTime?  @map("locked_until")
+  /// Optional TOTP MFA (AES-256-GCM encrypted secret). Pending secret holds an enrolment in progress.
+  mfaSecretEncrypted        String?    @map("mfa_secret_encrypted")
+  mfaPendingSecretEncrypted String?    @map("mfa_pending_secret_encrypted")
+  mfaEnabledAt              DateTime?  @map("mfa_enabled_at")
+  suspendedAt               DateTime?  @map("suspended_at")
+  suspensionReason          String?    @map("suspension_reason") @db.VarChar(500)
+  deletionRequestedAt       DateTime?  @map("deletion_requested_at")
+  deletionScheduledAt       DateTime?  @map("deletion_scheduled_at")
+  lastLoginAt               DateTime?  @map("last_login_at")
+  termsAcceptedAt           DateTime?  @map("terms_accepted_at")
+  createdAt                 DateTime   @default(now()) @map("created_at")
+  updatedAt                 DateTime   @updatedAt @map("updated_at")
+  deletedAt                 DateTime?  @map("deleted_at")
 
   profile              UserProfile?
   privacySettings      UserPrivacySettings?
   notificationSettings UserNotificationSettings?
   sessions             UserSession[]
+  mfaRecoveryCodes     UserMfaRecoveryCode[]
   emailVerifications   EmailVerification[]
   passwordResets       PasswordReset[]
   phoneVerifications   PhoneVerification[]
@@ -240,6 +245,20 @@ model UserNotificationSettings {
 }
 
 /// One row per logged-in device. Refresh tokens rotate within a session (token family).
+/// Single-use MFA recovery codes (only HMAC hashes are stored; codes are shown once at enrolment).
+model UserMfaRecoveryCode {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  codeHash  String    @unique @map("code_hash") @db.VarChar(128)
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_mfa_recovery_codes")
+}
+
 model UserSession {
   id            String          @id @default(uuid()) @db.Uuid
   userId        String          @map("user_id") @db.Uuid

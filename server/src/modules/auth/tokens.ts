@@ -6,11 +6,12 @@ const ISSUER = 'walktogether-api';
 const memberKey = new TextEncoder().encode(env.JWT_ACCESS_SECRET);
 const adminKey = new TextEncoder().encode(env.JWT_ADMIN_SECRET);
 
-type TokenType = 'access' | 'phone_registration' | 'admin_access' | 'admin_mfa';
+type TokenType = 'access' | 'phone_registration' | 'member_mfa' | 'admin_access' | 'admin_mfa';
 
 const AUDIENCE: Record<TokenType, string> = {
   access: 'walktogether:member',
   phone_registration: 'walktogether:phone-registration',
+  member_mfa: 'walktogether:member-mfa',
   admin_access: 'walktogether:platform-admin',
   admin_mfa: 'walktogether:platform-admin-mfa',
 };

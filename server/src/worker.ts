@@ -6,7 +6,9 @@ import { getQueue } from './queues';
 import type { JobMap, JobName } from './queues/jobs';
 import { processors } from './queues/processors';
 import { logger } from './shared/logger';
-import { jobCounter } from './shared/metrics';
+import { createServer } from 'node:http';
+import { jobCounter, registry } from './shared/metrics';
+import { safeEqual } from './shared/crypto';
 
 if (env.SENTRY_DSN) Sentry.init({ dsn: env.SENTRY_DSN, environment: env.NODE_ENV });
 
@@ -51,9 +53,21 @@ await maintenance.upsertJobScheduler('media-cleanup', { pattern: '37 4 * * *' },
 await maintenance.upsertJobScheduler('event-reminders', { pattern: '*/10 * * * *' }, { name: 'events.reminders', data: {} });
 await maintenance.upsertJobScheduler('subscriptions-lifecycle', { pattern: '7 * * * *' }, { name: 'subscriptions.lifecycle', data: {} });
 
+// Private metrics endpoint so Prometheus can alert on job failures (same bearer token as the API).
+const metricsServer = createServer((req, res) => {
+  const token = (req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+  if (req.url !== '/metrics' || !env.METRICS_TOKEN || !safeEqual(token, env.METRICS_TOKEN)) {
+    res.writeHead(404).end();
+    return;
+  }
+  void registry.metrics().then((body) => res.writeHead(200, { 'Content-Type': registry.contentType }).end(body));
+});
+metricsServer.listen(env.WORKER_METRICS_PORT);
+
 logger.info('WalkTogether worker started');
 
 async function shutdown() {
+  metricsServer.close();
   await Promise.allSettled(workers.map((w) => w.close()));
   process.exit(0);
 }

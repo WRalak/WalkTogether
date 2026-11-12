@@ -1,0 +1,127 @@
+# Production / staging stack for a single hardened Docker host (see infrastructure/terraform:
+# private EC2 host behind an ALB, reached via SSM — no public SSH). Kubernetes manifests exist in
+# infrastructure/kubernetes for when scale justifies them.
+#
+#   docker compose -f infrastructure/docker/docker-compose.yml --env-file /etc/walktogether/compose.env up -d
+#
+# Images are referenced by immutable digest (WT_API_IMAGE=ghcr.io/…/walktogether-api@sha256:…) and
+# verified with Cosign by infrastructure/deployment/deploy.sh before this file is applied.
+# Secrets come from AWS Secrets Manager, rendered by deploy.sh into root-owned 0600 env files under
+# /etc/walktogether — never committed, never baked into images.
+#
+# PostgreSQL and Redis are managed services (RDS, ElastiCache) in private subnets. The optional
+# `self-hosted-data` profile runs them here on an internal-only network for small deployments;
+# no data service ever publishes a port.
+
+x-hardening: &hardening
+  read_only: true
+  security_opt: ['no-new-privileges:true']
+  cap_drop: [ALL]
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: '20m', max-file: '5' }
+
+services:
+  migrate:
+    <<: *hardening
+    image: ${WT_API_IMAGE:?set WT_API_IMAGE to an image digest}
+    restart: 'no'
+    command: ['npx', 'prisma', 'migrate', 'deploy']
+    env_file: /etc/walktogether/migrate.env   # uses the migrator database role (DDL rights)
+    tmpfs: ['/tmp:size=64m', '/home/node/.npm:size=64m']
+    networks: [egress, data]
+    deploy: { resources: { limits: { cpus: '0.5', memory: 512M } } }
+
+  api:
+    <<: *hardening
+    image: ${WT_API_IMAGE:?set WT_API_IMAGE to an image digest}
+    env_file: /etc/walktogether/api.env       # application role: DML only
+    tmpfs: ['/tmp:size=512m']                 # image/video processing scratch space
+    networks: [edge, egress, data]
+    expose: ['4000']
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:4000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy: { resources: { limits: { cpus: '1.5', memory: 1536M } } }
+
+  worker:
+    <<: *hardening
+    image: ${WT_API_IMAGE:?set WT_API_IMAGE to an image digest}
+    command: ['node', 'dist/worker.js']
+    env_file: /etc/walktogether/api.env
+    tmpfs: ['/tmp:size=1g']                   # video transcoding
+    networks: [egress, data]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    deploy: { resources: { limits: { cpus: '1.5', memory: 1536M } } }
+
+  platform-admin:
+    <<: *hardening
+    image: ${WT_PLATFORM_ADMIN_IMAGE:?set WT_PLATFORM_ADMIN_IMAGE to an image digest}
+    tmpfs: ['/tmp:size=64m', '/app/platform-admin/.next/cache:size=64m']
+    networks: [edge]
+    expose: ['3000']
+    deploy: { resources: { limits: { cpus: '0.5', memory: 512M } } }
+
+  clamav:
+    image: clamav/clamav:1.4.2
+    restart: unless-stopped
+    security_opt: ['no-new-privileges:true']
+    networks: [egress, data]                  # egress only for signature updates (freshclam)
+    volumes: ['clamav-db:/var/lib/clamav']
+    deploy: { resources: { limits: { cpus: '1', memory: 3G } } }
+
+  nginx:
+    <<: *hardening
+    image: nginx:1.27.3-alpine
+    cap_add: [NET_BIND_SERVICE, CHOWN, SETUID, SETGID]   # bind 80/443 and drop to the nginx user
+    ports: ['80:80', '443:443']                          # the only published ports
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/security-headers.conf:/etc/nginx/security-headers.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+    tmpfs: ['/var/cache/nginx:size=64m', '/var/run:size=1m', '/var/log/nginx:size=64m', '/tmp:size=16m']
+    networks: [edge]
+    depends_on: [api, platform-admin]
+    deploy: { resources: { limits: { cpus: '0.5', memory: 256M } } }
+
+  # --- Optional: data services on this host (internal network only, never published) -----------
+  postgres:
+    profiles: [self-hosted-data]
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    security_opt: ['no-new-privileges:true']
+    env_file: /etc/walktogether/postgres.env
+    # Clients must connect with sslmode=verify-full (enforced by the API's start-up guard).
+    command: ['postgres', '-c', 'ssl=on', '-c', 'ssl_cert_file=/certs/server.crt', '-c', 'ssl_key_file=/certs/server.key', '-c', 'password_encryption=scram-sha-256', '-c', 'log_connections=on']
+    volumes: ['pgdata:/var/lib/postgresql/data', '/etc/walktogether/pg-certs:/certs:ro']
+    networks: [data]
+    deploy: { resources: { limits: { cpus: '2', memory: 4G } } }
+
+  redis:
+    profiles: [self-hosted-data]
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    security_opt: ['no-new-privileges:true']
+    # TLS only (the API refuses plaintext redis:// in staging/production): clients use rediss://.
+    command: ['redis-server', '--port', '0', '--tls-port', '6379', '--tls-cert-file', '/certs/redis.crt', '--tls-key-file', '/certs/redis.key', '--tls-ca-cert-file', '/certs/ca.crt', '--tls-auth-clients', 'no', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction', '--requirepass', '${REDIS_PASSWORD:?set REDIS_PASSWORD}', '--rename-command', 'FLUSHALL', '', '--rename-command', 'CONFIG', '']
+    volumes: ['redisdata:/data', '/etc/walktogether/redis-certs:/certs:ro']
+    networks: [data]
+    deploy: { resources: { limits: { cpus: '1', memory: 1G } } }
+
+networks:
+  edge: {}                 # nginx ↔ api / platform-admin (platform-admin has no other network)
+  egress: {}               # outbound to managed RDS/ElastiCache/S3 and providers (Daraja, Stripe, SMTP…)
+  data: { internal: true } # api / worker ↔ ClamAV and self-hosted data services; no internet route
+
+volumes:
+  clamav-db: {}
+  certbot-www: {}
+  pgdata: {}
+  redisdata: {}

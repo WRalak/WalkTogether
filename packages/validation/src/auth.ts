@@ -77,3 +77,14 @@ export const phoneRegistrationSchema = z
     device: deviceInfoSchema.optional(),
   })
   .strict();
+
+// Optional member MFA (TOTP + single-use recovery codes) -----------------------------------------
+export const totpCodeSchema = z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code from your authenticator app');
+export const recoveryCodeSchema = z.string().trim().toLowerCase().regex(/^[a-z0-9]{5}-[a-z0-9]{5}$/, 'Recovery codes look like abcde-12345');
+export const mfaVerifySchema = z
+  .object({ mfaToken: z.string().min(20).max(2000), code: totpCodeSchema.optional(), recoveryCode: recoveryCodeSchema.optional() })
+  .strict()
+  .refine((b) => !!b.code !== !!b.recoveryCode, { message: 'Provide either an authenticator code or a recovery code' });
+export const mfaEnableSchema = z.object({ code: totpCodeSchema }).strict();
+export const mfaDisableSchema = z.object({ code: totpCodeSchema.optional(), recoveryCode: recoveryCodeSchema.optional(), password: z.string().max(128).optional() }).strict()
+  .refine((b) => !!b.code !== !!b.recoveryCode, { message: 'Provide either an authenticator code or a recovery code' });

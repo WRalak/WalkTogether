@@ -163,3 +163,27 @@ describe('payment webhooks', () => {
     expect(mpesa.status).toBeGreaterThanOrEqual(400);
   });
 });
+
+describe('threat-detection metrics', () => {
+  it('counts authentication failures, denials, admin actions and forged payment webhooks', async () => {
+    const { securityEvents } = await import('../src/shared/metrics');
+    const value = async (type: string) => (await securityEvents.get()).values.filter((v) => v.labels.type === type).reduce((n, v) => n + v.value, 0);
+    const before = { auth: await value('auth_failure'), unauth: await value('unauthorized'), forbidden: await value('forbidden'), admin: await value('admin_action'), pay: await value('payment_anomaly') };
+
+    const u = await registerUser();
+    await api().post('/api/v1/auth/login').send({ email: u.email, password: 'wrong-password-123' }).expect(401);
+    await api().get('/api/v1/users/me').expect(401);
+    const owner = await registerUser();
+    const club = await createClub(owner);
+    await api().patch(`/api/v1/clubs/${club.id}`).set(bearer(u)).send({ name: 'Hijacked club name' }).expect((r) => expect([403, 404]).toContain(r.status));
+    const admin = await createAdmin();
+    await api().put('/api/v1/platform-admin/promotions/' + `SEC${uid().toUpperCase()}`).set({ Authorization: `Bearer ${admin.accessToken}` }).send({ percentOff: 10 }).expect(200);
+    await api().post('/api/v1/payments/webhooks/sandbox').send({ eventId: 'forged' }).expect((r) => expect(r.status).toBeGreaterThanOrEqual(400));
+
+    expect(await value('auth_failure')).toBeGreaterThan(before.auth);
+    expect(await value('unauthorized')).toBeGreaterThan(before.unauth);
+    expect((await value('forbidden')) + (await value('unauthorized'))).toBeGreaterThan(before.forbidden + before.unauth);
+    expect(await value('admin_action')).toBeGreaterThan(before.admin);
+    expect(await value('payment_anomaly')).toBeGreaterThan(before.pay);
+  });
+});

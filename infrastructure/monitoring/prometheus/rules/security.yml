@@ -1,0 +1,63 @@
+# Threat-detection alerts built on walktogether_security_events_total (server/src/shared/metrics.ts).
+# Thresholds are starting points; tune them from production baselines and record changes in
+# security/vulnerability-management/README.md.
+groups:
+  - name: walktogether-security
+    rules:
+      - alert: AuthenticationFailureSpike
+        expr: sum(rate(walktogether_security_events_total{type="auth_failure"}[5m])) * 300 > 50
+        for: 5m
+        labels: { severity: warning, team: security }
+        annotations:
+          summary: More than 50 failed sign-ins in 5 minutes (possible credential stuffing)
+          runbook: security/incident-response/INCIDENT_RESPONSE.md#credential-attacks
+
+      - alert: MfaFailureSpike
+        expr: sum(rate(walktogether_security_events_total{type="mfa_failure"}[10m])) * 600 > 20
+        for: 5m
+        labels: { severity: warning, team: security }
+        annotations:
+          summary: Repeated MFA failures — a password may be compromised
+          runbook: security/incident-response/INCIDENT_RESPONSE.md#credential-attacks
+
+      - alert: RefreshTokenReuseDetected
+        expr: sum(increase(walktogether_security_events_total{type="refresh_token_reuse"}[15m])) > 0
+        labels: { severity: critical, team: security }
+        annotations:
+          summary: A rotated refresh token was replayed (stolen session); the session was revoked automatically
+          runbook: security/incident-response/INCIDENT_RESPONSE.md#session-theft
+
+      - alert: SuspiciousLoginSurge
+        expr: sum(increase(walktogether_security_events_total{type="suspicious_login"}[1h])) > 25
+        labels: { severity: warning, team: security }
+        annotations:
+          summary: Unusual number of sign-ins from new devices/locations
+
+      - alert: RateLimitAbuse
+        expr: sum by (detail) (rate(walktogether_security_events_total{type="rate_limited"}[5m])) * 300 > 200
+        for: 10m
+        labels: { severity: warning, team: security }
+        annotations:
+          summary: 'Sustained rate limiting on {{ $labels.detail }} (API abuse or a broken client)'
+
+      - alert: AuthorizationDenialSpike
+        expr: sum(rate(walktogether_security_events_total{type="forbidden"}[5m])) * 300 > 100
+        for: 10m
+        labels: { severity: warning, team: security }
+        annotations:
+          summary: Many 403s — possible IDOR/BOLA probing or a broken permission check
+          runbook: security/incident-response/INCIDENT_RESPONSE.md#tenant-isolation
+
+      - alert: PrivilegedAdminActivityBurst
+        expr: sum(increase(walktogether_security_events_total{type="admin_action"}[10m])) > 100
+        labels: { severity: warning, team: security }
+        annotations:
+          summary: Burst of platform-admin actions — verify it was intended (compromised admin account?)
+          runbook: security/incident-response/INCIDENT_RESPONSE.md#admin-compromise
+
+      - alert: ForgedPaymentWebhooks
+        expr: sum(increase(walktogether_security_events_total{type="payment_anomaly"}[15m])) > 3
+        labels: { severity: critical, team: security }
+        annotations:
+          summary: Payment callbacks failing signature verification (spoofing attempt or rotated secret)
+          runbook: security/incident-response/INCIDENT_RESPONSE.md#payment-fraud

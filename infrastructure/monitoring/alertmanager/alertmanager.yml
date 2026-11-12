@@ -1,0 +1,32 @@
+# Routes alerts to on-call. Receiver credentials (SMTP password, Slack webhook) are read from files
+# mounted from the secrets manager — never committed.
+route:
+  receiver: ops
+  group_by: [alertname]
+  group_wait: 30s
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity="critical"]
+      receiver: oncall-critical
+      repeat_interval: 30m
+    - matchers: [team="security"]
+      receiver: security
+
+receivers:
+  - name: ops
+    email_configs:
+      - to: ops@walktogether.app
+        from: alerts@walktogether.app
+        smarthost: email-smtp.eu-west-1.amazonaws.com:587
+        auth_username: alerts-smtp   # not secret on its own; the password comes from a file
+        auth_password_file: /run/secrets/smtp_password
+  - name: oncall-critical
+    slack_configs:
+      - api_url_file: /run/secrets/slack_oncall_webhook
+        send_resolved: true
+        title: '{{ .CommonAnnotations.summary }}'
+  - name: security
+    slack_configs:
+      - api_url_file: /run/secrets/slack_security_webhook
+        send_resolved: true
+        title: '[security] {{ .CommonAnnotations.summary }}'

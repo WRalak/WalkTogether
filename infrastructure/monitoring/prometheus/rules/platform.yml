@@ -1,0 +1,48 @@
+groups:
+  - name: walktogether-platform
+    rules:
+      - alert: ApiDown
+        expr: up{job="walktogether-api"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: 'API target {{ $labels.instance }} is down' }
+
+      - alert: WorkerDown
+        expr: up{job="walktogether-worker"} == 0
+        for: 5m
+        labels: { severity: critical }
+        annotations: { summary: 'Background worker is down (payments reconciliation, reminders and notifications stop)' }
+
+      - alert: HighErrorRate
+        expr: sum(rate(http_request_duration_seconds_count{status=~"5.."}[5m])) / clamp_min(sum(rate(http_request_duration_seconds_count[5m])), 1) > 0.02
+        for: 10m
+        labels: { severity: critical }
+        annotations: { summary: More than 2% of API requests are failing with 5xx }
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{route!="unmatched"}[5m]))) > 1
+        for: 15m
+        labels: { severity: warning }
+        annotations: { summary: p95 API latency above 1 s }
+
+      - alert: BackgroundJobFailures
+        expr: sum by (job) (increase(jobs_processed_total{outcome="error"}[30m])) > 5
+        labels: { severity: warning }
+        annotations: { summary: 'Job {{ $labels.job }} failing repeatedly' }
+
+      - alert: PaymentFailureRate
+        expr: sum(increase(payments_total{outcome="failed"}[1h])) > 20 and sum(increase(payments_total{outcome="failed"}[1h])) > 3 * sum(increase(payments_total{outcome="succeeded"}[1h]))
+        labels: { severity: warning }
+        annotations: { summary: Payment failures far exceed successes (provider outage or fraud attempt) }
+
+      - alert: HostMemoryHigh
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.9
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: 'Memory above 90% on {{ $labels.instance }}' }
+
+      - alert: HostDiskFilling
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.15
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: 'Less than 15% disk free on {{ $labels.instance }}' }

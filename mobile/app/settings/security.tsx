@@ -6,6 +6,7 @@ import { Screen } from '@/components/screen';
 import { api } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 import { errorMessage } from '@/utils/errors';
+import { MfaSettings } from '@/features/security/mfa-settings';
 
 export default function SecuritySettings() {
   const qc = useQueryClient();
@@ -45,6 +46,8 @@ export default function SecuritySettings() {
   return (
     <Screen edges={[]}>
       {error && <ErrorState message={error} />}
+      <SectionTitle>Sign-in protection</SectionTitle>
+      <MfaSettings />
       <SectionTitle>Signed-in devices</SectionTitle>
       {sessions.isLoading ? (
         <Loading />

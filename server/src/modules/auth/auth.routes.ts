@@ -9,6 +9,9 @@ import {
   phoneRegistrationSchema,
   refreshSchema,
   registerSchema,
+  mfaDisableSchema,
+  mfaEnableSchema,
+  mfaVerifySchema,
   resetPasswordSchema,
   verifyEmailSchema,
 } from '@walktogether/validation';
@@ -20,6 +23,8 @@ import { authLimiter, otpLimiter, refreshLimiter } from '../../middleware/rate-l
 import { parse } from '../../middleware/validate';
 import { unauthorized } from '../../shared/errors';
 import * as auth from './auth.service';
+import * as mfa from './mfa.service';
+import type { MfaChallenge } from './mfa.service';
 import * as phone from './phone.service';
 import { loginWithOAuth } from './oauth.service';
 
@@ -37,7 +42,12 @@ function cookieOptions(expires?: Date): CookieOptions {
   return { httpOnly: true, secure: cookieSecure, sameSite: 'strict', path: REFRESH_COOKIE_PATH, domain: env.COOKIE_DOMAIN, expires };
 }
 
-function sendTokens(req: Request, res: Response, tokens: auth.IssuedTokens, status = 200, extra: Record<string, unknown> = {}) {
+function sendTokens(req: Request, res: Response, tokens: auth.IssuedTokens | MfaChallenge, status = 200, extra: Record<string, unknown> = {}) {
+  // Two-step verification pending: no session yet, only the short-lived challenge.
+  if ('mfaRequired' in tokens) {
+    res.status(status).json({ data: { ...tokens, ...extra } });
+    return;
+  }
   if (isWebClient(req)) {
     res.cookie(REFRESH_COOKIE, tokens.refreshToken, cookieOptions(new Date(tokens.refreshTokenExpiresAt)));
     const { refreshToken: _omit, ...rest } = tokens;
@@ -55,6 +65,26 @@ authRouter.post('/register', authLimiter, async (req, res) => {
   const input = parse(registerSchema, req.body);
   const result = await auth.register(input, clientCtx(req, input.device));
   sendTokens(req, res, result.tokens, 201, { userId: result.userId });
+});
+
+authRouter.post('/mfa/verify', authLimiter, async (req, res) => {
+  sendTokens(req, res, await auth.verifyMfaLogin(parse(mfaVerifySchema, req.body), clientCtx(req)));
+});
+authRouter.get('/mfa', requireAuth, async (req, res) => {
+  res.json({ data: await mfa.status(authUserId(req)) });
+});
+authRouter.post('/mfa/setup', requireAuth, authLimiter, async (req, res) => {
+  res.json({ data: await mfa.setup(authUserId(req)) });
+});
+authRouter.post('/mfa/enable', requireAuth, authLimiter, async (req, res) => {
+  res.json({ data: await mfa.enable(authUserId(req), parse(mfaEnableSchema, req.body).code, auditCtx(req)) });
+});
+authRouter.post('/mfa/disable', requireAuth, authLimiter, async (req, res) => {
+  await mfa.disable(authUserId(req), parse(mfaDisableSchema, req.body), auditCtx(req));
+  res.status(204).end();
+});
+authRouter.post('/mfa/recovery-codes', requireAuth, authLimiter, async (req, res) => {
+  res.json({ data: await mfa.regenerateRecoveryCodes(authUserId(req), parse(mfaEnableSchema, req.body).code, auditCtx(req)) });
 });
 
 authRouter.post('/login', authLimiter, async (req, res) => {
@@ -145,7 +175,7 @@ authRouter.post('/phone/verify-otp', authLimiter, optionalAuth, async (req, res)
     return;
   }
   const result = await phone.loginWithPhone(input.phone, input.code, clientCtx(req, input.device));
-  if (result.status === 'authenticated') {
+  if (result.status === 'authenticated' || result.status === 'mfa_required') {
     sendTokens(req, res, result.tokens, 200, { status: result.status });
     return;
   }

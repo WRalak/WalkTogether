@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { usernameSchema } from '@walktogether/validation';
@@ -14,6 +15,7 @@ type Step = { kind: 'phone' } | { kind: 'code'; phone: string } | { kind: 'profi
 /** Phone-first sign-in / sign-up with an SMS one-time code. */
 export default function PhoneAuth() {
   const loadUser = useAuthStore((s) => s.loadUser);
+  const router = useRouter();
   const [step, setStep] = useState<Step>({ kind: 'phone' });
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
@@ -75,6 +77,7 @@ export default function PhoneAuth() {
               run(async () => {
                 const res = await api.auth.verifyPhoneOtp({ phone: step.phone, code, purpose: 'LOGIN', device: await deviceInfo() });
                 if ('status' in res && res.status === 'authenticated') await loadUser();
+                else if ('status' in res && res.status === 'mfa_required') router.push({ pathname: '/(auth)/mfa', params: { mfaToken: res.mfaToken } });
                 else if ('status' in res && res.status === 'registration_required') setStep({ kind: 'profile', registrationToken: res.registrationToken });
               })
             }

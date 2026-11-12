@@ -108,7 +108,7 @@ describe('platform admin permissions & actions', () => {
 describe('audit log integrity', () => {
   it('the database refuses to update or delete audit records', async () => {
     const row = await prisma.auditLog.findFirstOrThrow();
-    await expect(prisma.auditLog.update({ where: { id: row.id }, data: { action: 'tampered' } })).rejects.toThrow(/append-only/);
-    await expect(prisma.auditLog.delete({ where: { id: row.id } })).rejects.toThrow(/append-only/);
+    await expect(prisma.auditLog.update({ where: { id: row.id }, data: { action: 'tampered' } })).rejects.toThrow(/append-only|permission denied/);
+    await expect(prisma.auditLog.delete({ where: { id: row.id } })).rejects.toThrow(/append-only|permission denied/);
   });
 });

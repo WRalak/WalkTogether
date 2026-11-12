@@ -94,10 +94,51 @@ const envSchema = z.object({
   SENTRY_DSN: z.string().optional(),
   /** Bearer token required to scrape /metrics (Prometheus). Unset = endpoint disabled. */
   METRICS_TOKEN: z.string().min(24).optional(),
+  /** Port of the worker's private metrics endpoint (job outcomes); not published outside the host network. */
+  WORKER_METRICS_PORT: z.coerce.number().int().min(1).max(65535).default(9464),
   ADMIN_TOTP_ISSUER: z.string().default('WalkTogether Admin'),
+  MEMBER_TOTP_ISSUER: z.string().default('WalkTogether'),
 });
 
 export type Env = z.infer<typeof envSchema>;
+
+/** Settings that must hold in staging/production; the API and worker refuse to start otherwise. */
+export function deployedConfigProblems(env: Env): string[] {
+  const problems: string[] = [];
+  if (env.EMAIL_PROVIDER === 'console') problems.push('EMAIL_PROVIDER must not be "console"');
+  if (env.SMS_PROVIDER === 'console') problems.push('SMS_PROVIDER must not be "console"');
+  if (env.QUEUE_DRIVER === 'inline') problems.push('QUEUE_DRIVER must be "bullmq"');
+  if (!env.RATE_LIMIT_ENABLED) problems.push('RATE_LIMIT_ENABLED must be true');
+  if (env.PUSH_PROVIDER === 'console') problems.push('PUSH_PROVIDER must not be "console"');
+  if (env.STORAGE_DRIVER === 'local') problems.push('STORAGE_DRIVER must be "s3"');
+  if (env.STORAGE_DRIVER === 's3' && !env.S3_BUCKET) problems.push('S3_BUCKET is required');
+  if (env.MALWARE_SCANNER === 'none') problems.push('MALWARE_SCANNER must be "clamav"');
+  if (env.PAYMENT_PROVIDERS.includes('sandbox')) problems.push('the sandbox payment provider is not allowed');
+  if (env.PAYMENT_PROVIDERS.includes('mpesa') && (!env.MPESA_CONSUMER_KEY || !env.MPESA_CONSUMER_SECRET || !env.MPESA_SHORTCODE || !env.MPESA_PASSKEY || !env.MPESA_CALLBACK_SECRET || env.MPESA_CALLBACK_SECRET.length < 24))
+    problems.push('M-Pesa requires MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY and a long MPESA_CALLBACK_SECRET');
+  if (env.PAYMENT_PROVIDERS.includes('stripe') && (!env.STRIPE_SECRET_KEY || !env.STRIPE_WEBHOOK_SECRET)) problems.push('Stripe requires STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET');
+  if (env.EMAIL_PROVIDER === 'smtp' && !env.SMTP_URL) problems.push('SMTP_URL is required');
+  if (env.SMS_PROVIDER === 'africastalking' && (!env.AFRICASTALKING_API_KEY || !env.AFRICASTALKING_USERNAME))
+    problems.push("AFRICASTALKING_USERNAME and AFRICASTALKING_API_KEY are required");
+  for (const k of ['JWT_ACCESS_SECRET', 'JWT_ADMIN_SECRET', 'TOKEN_HASH_SECRET'] as const) {
+    if (/change[-_]?me|dev|example/i.test(env[k])) problems.push(`${k} looks like a placeholder`);
+  }
+  if (env.JWT_ACCESS_SECRET === env.JWT_ADMIN_SECRET) problems.push('JWT_ACCESS_SECRET and JWT_ADMIN_SECRET must differ');
+  const insecure = env.CORS_ORIGINS.filter((o) => !o.startsWith('https://'));
+  if (insecure.length) problems.push(`CORS_ORIGINS must all be https:// (got ${insecure.join(', ')})`);
+  if (!env.API_PUBLIC_URL.startsWith('https://')) problems.push('API_PUBLIC_URL must be https://');
+  // Data in transit to PostgreSQL and Redis must be encrypted (security gap G7).
+  const sslmode = (() => {
+    try {
+      return new URL(env.DATABASE_URL).searchParams.get('sslmode');
+    } catch {
+      return null;
+    }
+  })();
+  if (!sslmode || !['require', 'verify-ca', 'verify-full'].includes(sslmode)) problems.push('DATABASE_URL must use TLS (sslmode=require, verify-ca or verify-full)');
+  if (!env.REDIS_URL.startsWith('rediss://')) problems.push('REDIS_URL must use TLS (rediss://)');
+  return problems;
+}
 
 function loadEnv(): Env {
   const parsed = envSchema.safeParse(process.env);
@@ -109,29 +150,7 @@ function loadEnv(): Env {
   const env = parsed.data;
   const deployed = env.NODE_ENV === 'production' || env.NODE_ENV === 'staging';
   if (deployed) {
-    const problems: string[] = [];
-    if (env.EMAIL_PROVIDER === 'console') problems.push('EMAIL_PROVIDER must not be "console"');
-    if (env.SMS_PROVIDER === 'console') problems.push('SMS_PROVIDER must not be "console"');
-    if (env.QUEUE_DRIVER === 'inline') problems.push('QUEUE_DRIVER must be "bullmq"');
-    if (!env.RATE_LIMIT_ENABLED) problems.push('RATE_LIMIT_ENABLED must be true');
-    if (env.PUSH_PROVIDER === 'console') problems.push('PUSH_PROVIDER must not be "console"');
-    if (env.STORAGE_DRIVER === 'local') problems.push('STORAGE_DRIVER must be "s3"');
-    if (env.STORAGE_DRIVER === 's3' && !env.S3_BUCKET) problems.push('S3_BUCKET is required');
-    if (env.MALWARE_SCANNER === 'none') problems.push('MALWARE_SCANNER must be "clamav"');
-    if (env.PAYMENT_PROVIDERS.includes('sandbox')) problems.push('the sandbox payment provider is not allowed');
-    if (env.PAYMENT_PROVIDERS.includes('mpesa') && (!env.MPESA_CONSUMER_KEY || !env.MPESA_CONSUMER_SECRET || !env.MPESA_SHORTCODE || !env.MPESA_PASSKEY || !env.MPESA_CALLBACK_SECRET || env.MPESA_CALLBACK_SECRET.length < 24))
-      problems.push('M-Pesa requires MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY and a long MPESA_CALLBACK_SECRET');
-    if (env.PAYMENT_PROVIDERS.includes('stripe') && (!env.STRIPE_SECRET_KEY || !env.STRIPE_WEBHOOK_SECRET)) problems.push('Stripe requires STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET');
-    if (env.EMAIL_PROVIDER === 'smtp' && !env.SMTP_URL) problems.push('SMTP_URL is required');
-    if (env.SMS_PROVIDER === 'africastalking' && (!env.AFRICASTALKING_API_KEY || !env.AFRICASTALKING_USERNAME))
-      problems.push("AFRICASTALKING_USERNAME and AFRICASTALKING_API_KEY are required");
-    for (const k of ['JWT_ACCESS_SECRET', 'JWT_ADMIN_SECRET', 'TOKEN_HASH_SECRET'] as const) {
-      if (/change[-_]?me|dev|example/i.test(env[k])) problems.push(`${k} looks like a placeholder`);
-    }
-    if (env.JWT_ACCESS_SECRET === env.JWT_ADMIN_SECRET) problems.push('JWT_ACCESS_SECRET and JWT_ADMIN_SECRET must differ');
-    const insecure = env.CORS_ORIGINS.filter((o) => !o.startsWith('https://'));
-    if (insecure.length) problems.push(`CORS_ORIGINS must all be https:// (got ${insecure.join(', ')})`);
-    if (!env.API_PUBLIC_URL.startsWith('https://')) problems.push('API_PUBLIC_URL must be https://');
+    const problems = deployedConfigProblems(env);
     if (problems.length) throw new Error(`Unsafe ${env.NODE_ENV} configuration:\n  ${problems.join('\n  ')}`);
   }
   return env;

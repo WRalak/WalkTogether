@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
@@ -14,14 +14,16 @@ import { errorMessage } from '@/utils/errors';
 
 export default function Login() {
   const loadUser = useAuthStore((s) => s.loadUser);
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const { control, handleSubmit, formState } = useForm<z.infer<typeof loginSchema>>({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } });
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
     try {
-      await api.auth.login({ ...values, device: await deviceInfo() });
-      await loadUser();
+      const res = await api.auth.login({ ...values, device: await deviceInfo() });
+      if ('mfaRequired' in res) router.push({ pathname: '/(auth)/mfa', params: { mfaToken: res.mfaToken } });
+      else await loadUser();
     } catch (e) {
       setError(errorMessage(e));
     }

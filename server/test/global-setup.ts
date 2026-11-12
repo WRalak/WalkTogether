@@ -14,6 +14,11 @@ export default async function setup() {
   await syncPermissionCatalog();
   const { seedDefaultAchievements } = await import('../src/modules/challenges/achievements.service');
   await seedDefaultAchievements();
+  // Least-privilege mode (CI): after migrating as the schema owner, apply the production role
+  // grants and run the whole suite as the restricted application role `wt_app`.
+  if (process.env.TEST_APP_DATABASE_URL) {
+    execSync(`psql "${String(testEnv.DATABASE_URL).split('?')[0]}" -v ON_ERROR_STOP=1 -q -f ../infrastructure/deployment/database-roles.sql`, { stdio: 'pipe' });
+  }
   const { redis } = await import('../src/database/redis');
   await redis.flushdb();
   await redis.quit();

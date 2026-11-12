@@ -23,7 +23,10 @@ describe('platform administration', () => {
     const admin = await createAdmin();
     const sys = (await api().get('/api/v1/platform-admin/system').set(auth(admin)).expect(200)).body.data;
     expect(sys).toMatchObject({ status: 'ok', database: { ok: true }, redis: { ok: true } });
-    expect(sys.latestMigration.migration_name).toMatch(/phase/);
+    // The health page reports the newest applied migration.
+    const { readdirSync } = await import('node:fs');
+    const newest = readdirSync('prisma/migrations').filter((d) => /^\d{14}_/.test(d)).sort().at(-1);
+    expect(sys.latestMigration.migration_name).toBe(newest);
     const u = await registerUser();
     await api().post('/api/v1/auth/login').send({ email: u.email, password: 'wrong-pass-123' }).expect(401);
     const sec = (await api().get('/api/v1/platform-admin/security').set(auth(admin)).expect(200)).body.data;

@@ -1,0 +1,24 @@
+# Code owners must approve changes to the paths below (enable "Require review from Code Owners" in the
+# branch protection rule for main). Replace or extend @WRalak with team handles as the team grows,
+# e.g. @walktogether/security and @walktogether/platform.
+
+*                                   @WRalak
+
+# Security-critical code: authentication, authorization, tenant isolation, payments, admin.
+/server/src/modules/auth/           @WRalak
+/server/src/modules/clubs/club-access.ts @WRalak
+/server/src/modules/administration/ @WRalak
+/server/src/modules/payments/       @WRalak
+/server/src/middleware/             @WRalak
+/server/src/config/                 @WRalak
+/server/prisma/migrations/          @WRalak
+/packages/shared-types/src/permissions.ts @WRalak
+
+# Supply chain, pipelines, infrastructure and policy.
+/.github/                           @WRalak
+/infrastructure/                    @WRalak
+/security/                          @WRalak
+/SECURITY.md                        @WRalak
+/audit-ci.jsonc                     @WRalak
+/.gitleaks.toml                     @WRalak
+/package-lock.json                  @WRalak

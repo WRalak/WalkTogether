@@ -51,3 +51,38 @@ describe('split hosting', () => {
     expect(crossSiteOrigins('https://api.walktogether.co.ke', ['https://clubs.walktogether.co.ke', 'https://other.co.ke'])).toEqual(['https://other.co.ke']);
   });
 });
+
+describe('production configuration guard', () => {
+  it('requires TLS to PostgreSQL and Redis and https origins; a hardened config passes', async () => {
+    const { deployedConfigProblems, env } = await import('../src/config/env');
+    const hardened = {
+      ...env,
+      NODE_ENV: 'production' as const,
+      EMAIL_PROVIDER: 'smtp' as const,
+      SMTP_URL: 'smtps://user:pass@email-smtp.example.com:465',
+      SMS_PROVIDER: 'africastalking' as const,
+      AFRICASTALKING_USERNAME: 'wt',
+      AFRICASTALKING_API_KEY: 'k'.repeat(32),
+      PUSH_PROVIDER: 'expo' as const,
+      QUEUE_DRIVER: 'bullmq' as const,
+      RATE_LIMIT_ENABLED: true,
+      STORAGE_DRIVER: 's3' as const,
+      S3_BUCKET: 'wt-media',
+      MALWARE_SCANNER: 'clamav' as const,
+      PAYMENT_PROVIDERS: ['stripe'],
+      STRIPE_SECRET_KEY: 'sk_live_x',
+      STRIPE_WEBHOOK_SECRET: 'whsec_x',
+      JWT_ACCESS_SECRET: 'a'.repeat(48),
+      JWT_ADMIN_SECRET: 'b'.repeat(48),
+      TOKEN_HASH_SECRET: 'c'.repeat(48),
+      CORS_ORIGINS: ['https://admin.walktogether.app'],
+      API_PUBLIC_URL: 'https://api.walktogether.app',
+      DATABASE_URL: 'postgresql://wt_app:pw@db.internal:5432/walktogether?sslmode=verify-full',
+      REDIS_URL: 'rediss://:pw@cache.internal:6379',
+    };
+    expect(deployedConfigProblems(hardened as typeof env)).toEqual([]);
+    const plain = deployedConfigProblems({ ...hardened, DATABASE_URL: 'postgresql://wt_app:pw@db/walktogether', REDIS_URL: 'redis://cache:6379' } as typeof env);
+    expect(plain).toEqual(expect.arrayContaining([expect.stringMatching(/DATABASE_URL must use TLS/), expect.stringMatching(/REDIS_URL must use TLS/)]));
+    expect(deployedConfigProblems({ ...hardened, DATABASE_URL: 'postgresql://x@db/w?sslmode=disable' } as typeof env).join()).toMatch(/DATABASE_URL must use TLS/);
+  });
+});

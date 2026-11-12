@@ -4,7 +4,7 @@ import { prisma, type Tx } from '../../database/prisma';
 import { enqueue } from '../../queues';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../../shared/errors';
 import { logger } from '../../shared/logger';
-import { paymentCounter } from '../../shared/metrics';
+import { paymentCounter, recordSecurityEvent } from '../../shared/metrics';
 import { audit, type AuditContext } from '../audit/audit.service';
 import { requireClubPermission } from '../clubs/club-access';
 import { notify } from '../notifications/notifications.service';
@@ -161,6 +161,7 @@ export async function handleWebhook(providerId: string, req: Request) {
   } catch (err) {
     if (err instanceof WebhookAuthError) {
       logger.warn({ provider: providerId }, 'rejected unauthenticated payment webhook');
+      recordSecurityEvent('payment_anomaly', `invalid_signature_${providerId}`);
       throw new AppError(401, 'INVALID_SIGNATURE', 'Webhook signature verification failed');
     }
     throw err;

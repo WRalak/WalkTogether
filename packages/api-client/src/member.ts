@@ -5,6 +5,12 @@ import { HttpClient, type HttpClientOptions } from './http';
 
 type In<S extends z.ZodTypeAny> = z.input<S>;
 
+export interface MfaChallengeDto {
+  mfaRequired: true;
+  mfaToken: string;
+  expiresAt: string;
+}
+
 export interface ClubActivityDto {
   id: string;
   type: 'WALK' | 'RUN' | 'HIKE';
@@ -395,12 +401,27 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
     await options.tokens.setTokens({ accessToken: t.accessToken, refreshToken: t.refreshToken });
     return t;
   };
+  /** Sign-in either returns a session or, when two-step verification is on, an MFA challenge. */
+  const storeUnlessChallenge = async <T extends object>(res: T): Promise<T> => {
+    if ('mfaRequired' in res) return res;
+    await storeTokens(res as unknown as AuthTokens);
+    return res;
+  };
 
   return {
     http,
     auth: {
       register: async (body: In<typeof v.registerSchema>) => storeTokens(await http.request<AuthTokens & { userId: string }>('/api/v1/auth/register', { method: 'POST', body, auth: false })),
-      login: async (body: In<typeof v.loginSchema>) => storeTokens(await http.request<AuthTokens>('/api/v1/auth/login', { method: 'POST', body, auth: false })),
+      login: async (body: In<typeof v.loginSchema>) => storeUnlessChallenge(await http.request<AuthTokens | MfaChallengeDto>('/api/v1/auth/login', { method: 'POST', body, auth: false })),
+      /** Second step of sign-in: an authenticator code or a single-use recovery code. */
+      verifyMfa: async (body: In<typeof v.mfaVerifySchema>) => storeTokens(await http.request<AuthTokens>('/api/v1/auth/mfa/verify', { method: 'POST', body, auth: false })),
+      mfa: {
+        status: () => http.request<{ enabled: boolean; enabledAt: string | null; recoveryCodesRemaining: number }>('/api/v1/auth/mfa'),
+        setup: () => http.request<{ secret: string; otpauthUrl: string }>('/api/v1/auth/mfa/setup', { method: 'POST' }),
+        enable: (code: string) => http.request<{ recoveryCodes: string[] }>('/api/v1/auth/mfa/enable', { method: 'POST', body: { code } }),
+        disable: (body: In<typeof v.mfaDisableSchema>) => http.request<void>('/api/v1/auth/mfa/disable', { method: 'POST', body }),
+        regenerateRecoveryCodes: (code: string) => http.request<{ recoveryCodes: string[] }>('/api/v1/auth/mfa/recovery-codes', { method: 'POST', body: { code } }),
+      },
       logout: async () => {
         try {
           await http.request<void>('/api/v1/auth/logout', { method: 'POST' });
@@ -424,7 +445,9 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
       changePassword: (body: In<typeof v.changePasswordSchema>) => http.request<{ changed: true }>('/api/v1/auth/change-password', { method: 'POST', body }),
       requestPhoneOtp: (body: In<typeof v.phoneOtpRequestSchema>) => http.request<{ sent: true }>('/api/v1/auth/phone/request-otp', { method: 'POST', body }),
       verifyPhoneOtp: async (body: In<typeof v.phoneOtpVerifySchema>) => {
-        const res = await http.request<(AuthTokens & { status: 'authenticated' }) | { status: 'registration_required'; registrationToken: string } | { verified: true }>(
+        const res = await http.request<
+          (AuthTokens & { status: 'authenticated' }) | (MfaChallengeDto & { status: 'mfa_required' }) | { status: 'registration_required'; registrationToken: string } | { verified: true }
+        >(
           '/api/v1/auth/phone/verify-otp',
           { method: 'POST', body },
         );
@@ -433,7 +456,8 @@ export function createMemberApi(options: Omit<HttpClientOptions, 'refreshPath'>)
       },
       completePhoneRegistration: async (body: In<typeof v.phoneRegistrationSchema>) =>
         storeTokens(await http.request<AuthTokens>('/api/v1/auth/phone/register', { method: 'POST', body, auth: false })),
-      oauth: async (body: In<typeof v.oauthLoginSchema>) => storeTokens(await http.request<AuthTokens & { created: boolean }>('/api/v1/auth/oauth', { method: 'POST', body, auth: false })),
+      oauth: async (body: In<typeof v.oauthLoginSchema>) =>
+        storeUnlessChallenge(await http.request<(AuthTokens & { created: boolean }) | (MfaChallengeDto & { created: boolean })>('/api/v1/auth/oauth', { method: 'POST', body, auth: false })),
     },
     activities: {
       create: (body: In<typeof v.createActivitySchema>) => http.request<ActivityDto>('/api/v1/activities', { method: 'POST', body }),

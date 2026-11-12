@@ -7,6 +7,8 @@ import { enqueue } from '../../queues';
 import { hashToken, randomToken } from '../../shared/crypto';
 import { AppError, badRequest, conflict, forbidden, notFound, unauthorized } from '../../shared/errors';
 import { logger } from '../../shared/logger';
+import { recordSecurityEvent } from '../../shared/metrics';
+import * as mfa from './mfa.service';
 import { burnPasswordCheck, hashPassword, needsRehash, verifyPassword } from '../../shared/password';
 import { audit, type AuditContext } from '../audit/audit.service';
 import { templates } from '../notifications/templates';
@@ -94,6 +96,7 @@ export async function refreshSession(rawToken: string, ctx: AuditContext): Promi
 
   const { session } = token;
   if (token.usedAt) {
+    recordSecurityEvent('refresh_token_reuse');
     await revokeSessions({ id: session.id }, 'refresh_token_reuse');
     await audit({ actorType: 'SYSTEM', action: 'auth.refresh_token_reuse_detected', targetType: 'user', targetId: session.userId, metadata: { sessionId: session.id } }, ctx);
     logger.warn({ sessionId: session.id }, 'refresh token reuse detected; session revoked');
@@ -213,6 +216,8 @@ export async function resendEmailVerification(userId: string) {
 // ---------------------------------------------------------------------------
 
 async function recordLogin(data: { userId?: string; method: AuthMethod; success: boolean; failureReason?: string; suspicious?: boolean }, ctx: ClientContext) {
+  if (!data.success) recordSecurityEvent('auth_failure', data.failureReason ?? 'unknown');
+  if (data.suspicious) recordSecurityEvent('suspicious_login', data.method);
   await prisma.loginEvent.create({
     data: {
       ...data,
@@ -239,11 +244,19 @@ async function isSuspiciousLogin(userId: string, ctx: ClientContext) {
   return !prior.some((p) => (ctx.device?.deviceId && p.deviceId === ctx.device.deviceId) || (ctx.ipAddress && p.ipAddress === ctx.ipAddress));
 }
 
-/** Shared post-authentication steps for every login method. */
-export async function completeLogin(user: { id: string; email: string | null; status: string }, method: AuthMethod, ctx: ClientContext) {
+/**
+ * Shared post-authentication steps for every login method (password, phone OTP, Google/Apple).
+ * When the member has turned on two-step verification, the first factor only earns a short-lived
+ * MFA challenge; tokens are issued by verifyMfaLogin once the second factor checks out.
+ */
+export async function completeLogin(user: { id: string; email: string | null; status: string }, method: AuthMethod, ctx: ClientContext, opts: { mfaVerified?: boolean } = {}): Promise<IssuedTokens | mfa.MfaChallenge> {
   if (user.status === 'SUSPENDED') {
     await recordLogin({ userId: user.id, method, success: false, failureReason: 'suspended' }, ctx);
     throw forbidden('This account has been suspended. Contact support for help.', 'ACCOUNT_SUSPENDED');
+  }
+  if (!opts.mfaVerified) {
+    const { mfaEnabledAt } = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { mfaEnabledAt: true } });
+    if (mfaEnabledAt) return mfa.issueChallenge(user.id, method);
   }
   const suspicious = await isSuspiciousLogin(user.id, ctx);
   const tokens = await prisma.$transaction(async (tx) => {
@@ -293,6 +306,25 @@ export async function login(input: LoginInput, ctx: ClientContext) {
     await prisma.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(input.password) } });
   }
   return completeLogin(user, 'PASSWORD', ctx);
+}
+
+/** Second step of sign-in for members with two-step verification turned on. */
+export async function verifyMfaLogin(input: { mfaToken: string; code?: string; recoveryCode?: string }, ctx: ClientContext) {
+  const challenge = await mfa.readChallenge(input.mfaToken);
+  const user = await prisma.user.findUnique({ where: { id: challenge.userId } });
+  if (!user || user.status === 'DELETED') throw unauthorized('Invalid token', 'INVALID_TOKEN');
+  const method = challenge.method as AuthMethod;
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    await recordLogin({ userId: user.id, method, success: false, failureReason: 'locked' }, ctx);
+    throw new AppError(429, 'ACCOUNT_TEMPORARILY_LOCKED', 'Too many failed sign-in attempts. Try again later or reset your password.');
+  }
+  try {
+    await mfa.checkSecondFactor(user, input, ctx);
+  } catch (err) {
+    await recordLogin({ userId: user.id, method, success: false, failureReason: 'mfa_invalid' }, ctx);
+    throw err;
+  }
+  return completeLogin(user, method, ctx, { mfaVerified: true });
 }
 
 // ---------------------------------------------------------------------------

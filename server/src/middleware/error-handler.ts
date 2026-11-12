@@ -4,6 +4,7 @@ import { ZodError } from 'zod';
 import * as Sentry from '@sentry/node';
 import { AppError } from '../shared/errors';
 import { logger } from '../shared/logger';
+import { recordSecurityEvent } from '../shared/metrics';
 
 export function notFoundHandler(req: Request, res: Response) {
   res.status(404).json({ error: { code: 'ROUTE_NOT_FOUND', message: 'Route not found', requestId: req.requestId } });
@@ -15,6 +16,8 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
 
   if (err instanceof AppError) {
     if (err.status >= 500) logger.error({ err, requestId }, err.message);
+    if (err.status === 401) recordSecurityEvent('unauthorized', err.code);
+    if (err.status === 403) recordSecurityEvent('forbidden', err.code);
     res.status(err.status).json({ error: { code: err.code, message: err.message, details: err.details, requestId } });
     return;
   }

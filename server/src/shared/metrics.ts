@@ -18,6 +18,31 @@ const httpDuration = new client.Histogram({
 export const jobCounter = new client.Counter({ name: 'jobs_processed_total', help: 'Background jobs processed', labelNames: ['job', 'outcome'] as const, registers: [registry] });
 export const paymentCounter = new client.Counter({ name: 'payments_total', help: 'Payment outcomes', labelNames: ['provider', 'outcome'] as const, registers: [registry] });
 
+/**
+ * Security-relevant events for threat detection (Prometheus alerts in infrastructure/monitoring).
+ * Label values come from fixed code sets (error codes, limiter names, audit actions) — never from
+ * user input — so cardinality stays bounded and no personal data reaches the metrics store.
+ */
+export type SecurityEventType =
+  | 'auth_failure'
+  | 'mfa_failure'
+  | 'suspicious_login'
+  | 'refresh_token_reuse'
+  | 'rate_limited'
+  | 'unauthorized'
+  | 'forbidden'
+  | 'admin_action'
+  | 'payment_anomaly';
+export const securityEvents = new client.Counter({
+  name: 'walktogether_security_events_total',
+  help: 'Security-relevant events (authentication failures, abuse, denials, privileged actions, payment anomalies)',
+  labelNames: ['type', 'detail'] as const,
+  registers: [registry],
+});
+export function recordSecurityEvent(type: SecurityEventType, detail = '') {
+  securityEvents.inc({ type, detail: detail.slice(0, 64) });
+}
+
 /** Records latency with the matched route pattern (never the raw URL, so ids don't explode cardinality). */
 export function metricsMiddleware(req: Request, res: Response, next: NextFunction) {
   const end = httpDuration.startTimer();

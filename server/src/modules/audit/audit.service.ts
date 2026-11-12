@@ -1,3 +1,4 @@
+import { recordSecurityEvent } from '../../shared/metrics';
 import type { Prisma } from '@prisma/client';
 import { prisma, type Tx } from '../../database/prisma';
 
@@ -22,6 +23,7 @@ export interface AuditEntry {
  * is transactional, so the audit row commits (or rolls back) together with the change.
  */
 export async function audit(entry: AuditEntry, ctx: AuditContext = {}, tx: Tx = prisma) {
+  if (entry.actorType === 'ADMIN') recordSecurityEvent('admin_action', entry.action);
   await tx.auditLog.create({
     data: {
       actorType: entry.actorType,
