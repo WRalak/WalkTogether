@@ -94,7 +94,7 @@ services:
   # --- Optional: data services on this host (internal network only, never published) -----------
   postgres:
     profiles: [self-hosted-data]
-    image: postgis/postgis:16-3.4
+    image: postgis/postgis:18-3.6
     restart: unless-stopped
     security_opt: ['no-new-privileges:true']
     env_file: /etc/walktogether/postgres.env
