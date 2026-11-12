@@ -96,7 +96,7 @@ jobs:
       - run: npm ci -w @walktogether/server
       - run: npm run db:generate
       - name: Install ffmpeg and psql
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg postgresql-client age
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg postgresql-client-16 age
       - name: Create the least-privilege application role (random, per-run password)
         run: |
           PW=$(openssl rand -hex 24)
@@ -111,6 +111,8 @@ jobs:
         run: npm run test -w @walktogether/server
       - name: Backup and restore drill (encrypted dump → checksum → decrypt → restore → verify)
         run: |
+          # Client tools must match the server major version (newer pg_dump emits settings PG16 rejects).
+          export PATH="/usr/lib/postgresql/16/bin:$PATH" && pg_dump --version
           d="$RUNNER_TEMP/drill" && mkdir -p "$d"
           age-keygen -o "$d/key.txt" 2>/dev/null
           DATABASE_URL=postgresql://walktogether:walktogether@localhost:5432/walktogether_test \
