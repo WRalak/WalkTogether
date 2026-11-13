@@ -1,0 +1,18 @@
+{
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": { "source.fixAll.eslint": "explicit" },
+  "[prisma]": { "editor.defaultFormatter": "Prisma.prisma" },
+  "eslint.useFlatConfig": true,
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "tailwindCSS.experimental.configFile": {
+    "platform-admin/tailwind.config.cjs": "platform-admin/**",
+    "mobile/tailwind.config.js": "mobile/**"
+  },
+  "files.exclude": { "**/.expo": true, "**/.next": true, "**/.turbo": true },
+  "search.exclude": { "**/node_modules": true, "**/dist": true, "**/.next": true, "package-lock.json": true },
+  "debug.javascript.autoAttachFilter": "smart",
+  "vitest.maximumConfigs": 10
+}

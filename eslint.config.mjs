@@ -64,7 +64,7 @@ export default tseslint.config(
   },
   {
     // CLI scripts print to the terminal on purpose.
-    files: ['server/scripts/**', 'server/prisma/seed.ts', 'server/prisma/seed-demo.ts'],
+    files: ['scripts/**', 'server/scripts/**', 'server/prisma/seed.ts', 'server/prisma/seed-demo.ts'],
     rules: { 'no-console': 'off' },
   },
 );

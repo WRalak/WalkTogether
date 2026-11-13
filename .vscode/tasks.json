@@ -1,0 +1,81 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "WalkTogether: first-time setup",
+      "detail": "Creates .env files, starts PostgreSQL + Redis (Docker), migrates and loads demo data",
+      "type": "shell",
+      "command": "npm install && npm run setup",
+      "problemMatcher": []
+    },
+    {
+      "label": "WalkTogether: databases (Docker)",
+      "detail": "PostgreSQL + PostGIS on 5432, Redis on 6379",
+      "type": "shell",
+      "command": "docker compose up -d postgres redis",
+      "problemMatcher": []
+    },
+    {
+      "label": "WalkTogether: API",
+      "detail": "http://localhost:4000 (docs at /api/docs)",
+      "type": "npm",
+      "script": "dev:server",
+      "presentation": {
+        "group": "walktogether",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "WalkTogether: worker",
+      "detail": "Background jobs (reminders, payments reconciliation, media processing)",
+      "type": "npm",
+      "script": "dev:worker",
+      "presentation": {
+        "group": "walktogether",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "WalkTogether: platform admin",
+      "detail": "http://localhost:3002",
+      "type": "npm",
+      "script": "dev:platform-admin",
+      "presentation": {
+        "group": "walktogether",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "WalkTogether: mobile (Expo)",
+      "detail": "Metro bundler; press 'a' in this terminal for the Android emulator",
+      "type": "npm",
+      "script": "dev:mobile",
+      "presentation": {
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "WalkTogether: start API + worker + admin",
+      "dependsOn": ["WalkTogether: API", "WalkTogether: worker", "WalkTogether: platform admin"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "WalkTogether: tests",
+      "type": "npm",
+      "script": "test",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "WalkTogether: lint + typecheck",
+      "type": "shell",
+      "command": "npm run lint && npm run typecheck",
+      "problemMatcher": ["$tsc"]
+    }
+  ]
+}

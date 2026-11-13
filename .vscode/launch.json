@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API (debug)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev:server",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Worker (debug)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev:worker",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Platform admin (debug server side)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev:platform-admin",
+      "cwd": "${workspaceFolder}",
+      "serverReadyAction": { "pattern": "- Local:.+(https?://\\S+)", "uriFormat": "%s", "action": "openExternally" }
+    },
+    {
+      "name": "Server tests (debug current file)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npx vitest run ${fileBasenameNoExtension}",
+      "cwd": "${workspaceFolder}/server"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "API + worker + platform admin",
+      "configurations": ["API (debug)", "Worker (debug)", "Platform admin (debug server side)"],
+      "stopAll": true
+    }
+  ]
+}

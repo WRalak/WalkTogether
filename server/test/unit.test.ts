@@ -63,6 +63,13 @@ describe('split hosting', () => {
   });
 });
 
+describe('environment loading', () => {
+  it('treats blank values from .env.example as unset', async () => {
+    const { withoutBlankValues } = await import('../src/config/env');
+    expect(withoutBlankValues({ METRICS_TOKEN: '', SMTP_URL: '   ', PORT: '4000' })).toEqual({ PORT: '4000' });
+  });
+});
+
 describe('production configuration guard', () => {
   it('requires TLS to PostgreSQL and Redis and https origins; a hardened config passes', async () => {
     const { deployedConfigProblems, env } = await import('../src/config/env');

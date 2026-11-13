@@ -8,13 +8,14 @@
     "packages/*"
   ],
   "version": "0.1.0",
-  "description": "WalkTogether \u2014 multi-club fitness social network and SaaS platform",
+  "description": "WalkTogether — multi-club fitness social network and SaaS platform",
   "packageManager": "npm@10.9.2",
   "engines": {
     "node": ">=22.0.0",
     "npm": ">=10.0.0"
   },
   "scripts": {
+    "setup": "node scripts/setup-local.mjs",
     "dev:server": "npm run dev -w @walktogether/server",
     "dev:worker": "npm run dev:worker -w @walktogether/server",
     "dev:platform-admin": "npm run dev -w @walktogether/platform-admin",

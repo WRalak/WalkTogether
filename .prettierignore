@@ -11,3 +11,4 @@ mobile/ios
 infrastructure/monitoring/grafana/dashboards
 security/semgrep/tests/
 **/.terraform/
+**/expo-env.d.ts

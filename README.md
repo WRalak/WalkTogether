@@ -37,6 +37,29 @@ the same PostgreSQL database. Full hosting map: [`docs/deployment/HOSTING.md`](d
 docker compose up -d postgres redis
 ```
 
+## Run it in VS Code (Windows, macOS, Linux)
+
+1. Install **Node.js 22**, **Docker Desktop** (start it), **Git** and **VS Code**.
+2. Open the repository folder in VS Code (**File → Open Folder…**) and accept the recommended
+   extensions it suggests (ESLint, Prettier, Prisma, Tailwind, Expo, Docker, Vitest).
+3. First time only: **Terminal → Run Task… → `WalkTogether: first-time setup`**. This runs
+   `npm install` and `npm run setup`, which creates the `.env` files, starts PostgreSQL + Redis in
+   Docker, applies the migrations and loads demo data. Safe to re-run.
+4. Every time: **Terminal → Run Task… → `WalkTogether: start API + worker + admin`**, or press
+   **F5** and choose **API + worker + platform admin** to run them under the debugger (breakpoints
+   work in `server/src` and in the platform admin's server code).
+5. Mobile: **Run Task… → `WalkTogether: mobile (Expo)`**, then press `a` in that terminal to open
+   the Android emulator (install Android Studio and create an emulator first).
+
+| What | Where |
+| --- | --- |
+| API docs | <http://localhost:4000/api/docs> |
+| Platform admin | <http://localhost:3002> (create an admin with `npm run admin:create -w @walktogether/server -- --email you@example.com --name "Your Name"`) |
+| Demo member/owner (mobile) | `owner@demo.walktogether.local` / `walktogether-demo-1` |
+| Emails and SMS codes | printed in the **API** terminal |
+
+The steps below are the same thing done by hand.
+
 ## Getting started
 
 ```bash

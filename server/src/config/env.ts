@@ -147,8 +147,13 @@ export function deployedConfigProblems(env: Env): string[] {
   return problems;
 }
 
+/** `KEY=` with nothing after it (as in .env.example) means "not set", not "set to an empty string". */
+export function withoutBlankValues(source: NodeJS.ProcessEnv): Record<string, string> {
+  return Object.fromEntries(Object.entries(source).filter((e): e is [string, string] => typeof e[1] === 'string' && e[1].trim() !== ''));
+}
+
 function loadEnv(): Env {
-  const parsed = envSchema.safeParse(process.env);
+  const parsed = envSchema.safeParse(withoutBlankValues(process.env));
   if (!parsed.success) {
     // Print field names only; never echo values (they may be secrets).
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('\n  ');
